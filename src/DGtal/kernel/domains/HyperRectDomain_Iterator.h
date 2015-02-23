@@ -167,7 +167,7 @@ namespace DGtal
 
 
     HyperRectDomain_Iterator( const TPoint & p, const TPoint& lower, const TPoint &upper )
-      : myPoint( p ), mylower( lower ), myupper( upper ),  myCurrentPos( 0 )
+      : myPoint( p ), mylower( lower ), myupper( upper )
     {
       ASSERT( lower <= upper );
       ASSERT( lower <= p && p <= upper );
@@ -208,20 +208,20 @@ namespace DGtal
      **/
     void nextLexicographicOrder()
     {
-      ++myPoint[myCurrentPos];
-      if (( myCurrentPos < TPoint::dimension - 1 ) &&
-    ( myPoint[myCurrentPos] > myupper[myCurrentPos] ) )
+      ++myPoint[0];
+      if (( TPoint::dimension > 1 ) &&
+    ( myPoint[0] > myupper[0] ) )
         {
+          Dimension currentPos = 0;
           do
       {
-        myPoint[myCurrentPos] = mylower[myCurrentPos];
-        myCurrentPos++;
-        if ( myCurrentPos < TPoint::dimension )
-    ++myPoint[myCurrentPos];
+        myPoint[currentPos] = mylower[currentPos];
+        ++currentPos;
+        if ( currentPos < TPoint::dimension )
+    ++myPoint[currentPos];
       }
-          while (( myCurrentPos < TPoint::dimension - 1 ) &&
-     ( myPoint[myCurrentPos]  >  myupper[ myCurrentPos ] ) );
-          myCurrentPos = 0;
+          while (( currentPos < TPoint::dimension - 1 ) &&
+     ( myPoint[currentPos]  >  myupper[ currentPos ] ) );
         }
     }
 
@@ -251,20 +251,20 @@ namespace DGtal
      **/
     void prevLexicographicOrder()
     {
-      --myPoint[ myCurrentPos ];
-      if (( myCurrentPos < TPoint::dimension - 1 ) &&
-    ( myPoint[ myCurrentPos ]  <  mylower[ myCurrentPos ] ) )
+      --myPoint[0];
+      if (( TPoint::dimension > 1 ) &&
+    ( myPoint[0]  <  mylower[0] ) )
         {
+          Dimension currentPos = 0;
           do
       {
-        myPoint[ myCurrentPos ] = myupper[ myCurrentPos ];
-        ++myCurrentPos;
-        if ( myCurrentPos < TPoint::dimension )
-    --myPoint[ myCurrentPos ];
+        myPoint[ currentPos ] = myupper[ currentPos ];
+        ++currentPos;
+        if ( currentPos < TPoint::dimension )
+    --myPoint[ currentPos ];
       }
-          while (( myCurrentPos < TPoint::dimension - 1 ) &&
-     ( myPoint[ myCurrentPos ]  <  mylower[ myCurrentPos ] ) );
-          myCurrentPos = 0;
+          while (( currentPos < TPoint::dimension - 1 ) &&
+     ( myPoint[ currentPos ]  <  mylower[ currentPos ] ) );
         }
     }
 
@@ -293,8 +293,6 @@ namespace DGtal
     TPoint myPoint;
     ///Copies of the Domain limits
     TPoint mylower, myupper;
-    ///Second index of the iterator position
-    Dimension myCurrentPos;
   };
   /////////////////////////////////////////////////////////////////////////////
   // class HyperRectDomain_Iterator
