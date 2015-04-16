@@ -190,12 +190,12 @@ DGtal::Trace::warning()
  * The string is postfixed by the keyword "[ERR]"
  * @return the output stream with the prefix
  */
-inline std::ostream &
+inline std::ostream
 DGtal::Trace::error()
 {
   myWriter.outputStream() <<  myCurrentPrefix << myWriter.prefixError();
   myStyle = true;
-  return  myWriter.outputStream();
+  return TmpStreamBuf(*this);
 }
 
 

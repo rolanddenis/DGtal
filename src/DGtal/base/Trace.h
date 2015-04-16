@@ -41,6 +41,7 @@
 // Inclusions
 #include <iostream>
 #include <ostream>
+#include <streambuf>
 #include <string>
 #include <stack>
 
@@ -135,7 +136,7 @@ namespace DGtal
      *  the string is postfixed by the keyword "[ERR]"
      * @return the cerr output stream with the prefix
      */
-    std::ostream &  error();
+     std::ostream  error();
 
 
     /**
@@ -223,6 +224,44 @@ namespace DGtal
     // ------------------------- Internals ------------------------------------
   private:
 
+    /*
+    class TmpStream : public std::ostream
+    {
+    public:
+
+      TmpStream( Trace& aTrace )
+        : std::ostream(aTrace.myWriter.outputStream().rdbuf()),
+          myTrace(aTrace)
+      { }
+
+      ~TmpStream()
+        {
+          myTrace.myWriter.outputStream() << myTrace.myWriter.postfixReset();
+        }
+    private:
+      Trace& myTrace;
+    };
+    */
+
+
+    class TmpStreamBuf 
+      : public std::streambuf
+      {
+      public:
+        TmpStreamBuf( Trace& aTrace )
+          : std::streambuf(*aTrace.myWriter.outputStream().rdbuf()), myTrace(aTrace)
+        { }
+
+        ~TmpStreamBuf()
+          {
+            myTrace.myWriter.outputStream() << myTrace.myWriter.postfixReset();
+          }
+      private:
+        Trace& myTrace;
+      };
+
+
+
   }; // end of class Trace
 
 
@@ -251,3 +290,5 @@ namespace DGtal
 
 #undef Trace_RECURSES
 #endif // else defined(Trace_RECURSES)
+/* GNU coding style */
+/* vim: set ts=2 sw=2 expandtab cindent cinoptions=>4,n-2,{2,^-2,:2,=2,g0,h2,p5,t0,+2,(0,u0,w1,m1 : */
