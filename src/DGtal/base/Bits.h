@@ -77,20 +77,153 @@ struct Bits
         return bitStr;
       }
 
-
     // ---------------------------------------------------------------------
-    //  Other functions
+    //  Bit shift functions
     // ---------------------------------------------------------------------
 
-    /**
-     * Returns an value which bits are of the form 0..010..0 with the nthBit equal to 1.
+    /** Returns a given value whose bits have been left-shifted.
+     * @tparam    T   The type of the value.
+     * @param[in] val The value to be shifted.
+     * @param[in] n   Shift count.
      */
-    template<typename T>
-    static inline T mask(unsigned nthBit)
+    template < typename T >
+    static inline
+    T leftShift( T val, unsigned n )
       {
-        return static_cast<T>(static_cast<T>(1) << nthBit);
+        return val << n;
       }
 
+    /** Returns a given value whose bits have been right-shifted.
+     * @tparam    T   The type of the value.
+     * @param[in] val The value to be shifted.
+     * @param[in] n   Shift count.
+     */
+    template < typename T >
+    static inline
+    T rightShift( T val, unsigned n )
+      {
+        return val >> n;
+      }
+
+    /** Returns a given value whose bits have been left or right shifted depending of the sign of \p n.
+     * It is equivalent to a left-shift if \p n is positive, right-shift otherwise.
+     * @tparam    T   The type of the value.
+     * @param[in] val The value to be shifted.
+     * @param[in] n   Shift count.
+     */
+    template < typename T >
+    static inline
+    T signedShift( T val, signed n )
+      {
+        return ( n > 0 ) ? leftShift(val, static_cast<unsigned>(n)) : rightShift(val, static_cast<unsigned>(-n));
+      }
+
+    /** Returns a given value whose bits have been shifted so that the bit at position \p fromPos has been moved to the position \p toPos.
+     * @tparam    T       The type of the value.
+     * @param[in] val     The value to be shifted.
+     * @param[in] fromPos Position of the bit to be moved.
+     * @param[in] toPos   Destination position of the same bit.
+     */
+    template < typename T >
+    static inline
+    T diffShift( T val, unsigned fromPos, unsigned toPos )
+      {
+        return ( fromPos < toPos ) ? leftShift(val, toPos - fromPos) : rightShift(val, fromPos - toPos);
+      }
+    
+    // ---------------------------------------------------------------------
+    //  Bit mask functions
+    // ---------------------------------------------------------------------
+
+    /** Returns a value with only one bit set, preceded by \p nthBit zero bits.
+     * @tparam    T       The type of the value.
+     * @param[in] nthBit  Position of the set bit.
+     */
+    template< typename T >
+    static inline 
+    T mask(unsigned nthBit)
+      {
+        return T(1) << nthBit;
+      }
+
+    /** Returns a value with only \p width consecutive bits equal to 1, starting with the first bit.
+     * @tparam    T     The type of the value.
+     * @param[in] width Number of consecutive set bits.
+     */
+    template < typename T >
+    static inline
+    T wideMask( unsigned width )
+      {
+        return ( T(1) << width ) - 1;
+      }
+
+    /** Returns a value with only \p width consecutive bits equal to 1, preceded by \p nthBit zero bits.
+     * @tparam    T       The type of the value.
+     * @param[in] nthBit  Position of the first set bit.
+     * @param[in] width   Number of consecutive set bits.
+     */
+    template<typename T>
+    static inline
+    T wideMask(unsigned width, unsigned nthBit)
+      {
+        return leftShift( wideMask<T>(width), nthBit );
+      }
+    
+    // ---------------------------------------------------------------------
+    //  Bit copy functions
+    // ---------------------------------------------------------------------
+     
+    /** Copy consecutive bits from a value to another one, with different bit positions.
+     * @tparam    T   The type of the values.
+     * @param[in] fromValue The origin value.
+     * @param[in] fromPos   The position of the first bit to be copied in the origin value.
+     * @param[in] toValue   The destination value.
+     * @param[in] toPos     The position where to copy the first bit.
+     * @param[in] width     Number of consecutive bits to be copied.
+     */
+    template < typename T >
+    static inline
+    T wideCopy( T fromValue, unsigned fromPos, T toValue, unsigned toPos, unsigned width )
+      {
+        const T toMask = wideMask<T>( width, toPos );
+        return ( toValue & ~toMask ) | ( diffShift(fromValue, fromPos, toPos) & toMask );
+      }
+
+    /** Copy consecutive bits from a value to another one, where the first copied bit is at the beginning of the origin value.
+     * @tparam    T   The type of the values.
+     * @param[in] fromValue The origin value.
+     * @param[in] toValue   The destination value.
+     * @param[in] toPos     The position where to copy the first bit.
+     * @param[in] width     Number of consecutive bits to be copied.
+     */
+    template < typename T >
+    static inline
+    T wideCopyFromStart( T fromValue, T toValue, unsigned toPos, unsigned width )
+      {
+        const T toMask = wideMask<T>( width, toPos );
+        return ( toValue & ~toMask ) | ( leftShift(fromValue, toPos) & toMask );
+      }
+    
+    /** Copy consecutive bits from a value to another one, where the first copied bit is at the beginning of the destination value.
+     * @tparam    T   The type of the values.
+     * @param[in] fromValue The origin value.
+     * @param[in] fromPos   The position of the first bit to be copied in the origin value.
+     * @param[in] toValue   The destination value.
+     * @param[in] width     Number of consecutive bits to be copied.
+     */
+    template < typename T >
+    static inline
+    T wideCopyToStart( T fromValue, unsigned fromPos, T toValue, unsigned width )
+      {
+        const T toMask = wideMask<T>( width );
+        return ( toValue & ~toMask ) | ( rightShift(fromValue, fromPos) & toMask );
+      }
+
+
+    // ---------------------------------------------------------------------
+    //  Bit query functions
+    // ---------------------------------------------------------------------
+    
     /**
      *  Returns the state of key's nthBit bit.
      */
