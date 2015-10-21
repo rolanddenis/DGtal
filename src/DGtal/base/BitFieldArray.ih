@@ -1,0 +1,66 @@
+namespace
+{
+  template < bool V >
+  struct Boolean
+    {
+      enum { value = V };
+    };
+
+  template < std::size_t A, std::size_t B >
+  struct IsDivisibleBy : Boolean< (A % B == 0) >
+    {};
+
+  template < std::size_t A, std::size_t B >
+  struct IsGreaterThan : Boolean< (A > B) >
+    {};
+
+  template < std::size_t A, std::size_t B >
+  struct IsLessThan : IsGreaterThan<B, A>
+    {};
+}
+
+union BitFieldAsWord
+    {
+      T bitField;
+      uint_t word[(S+8*sizeof(uint_t)-1)/(8*sizeof(uint_t))];
+    };
+
+  /*
+  T get( std::size_t i )
+    {
+      // Only for S divider of 8*sizeof(T*)
+      T result;
+      const std::size_t word_index = (i*S)/(8*sizeof(uint_t*));
+      const uint_t mask = ( ( uint_t(1) << S) - 1 ) << ( (i*S) % (8*sizeof(uint_t*)) );
+      *reinterpret_cast<uint_t*>(&result) = (reinterpret_cast<uint_t*>(myMemory)[word_index] & mask) >> ( (i*S) % (8*sizeof(uint_t*)) );
+      return result;
+    }
+  */
+
+  T get ( std::size_t i )
+    {
+      BitFieldAsWord result;
+      const std::size_t word_index = (i*S) / (8*sizeof(uint_t*));
+      const std::size_t word_pos   = (i*S) % (8*sizeof(uint_t*));
+      result.word[0] = Bits::wideCopyToStart( reinterpret_cast<uint_t*>(myMemory)[word_index], word_pos, result.word[0], S );
+      return result.bitField;
+    }
+
+  /*
+  void set( std::size_t i, T const& value)
+    {
+      const std::size_t word_index = (i*S)/(8*sizeof(uint_t*));
+      const uint_t mask = ( ( uint_t(1) << S) - 1 ) << ( (i*S) % (8*sizeof(uint_t*)) );
+      std::cout << ( (i*S) % (8*sizeof(uint_t*)) ) << " " << Bits::bitString(mask) << std::endl;
+      reinterpret_cast<uint_t*>(myMemory)[word_index] &= ~mask;
+      reinterpret_cast<uint_t*>(myMemory)[word_index] |= ( *reinterpret_cast<uint_t const*>(&value) << ( (i*S) % (8*sizeof(uint_t*)) ) ) & mask;
+    }
+  */
+
+  void set( std::size_t i, T const& value)
+    {
+      const std::size_t word_index = (i*S) / (8*sizeof(uint_t*));
+      const std::size_t word_pos   = (i*S) % (8*sizeof(uint_t*));
+      reinterpret_cast<uint_t*>(myMemory)[word_index] = Bits::wideCopyFromStart( *reinterpret_cast<uint_t const*>(&value), reinterpret_cast<uint_t*>(myMemory)[word_index], word_pos, S );
+
+    }

@@ -6,8 +6,8 @@ int main()
 {
   using namespace std;
 
-  const size_t S = 64;
-  const size_t N = 1;
+  const size_t S = 8;
+  const size_t N = 8;
   typedef DGtal::BitFieldArray<unsigned char, S, N> myBitFieldArray;
 
   cout << "sizeof = " << sizeof(myBitFieldArray) << endl;
