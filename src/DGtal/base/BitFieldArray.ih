@@ -15,9 +15,25 @@ namespace
     {};
 
   template < std::size_t A, std::size_t B >
-  struct IsLessThan : IsGreaterThan<B, A>
+  struct IsLessThan : Boolean< (A < B) >
     {};
+
+  template <
+    bool IsSmallerThanAWord,
+    bool IsLargerThanAWord,
+    bool DivideAWord,
+    bool IsDivisibleByAWord
+  >
+  struct BitFieldArrayImpl;
+
+  template <>
+  struct BitFieldArrayImpl< false, false, true, true >
+    {
+
+    }
 }
+
+
 
 union BitFieldAsWord
     {
