@@ -32,3 +32,6 @@ private:
 };
 
 } // namespace DGtal
+
+#include <DGtal/base/BitFieldArray.ih>
+
