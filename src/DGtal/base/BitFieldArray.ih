@@ -1,0 +1,218 @@
+namespace
+{
+  template < bool V >
+  struct Boolean
+    {
+      enum { value = V };
+    };
+
+  template < std::size_t A, std::size_t B >
+  struct IsDivisibleBy : Boolean< (A % B == 0) >
+    {};
+
+  template < std::size_t A, std::size_t B >
+  struct IsGreaterThan : Boolean< (A > B) >
+    {};
+
+  template < std::size_t A, std::size_t B >
+  struct IsLessThan : Boolean< (A < B) >
+    {};
+
+  template <
+    std::size_t S,
+    std::size_t N,
+    bool IsSmallerThanAWord,
+    bool IsLargerThanAWord,
+    bool DivideAWord,
+    bool IsDivisibleByAWord
+  >
+  struct BitFieldArrayImpl;
+
+  // When the stored data has same size as a word
+  template < std::size_t S, std::size_t N >
+  struct BitFieldArrayImpl< S, N, false, false, true, true >
+    {
+      template < typename Integer >
+      static inline
+      void getValue( std::size_t i, Integer const* data, Integer* result  )
+        {
+          *result = data[i];
+        }
+
+      template < typename Integer >
+      static inline 
+      void setValue( std::size_t i, Integer* data, Integer const* value )
+        {
+          data[i] = *value;
+        }
+    };
+
+  // When the stored data has a size that divide a word
+  template < std::size_t S, std::size_t N >
+  struct BitFieldArrayImpl< S, N, true, false, true, false >
+    {
+      template < typename Integer >
+      static inline
+      void getValue ( std::size_t i, Integer const* data, Integer* result )
+        {
+          const std::size_t word_index = (i*S) / (8*sizeof(Integer));
+          const std::size_t word_pos   = (i*S) % (8*sizeof(Integer));
+          *result = DGtal::Bits::wideCopyToStart( data[word_index], word_pos, *result, S );
+        }
+
+      template < typename Integer >
+      static inline
+      void setValue ( std::size_t i, Integer* data, Integer const* value )
+        {
+          const std::size_t word_index = (i*S) / (8*sizeof(Integer));
+          const std::size_t word_pos   = (i*S) % (8*sizeof(Integer));
+          data[word_index] = DGtal::Bits::wideCopyFromStart( *value, data[word_index], word_pos, S );
+        }
+    };
+
+  // When the stored data has a size smaller than a word and that do no divide it.
+  template < std::size_t S, std::size_t N >
+  struct BitFieldArrayImpl< S, N, true, false, false, false >
+    {
+      template < typename Integer >
+      static inline
+      void getValue ( std::size_t i, Integer const* data, Integer* result )
+        {
+          const std::size_t word_index = (i*S) / (8*sizeof(Integer));
+          const std::size_t word_pos   = (i*S) % (8*sizeof(Integer));
+          const std::size_t result_length = 8*sizeof(Integer) - word_pos;
+          *result = DGtal::Bits::wideCopyToStart( data[word_index], word_pos, *result, S );
+
+          if ( result_length < S )
+            {
+              *result = DGtal::Bits::wideCopyFromStart( data[word_index+1], *result, result_length, S - result_length );
+            }
+        }
+
+      template < typename Integer >
+      static inline
+      void setValue ( std::size_t i, Integer* data, Integer const* value )
+        {
+          const std::size_t word_index = (i*S) / (8*sizeof(Integer));
+          const std::size_t word_pos   = (i*S) % (8*sizeof(Integer));
+          const std::size_t result_length = 8*sizeof(Integer) - word_pos;
+          data[word_index] = DGtal::Bits::wideCopyFromStart( *value, data[word_index], word_pos, S );
+
+          if ( result_length < S )
+            {
+              data[word_index+1] = DGtal::Bits::wideCopyToStart( *value, result_length, data[word_index+1], S - result_length );
+            }
+        }
+    };
+
+  // When the stored data has a size greater than a word and multiple of a word size.
+  // TODO: factor with the case when data as same size as word.
+  // Remark: This is stupid, we could use the array syntax.
+  template < std::size_t S, std::size_t N >
+  struct BitFieldArrayImpl< S, N, false, true, false, true >
+    {
+      template < typename Integer >
+      static inline
+      void getValue ( std::size_t i, Integer const* data, Integer* result )
+        {
+          *result = data[i*S/(8*sizeof(Integer))];
+          BitFieldArrayImpl< S - 8*sizeof(Integer), N, 
+            false, 
+            IsGreaterThan< S - 8*sizeof(Integer), 8*sizeof(Integer) >::value, 
+            IsDivisibleBy< 8*sizeof(Integer), S - 8*sizeof(Integer) >::value,
+            true
+          >::getValue ( i, data+1, result+1 ); // ---->[]
+        }
+      
+      template < typename Integer >
+      static inline
+      void setValue ( std::size_t i, Integer* data, Integer const* value )
+        {
+          data[i*S/(8*sizeof(Integer))] = *value;
+          BitFieldArrayImpl< S - 8*sizeof(Integer), N, 
+            false, 
+            IsGreaterThan< S - 8*sizeof(Integer), 8*sizeof(Integer) >::value, 
+            IsDivisibleBy< 8*sizeof(Integer), S - 8*sizeof(Integer) >::value,
+            true
+          >::setValue ( i, data+1, value+1 ); // ---->[]
+        }
+    };
+
+} // anonymous namespace
+
+namespace DGtal
+{
+
+template < typename T, std::size_t S, std::size_t N >
+inline
+T BitFieldArray<T,S,N>::getValue( std::size_t i ) const
+{
+  Value result;
+  BitFieldArrayImpl < S, N,
+    IsLessThan< S, 8*sizeof(Integer) >::value,
+    IsGreaterThan< S, 8*sizeof(Integer) >::value,
+    IsDivisibleBy< 8*sizeof(Integer), S >::value,
+    IsDivisibleBy< S, 8*sizeof(Integer) >::value
+  >::getValue( i, reinterpret_cast<Integer const*>(myMemory), reinterpret_cast<Integer*>(&result) );
+
+  return result;
+}
+
+template < typename T, std::size_t S, std::size_t N >
+inline
+void BitFieldArray<T,S,N>::setValue( std::size_t i, Value const& value )
+{
+  BitFieldArrayImpl < S, N,
+    IsLessThan< S, 8*sizeof(Integer) >::value,
+    IsGreaterThan< S, 8*sizeof(Integer) >::value,
+    IsDivisibleBy< 8*sizeof(Integer), S >::value,
+    IsDivisibleBy< S, 8*sizeof(Integer) >::value
+  >::setValue( i, reinterpret_cast<Integer*>(myMemory), reinterpret_cast<Integer const*>(&value) );
+
+}
+
+} // namespace DGtal
+
+/*
+union BitFieldAsWord
+    {
+      T bitField;
+      uint_t word[(S+8*sizeof(uint_t)-1)/(8*sizeof(uint_t))];
+    };
+
+  T get( std::size_t i )
+    {
+      // Only for S divider of 8*sizeof(T*)
+      T result;
+      const std::size_t word_index = (i*S)/(8*sizeof(uint_t*));
+      const uint_t mask = ( ( uint_t(1) << S) - 1 ) << ( (i*S) % (8*sizeof(uint_t*)) );
+      *reinterpret_cast<uint_t*>(&result) = (reinterpret_cast<uint_t*>(myMemory)[word_index] & mask) >> ( (i*S) % (8*sizeof(uint_t*)) );
+      return result;
+    }
+
+  T get ( std::size_t i )
+    {
+      BitFieldAsWord result;
+      const std::size_t word_index = (i*S) / (8*sizeof(uint_t*));
+      const std::size_t word_pos   = (i*S) % (8*sizeof(uint_t*));
+      result.word[0] = Bits::wideCopyToStart( reinterpret_cast<uint_t*>(myMemory)[word_index], word_pos, result.word[0], S );
+      return result.bitField;
+    }
+
+  void set( std::size_t i, T const& value)
+    {
+      const std::size_t word_index = (i*S)/(8*sizeof(uint_t*));
+      const uint_t mask = ( ( uint_t(1) << S) - 1 ) << ( (i*S) % (8*sizeof(uint_t*)) );
+      std::cout << ( (i*S) % (8*sizeof(uint_t*)) ) << " " << Bits::bitString(mask) << std::endl;
+      reinterpret_cast<uint_t*>(myMemory)[word_index] &= ~mask;
+      reinterpret_cast<uint_t*>(myMemory)[word_index] |= ( *reinterpret_cast<uint_t const*>(&value) << ( (i*S) % (8*sizeof(uint_t*)) ) ) & mask;
+    }
+
+  void set( std::size_t i, T const& value)
+    {
+      const std::size_t word_index = (i*S) / (8*sizeof(uint_t*));
+      const std::size_t word_pos   = (i*S) % (8*sizeof(uint_t*));
+      reinterpret_cast<uint_t*>(myMemory)[word_index] = Bits::wideCopyFromStart( *reinterpret_cast<uint_t const*>(&value), reinterpret_cast<uint_t*>(myMemory)[word_index], word_pos, S );
+
+    }
+*/
