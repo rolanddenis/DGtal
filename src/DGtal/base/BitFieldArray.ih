@@ -1,3 +1,6 @@
+#include <cstring>
+#include <algorithm>
+
 namespace
 {
   template < bool V >
@@ -28,22 +31,31 @@ namespace
   >
   struct BitFieldArrayImpl;
 
-  // When the stored data has same size as a word
-  template < std::size_t S, std::size_t N >
-  struct BitFieldArrayImpl< S, N, false, false, true, true >
+  // When the stored data has a size multiple of a word
+  template < std::size_t S, std::size_t N, bool IsLargerThanAWord, bool DivideAWord >
+  struct BitFieldArrayImpl< S, N, false, IsLargerThanAWord, DivideAWord, true >
     {
       template < typename Integer >
       static inline
-      void getValue( std::size_t i, Integer const* data, Integer* result  )
+      void getValue( std::size_t i, Integer const* data, Integer* result )
         {
-          *result = data[i];
+          std::memcpy( 
+                      reinterpret_cast<void*>(result),
+                      reinterpret_cast<void const*>( data + i * (S/(8*sizeof(Integer))) ),
+                      S/8
+          );
+
         }
 
       template < typename Integer >
-      static inline 
+      static inline
       void setValue( std::size_t i, Integer* data, Integer const* value )
         {
-          data[i] = *value;
+          std::memcpy(
+                      reinterpret_cast<void*>( data + i * (S/(8*sizeof(Integer))) ),
+                      reinterpret_cast<void const*>(value),
+                      S/8
+          );
         }
     };
 
@@ -105,38 +117,78 @@ namespace
         }
     };
 
-  // When the stored data has a size greater than a word and multiple of a word size.
-  // TODO: factor with the case when data as same size as word.
-  // Remark: This is stupid, we could use the array syntax.
+  // When the stored data has a size larger than a word and is not a multiple of a word.
   template < std::size_t S, std::size_t N >
-  struct BitFieldArrayImpl< S, N, false, true, false, true >
+  struct BitFieldArrayImpl< S, N, false, true, false, false >
     {
       template < typename Integer >
       static inline
-      void getValue ( std::size_t i, Integer const* data, Integer* result )
+      void getValue( std::size_t i, Integer const* data, Integer* result )
         {
-          *result = data[i*S/(8*sizeof(Integer))];
-          BitFieldArrayImpl< S - 8*sizeof(Integer), N, 
-            false, 
-            IsGreaterThan< S - 8*sizeof(Integer), 8*sizeof(Integer) >::value, 
-            IsDivisibleBy< 8*sizeof(Integer), S - 8*sizeof(Integer) >::value,
-            true
-          >::getValue ( i, data+1, result+1 ); // ---->[]
+          data += (i*S) / (8*sizeof(Integer));
+          std::size_t data_pos   = (i*S) % (8*sizeof(Integer));
+          std::size_t value_pos  = 0;
+          std::size_t copy_left = S;
+
+          while ( copy_left > 0 )
+            {
+              const std::size_t copy_length =
+                  std::min( 
+                      copy_left, 
+                      8*sizeof(Integer) - std::max( data_pos, value_pos )
+              );
+
+              *result = DGtal::Bits::wideCopy( *data, data_pos, *result, value_pos, copy_length);
+              copy_left -= copy_length;
+              data    += ( copy_length == 8*sizeof(Integer) - data_pos )  ? 1 : 0;
+              result  += ( copy_length == 8*sizeof(Integer) - value_pos ) ? 1 : 0;
+              data_pos  = ( data_pos + copy_length )  % 8*sizeof(Integer);
+              value_pos = ( value_pos + copy_length ) % 8*sizeof(Integer);
+            }
         }
       
       template < typename Integer >
       static inline
-      void setValue ( std::size_t i, Integer* data, Integer const* value )
+      void setValue( std::size_t i, Integer* data, Integer const* value )
         {
-          data[i*S/(8*sizeof(Integer))] = *value;
-          BitFieldArrayImpl< S - 8*sizeof(Integer), N, 
-            false, 
-            IsGreaterThan< S - 8*sizeof(Integer), 8*sizeof(Integer) >::value, 
-            IsDivisibleBy< 8*sizeof(Integer), S - 8*sizeof(Integer) >::value,
-            true
-          >::setValue ( i, data+1, value+1 ); // ---->[]
+          data += (i*S) / (8*sizeof(Integer));
+          std::size_t data_pos   = (i*S) % (8*sizeof(Integer));
+          std::size_t value_pos  = 0;
+          std::size_t copy_left = S;
+
+          while ( copy_left > 0 )
+            {
+              const std::size_t copy_length =
+                  std::min( 
+                      copy_left, 
+                      8*sizeof(Integer) - std::max( data_pos, value_pos )
+              );
+
+              *data = DGtal::Bits::wideCopy( *value, value_pos, *data, data_pos, copy_length);
+              copy_left -= copy_length;
+              data    += ( copy_length == 8*sizeof(Integer) - data_pos )  ? 1 : 0;
+              value   += ( copy_length == 8*sizeof(Integer) - value_pos ) ? 1 : 0;
+              data_pos  = ( data_pos + copy_length )  % 8*sizeof(Integer);
+              value_pos = ( value_pos + copy_length ) % 8*sizeof(Integer);
+            }
         }
     };
+
+  template <
+    std::size_t S,
+    std::size_t N,
+    typename Integer
+  >
+  struct BitFieldArrayImplDispatch
+      : BitFieldArrayImpl< S, N,
+          IsLessThan< S, 8*sizeof(Integer) >::value,
+          IsGreaterThan< S, 8*sizeof(Integer) >::value,
+          IsDivisibleBy< 8*sizeof(Integer), S >::value,
+          IsDivisibleBy< S, 8*sizeof(Integer) >::value
+        >
+    {
+    };
+
 
 } // anonymous namespace
 
@@ -148,12 +200,12 @@ inline
 T BitFieldArray<T,S,N>::getValue( std::size_t i ) const
 {
   Value result;
-  BitFieldArrayImpl < S, N,
-    IsLessThan< S, 8*sizeof(Integer) >::value,
-    IsGreaterThan< S, 8*sizeof(Integer) >::value,
-    IsDivisibleBy< 8*sizeof(Integer), S >::value,
-    IsDivisibleBy< S, 8*sizeof(Integer) >::value
-  >::getValue( i, reinterpret_cast<Integer const*>(myMemory), reinterpret_cast<Integer*>(&result) );
+  BitFieldArrayImplDispatch< S, N, Integer >
+    ::getValue( 
+               i, 
+               reinterpret_cast<Integer const*>(myMemory), 
+               reinterpret_cast<Integer*>(&result) 
+  );
 
   return result;
 }
@@ -162,12 +214,12 @@ template < typename T, std::size_t S, std::size_t N >
 inline
 void BitFieldArray<T,S,N>::setValue( std::size_t i, Value const& value )
 {
-  BitFieldArrayImpl < S, N,
-    IsLessThan< S, 8*sizeof(Integer) >::value,
-    IsGreaterThan< S, 8*sizeof(Integer) >::value,
-    IsDivisibleBy< 8*sizeof(Integer), S >::value,
-    IsDivisibleBy< S, 8*sizeof(Integer) >::value
-  >::setValue( i, reinterpret_cast<Integer*>(myMemory), reinterpret_cast<Integer const*>(&value) );
+  BitFieldArrayImplDispatch < S, N, Integer >
+    ::setValue( 
+               i, 
+               reinterpret_cast<Integer*>(myMemory), 
+               reinterpret_cast<Integer const*>(&value) 
+  );
 
 }
 
