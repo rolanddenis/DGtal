@@ -149,6 +149,7 @@ struct Bits
     /** Returns a value with only \p width consecutive bits equal to 1, starting with the first bit.
      * @tparam    T     The type of the value.
      * @param[in] width Number of consecutive set bits.
+     * @warning \p width must be smaller than the bits size of \p T.
      */
     template < typename T >
     static inline

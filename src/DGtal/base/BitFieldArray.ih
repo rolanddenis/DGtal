@@ -39,7 +39,7 @@ namespace
       static inline
       void getValue( std::size_t i, Integer const* data, Integer* result )
         {
-          std::memcpy( 
+          std::memcpy(
                       reinterpret_cast<void*>(result),
                       reinterpret_cast<void const*>( data + i * (S/(8*sizeof(Integer))) ),
                       S/8
@@ -133,20 +133,31 @@ namespace
           while ( copy_left > 0 )
             {
               const std::size_t copy_length =
-                  std::min( 
-                      copy_left, 
+                  std::min(
+                      copy_left,
                       8*sizeof(Integer) - std::max( data_pos, value_pos )
               );
 
-              *result = DGtal::Bits::wideCopy( *data, data_pos, *result, value_pos, copy_length);
-              copy_left -= copy_length;
-              data    += ( copy_length == 8*sizeof(Integer) - data_pos )  ? 1 : 0;
-              result  += ( copy_length == 8*sizeof(Integer) - value_pos ) ? 1 : 0;
-              data_pos  = ( data_pos + copy_length )  % 8*sizeof(Integer);
-              value_pos = ( value_pos + copy_length ) % 8*sizeof(Integer);
+              if ( copy_length == 8*sizeof(Integer) )
+                {
+                  *result = *data;
+                  copy_left -= copy_length;
+                  ++data;
+                  ++result;
+                }
+              else
+                {
+                  *result = DGtal::Bits::wideCopy( *data, data_pos, *result, value_pos, copy_length );
+
+                  copy_left -= copy_length;
+                  data    += ( copy_length == 8*sizeof(Integer) - data_pos )  ? 1 : 0;
+                  result  += ( copy_length == 8*sizeof(Integer) - value_pos ) ? 1 : 0;
+                  data_pos  = ( data_pos + copy_length )  % (8*sizeof(Integer));
+                  value_pos = ( value_pos + copy_length ) % (8*sizeof(Integer));
+                }
             }
         }
-      
+
       template < typename Integer >
       static inline
       void setValue( std::size_t i, Integer* data, Integer const* value )
@@ -159,17 +170,28 @@ namespace
           while ( copy_left > 0 )
             {
               const std::size_t copy_length =
-                  std::min( 
-                      copy_left, 
+                  std::min(
+                      copy_left,
                       8*sizeof(Integer) - std::max( data_pos, value_pos )
               );
 
-              *data = DGtal::Bits::wideCopy( *value, value_pos, *data, data_pos, copy_length);
-              copy_left -= copy_length;
-              data    += ( copy_length == 8*sizeof(Integer) - data_pos )  ? 1 : 0;
-              value   += ( copy_length == 8*sizeof(Integer) - value_pos ) ? 1 : 0;
-              data_pos  = ( data_pos + copy_length )  % 8*sizeof(Integer);
-              value_pos = ( value_pos + copy_length ) % 8*sizeof(Integer);
+              if ( copy_length == 8*sizeof(Integer) )
+                {
+                  *data = *value;
+                  copy_left -= copy_length;
+                  ++data;
+                  ++value;
+                }
+              else
+                {
+                  *data = DGtal::Bits::wideCopy( *value, value_pos, *data, data_pos, copy_length);
+
+                  copy_left -= copy_length;
+                  data    += ( copy_length == 8*sizeof(Integer) - data_pos )  ? 1 : 0;
+                  value   += ( copy_length == 8*sizeof(Integer) - value_pos ) ? 1 : 0;
+                  data_pos  = ( data_pos + copy_length )  % (8*sizeof(Integer));
+                  value_pos = ( value_pos + copy_length ) % (8*sizeof(Integer));
+                }
             }
         }
     };
@@ -201,10 +223,10 @@ T BitFieldArray<T,S,N>::getValue( std::size_t i ) const
 {
   Value result;
   BitFieldArrayImplDispatch< S, N, Integer >
-    ::getValue( 
-               i, 
-               reinterpret_cast<Integer const*>(myMemory), 
-               reinterpret_cast<Integer*>(&result) 
+    ::getValue(
+               i,
+               reinterpret_cast<Integer const*>(myMemory),
+               reinterpret_cast<Integer*>(&result)
   );
 
   return result;
@@ -215,56 +237,13 @@ inline
 void BitFieldArray<T,S,N>::setValue( std::size_t i, Value const& value )
 {
   BitFieldArrayImplDispatch < S, N, Integer >
-    ::setValue( 
-               i, 
-               reinterpret_cast<Integer*>(myMemory), 
-               reinterpret_cast<Integer const*>(&value) 
+    ::setValue(
+               i,
+               reinterpret_cast<Integer*>(myMemory),
+               reinterpret_cast<Integer const*>(&value)
   );
 
 }
 
 } // namespace DGtal
 
-/*
-union BitFieldAsWord
-    {
-      T bitField;
-      uint_t word[(S+8*sizeof(uint_t)-1)/(8*sizeof(uint_t))];
-    };
-
-  T get( std::size_t i )
-    {
-      // Only for S divider of 8*sizeof(T*)
-      T result;
-      const std::size_t word_index = (i*S)/(8*sizeof(uint_t*));
-      const uint_t mask = ( ( uint_t(1) << S) - 1 ) << ( (i*S) % (8*sizeof(uint_t*)) );
-      *reinterpret_cast<uint_t*>(&result) = (reinterpret_cast<uint_t*>(myMemory)[word_index] & mask) >> ( (i*S) % (8*sizeof(uint_t*)) );
-      return result;
-    }
-
-  T get ( std::size_t i )
-    {
-      BitFieldAsWord result;
-      const std::size_t word_index = (i*S) / (8*sizeof(uint_t*));
-      const std::size_t word_pos   = (i*S) % (8*sizeof(uint_t*));
-      result.word[0] = Bits::wideCopyToStart( reinterpret_cast<uint_t*>(myMemory)[word_index], word_pos, result.word[0], S );
-      return result.bitField;
-    }
-
-  void set( std::size_t i, T const& value)
-    {
-      const std::size_t word_index = (i*S)/(8*sizeof(uint_t*));
-      const uint_t mask = ( ( uint_t(1) << S) - 1 ) << ( (i*S) % (8*sizeof(uint_t*)) );
-      std::cout << ( (i*S) % (8*sizeof(uint_t*)) ) << " " << Bits::bitString(mask) << std::endl;
-      reinterpret_cast<uint_t*>(myMemory)[word_index] &= ~mask;
-      reinterpret_cast<uint_t*>(myMemory)[word_index] |= ( *reinterpret_cast<uint_t const*>(&value) << ( (i*S) % (8*sizeof(uint_t*)) ) ) & mask;
-    }
-
-  void set( std::size_t i, T const& value)
-    {
-      const std::size_t word_index = (i*S) / (8*sizeof(uint_t*));
-      const std::size_t word_pos   = (i*S) % (8*sizeof(uint_t*));
-      reinterpret_cast<uint_t*>(myMemory)[word_index] = Bits::wideCopyFromStart( *reinterpret_cast<uint_t const*>(&value), reinterpret_cast<uint_t*>(myMemory)[word_index], word_pos, S );
-
-    }
-*/
