@@ -23,6 +23,12 @@ struct BitFieldArray
 
   BOOST_STATIC_CONSTANT( std::size_t, sizeInByte = (S*N+7)/8 );
 
+  static inline
+  std::size_t size()
+    {
+      return N;
+    }
+
   Value getValue( std::size_t i ) const;
 
   void setValue( std::size_t i, Value const& aValue );
