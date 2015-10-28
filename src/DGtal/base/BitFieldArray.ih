@@ -1,26 +1,92 @@
+/**
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU Lesser General Public License as
+ *  published by the Free Software Foundation, either version 3 of the
+ *  License, or  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * @file BitFieldArray
+ * @author Roland Denis (\c roland.denis@univ-smb.fr )
+ * LAboratory of MAthematics - LAMA (CNRS, UMR 5127), University of Savoie, France
+ *
+ * @date 2015/10/26
+ *
+ * This file is part of the DGtal library.
+ */
+
+///////////////////////////////////////////////////////////////////////////////
+// Inclusions
 #include <cstring>
 #include <algorithm>
+///////////////////////////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////////////////////////
+// Tools implementation
+///////////////////////////////////////////////////////////////////////////////
 namespace
 {
+
+  /////////////////////////////////////////////////////////////////////////////
+  // Helper traits on bit size properties.
+
+  /** Encapsulates a compile-time boolean in an enum.
+   * @tparam V The boolean value
+   */
   template < bool V >
   struct Boolean
     {
       enum { value = V };
     };
 
+  /** Compile-time tests if \p A is divisible by \p B.
+   * @tparam A The \p A value.
+   * @tparam B The \p B value.
+   *
+   * The enum \p value is true if \p A is divisible by \p B.
+   */
   template < std::size_t A, std::size_t B >
   struct IsDivisibleBy : Boolean< (A % B == 0) >
     {};
 
+  /** Compile-time tests if \p A is greater than \p B.
+   * @tparam A The \p A value.
+   * @tparam B The \p B value.
+   *
+   * The enum \p value is true if \p A is greater than \p B.
+   */
   template < std::size_t A, std::size_t B >
   struct IsGreaterThan : Boolean< (A > B) >
     {};
 
+  /** Compile-time tests if \p A is less than \p B.
+   * @tparam A The \p A value.
+   * @tparam B The \p B value.
+   *
+   * The enum \p value is true if \p A is less than \p B.
+   */
   template < std::size_t A, std::size_t B >
   struct IsLessThan : Boolean< (A < B) >
     {};
 
+  /////////////////////////////////////////////////////////////////////////////
+  // BitFieldArray implementations depending on the element size S
+
+  /** BitFieldArray implementation.
+   *
+   * @tparam S  The element size in bits.
+   * @tparam N  The array capacity.
+   * @tparam IsSmallerThanAWord true if the element size is smaller than the working integer.
+   * @tparam IsLargerThanAWord  true if the element size is larger than the working integer.
+   * @tparam DivideAWord        true if the element size is a divider of the working integer size.
+   * @tparam IsDivisibleByAWord true if the element size is divisible by the working integer size.
+   */
   template <
     std::size_t S,
     std::size_t N,
@@ -31,10 +97,26 @@ namespace
   >
   struct BitFieldArrayImpl;
 
-  // When the stored data has a size multiple of a word
-  template < std::size_t S, std::size_t N, bool IsLargerThanAWord, bool DivideAWord >
+  /** BitFieldArray implementation tuned for element size composed of multiple integers.
+   * @tparam S  The element size in bits.
+   * @tparam N  The array capacity.
+   * @tparam IsLargerThanAWord  true if the element size is larger than the working integer.
+   * @tparam DivideAWord        true if the element size is a divider of the working integer size.
+   */
+  template <
+    std::size_t S,
+    std::size_t N,
+    bool IsLargerThanAWord,
+    bool DivideAWord
+  >
   struct BitFieldArrayImpl< S, N, false, IsLargerThanAWord, DivideAWord, true >
     {
+      /** Reads the \p i-th value from the array.
+       * @tparam  Integer The working integer type.
+       * @param[in]   i       The value index.
+       * @param[in]   data    A pointer to the internal storage.
+       * @param[out]  result  A pointer to where to put the value.
+       */
       template < typename Integer >
       static inline
       void getValue( std::size_t i, Integer const* data, Integer* result )
@@ -47,6 +129,12 @@ namespace
 
         }
 
+      /** Writes the \p i-th value into the array.
+       * @tparam  Integer The working integer type.
+       * @param[in]     i       The value index.
+       * @param[in,out] data    A pointer to the internal storage.
+       * @param[in]    result  A pointer to value to be writed.
+       */
       template < typename Integer >
       static inline
       void setValue( std::size_t i, Integer* data, Integer const* value )
@@ -59,10 +147,19 @@ namespace
         }
     };
 
-  // When the stored data has a size that divide a word
+  /** BitFieldArray implementation tuned for element size that divides the working integer.
+   * @tparam S  The element size in bits.
+   * @tparam N  The array capacity.
+   */
   template < std::size_t S, std::size_t N >
   struct BitFieldArrayImpl< S, N, true, false, true, false >
     {
+      /** Reads the \p i-th value from the array.
+       * @tparam  Integer The working integer type.
+       * @param[in]   i       The value index.
+       * @param[in]   data    A pointer to the internal storage.
+       * @param[out]  result  A pointer to where to put the value.
+       */
       template < typename Integer >
       static inline
       void getValue ( std::size_t i, Integer const* data, Integer* result )
@@ -72,6 +169,12 @@ namespace
           *result = DGtal::Bits::wideCopyToStart( data[word_index], word_pos, *result, S );
         }
 
+      /** Writes the \p i-th value into the array.
+       * @tparam  Integer The working integer type.
+       * @param[in]     i       The value index.
+       * @param[in,out] data    A pointer to the internal storage.
+       * @param[in]    result  A pointer to value to be writed.
+       */
       template < typename Integer >
       static inline
       void setValue ( std::size_t i, Integer* data, Integer const* value )
@@ -82,10 +185,19 @@ namespace
         }
     };
 
-  // When the stored data has a size smaller than a word and that do no divide it.
+  /** BitFieldArray implementation tuned for element smaller than the working integer, but not dividing it.
+   * @tparam S  The element size in bits.
+   * @tparam N  The array capacity.
+   */
   template < std::size_t S, std::size_t N >
   struct BitFieldArrayImpl< S, N, true, false, false, false >
     {
+      /** Reads the \p i-th value from the array.
+       * @tparam  Integer The working integer type.
+       * @param[in]   i       The value index.
+       * @param[in]   data    A pointer to the internal storage.
+       * @param[out]  result  A pointer to where to put the value.
+       */
       template < typename Integer >
       static inline
       void getValue ( std::size_t i, Integer const* data, Integer* result )
@@ -101,6 +213,12 @@ namespace
             }
         }
 
+      /** Writes the \p i-th value into the array.
+       * @tparam  Integer The working integer type.
+       * @param[in]     i       The value index.
+       * @param[in,out] data    A pointer to the internal storage.
+       * @param[in]     result  A pointer to value to be writed.
+       */
       template < typename Integer >
       static inline
       void setValue ( std::size_t i, Integer* data, Integer const* value )
@@ -117,27 +235,38 @@ namespace
         }
     };
 
-  // When the stored data has a size larger than a word and is not a multiple of a word.
+  /** BitFieldArray implementation tuned for element larger than the working integer and that are not a multiple of it (all other cases).
+   * @tparam S  The element size in bits.
+   * @tparam N  The array capacity.
+   */
   template < std::size_t S, std::size_t N >
   struct BitFieldArrayImpl< S, N, false, true, false, false >
     {
+      /** Reads the \p i-th value from the array.
+       * @tparam  Integer The working integer type.
+       * @param[in]   i       The value index.
+       * @param[in]   data    A pointer to the internal storage.
+       * @param[out]  result  A pointer to where to put the value.
+       */
       template < typename Integer >
       static inline
       void getValue( std::size_t i, Integer const* data, Integer* result )
         {
-          data += (i*S) / (8*sizeof(Integer));
-          std::size_t data_pos   = (i*S) % (8*sizeof(Integer));
-          std::size_t value_pos  = 0;
-          std::size_t copy_left = S;
+          data += (i*S) / (8*sizeof(Integer)); // Initial pointer position in the internal storage.
+          std::size_t data_pos   = (i*S) % (8*sizeof(Integer)); // Bit position in the internal storage.
+          std::size_t value_pos  = 0; // Bit position in the resulting value.
+          std::size_t copy_left = S;  // Bits left to be copied.
 
           while ( copy_left > 0 )
             {
+              // Length of data part than will be copied in this iteration.
               const std::size_t copy_length =
                   std::min(
                       copy_left,
                       8*sizeof(Integer) - std::max( data_pos, value_pos )
               );
 
+              // Shortcut if we are aligned with the memory
               if ( copy_length == 8*sizeof(Integer) )
                 {
                   *result = *data;
@@ -150,31 +279,43 @@ namespace
                   *result = DGtal::Bits::wideCopy( *data, data_pos, *result, value_pos, copy_length );
 
                   copy_left -= copy_length;
+
+                  // Moving pointers only if we are done with this position.
                   data    += ( copy_length == 8*sizeof(Integer) - data_pos )  ? 1 : 0;
                   result  += ( copy_length == 8*sizeof(Integer) - value_pos ) ? 1 : 0;
+
+                  // New bit positions
                   data_pos  = ( data_pos + copy_length )  % (8*sizeof(Integer));
                   value_pos = ( value_pos + copy_length ) % (8*sizeof(Integer));
                 }
             }
         }
 
+      /** Writes the \p i-th value into the array.
+       * @tparam  Integer The working integer type.
+       * @param[in]     i       The value index.
+       * @param[in,out] data    A pointer to the internal storage.
+       * @param[in]     result  A pointer to value to be writed.
+       */
       template < typename Integer >
       static inline
       void setValue( std::size_t i, Integer* data, Integer const* value )
         {
-          data += (i*S) / (8*sizeof(Integer));
-          std::size_t data_pos   = (i*S) % (8*sizeof(Integer));
-          std::size_t value_pos  = 0;
-          std::size_t copy_left = S;
+          data += (i*S) / (8*sizeof(Integer)); // Initial pointer position in the internal storage.
+          std::size_t data_pos   = (i*S) % (8*sizeof(Integer)); // Bit position in the internal storage.
+          std::size_t value_pos  = 0; // Bit position in the value to be writed.
+          std::size_t copy_left = S;  // Bits left to be copied.
 
           while ( copy_left > 0 )
             {
+              // Length of data part than will be copied in this iteration.
               const std::size_t copy_length =
                   std::min(
                       copy_left,
                       8*sizeof(Integer) - std::max( data_pos, value_pos )
               );
 
+              // Shortcut if we are aligned with the memory
               if ( copy_length == 8*sizeof(Integer) )
                 {
                   *data = *value;
@@ -187,8 +328,12 @@ namespace
                   *data = DGtal::Bits::wideCopy( *value, value_pos, *data, data_pos, copy_length);
 
                   copy_left -= copy_length;
+
+                  // Moving pointers only if we are done with this position.
                   data    += ( copy_length == 8*sizeof(Integer) - data_pos )  ? 1 : 0;
                   value   += ( copy_length == 8*sizeof(Integer) - value_pos ) ? 1 : 0;
+
+                  // New bit positions
                   data_pos  = ( data_pos + copy_length )  % (8*sizeof(Integer));
                   value_pos = ( value_pos + copy_length ) % (8*sizeof(Integer));
                 }
@@ -196,6 +341,14 @@ namespace
         }
     };
 
+  /////////////////////////////////////////////////////////////////////////////
+  // BitFieldArray implementations dispatch helpers.
+
+  /** Dispatches to the different BitFieldArray implementations depending on the properties of the element size.
+   * @tparam S  The element size in bits.
+   * @tparam N  The array capacity.
+   * @tparam Integer  The working integer type.
+   */
   template <
     std::size_t S,
     std::size_t N,
@@ -211,7 +364,14 @@ namespace
     {
     };
 
-  template < 
+  /** Working integer type depending on the properties of the element size.
+   * @tparam S  The element size in bits.
+   * @tparam IsMultipleOfChar true if \p S is a multiple of 8.
+   * @tparam IsMultipleOfLong true if \p S is a multiple of the bit size of a unsigned long int.
+   *
+   * The default implementation uses an unsigned long int (i.e. std::size_t) as the working integer type.
+   */
+  template <
     std::size_t S,
     bool IsMultipleOfChar,
     bool IsMultipleOfLong
@@ -221,12 +381,21 @@ namespace
       typedef std::size_t type;
     };
 
+  /** Working integer type depending on the properties of the element size.
+   * @tparam S  The element size in bits.
+   *
+   * Specialized implementation that uses an unsigned char as the working integer type when
+   * the element size is a multiple of 8 but not a multiple to the unsigned long int bit size.
+   */
   template < std::size_t S >
   struct BitFieldArrayInteger< S, true, false >
     {
       typedef unsigned char type;
     };
 
+  /** Dispatcher to get the working integer type depending on the element size.
+   * @tparam S  The element size in bits.
+   */
   template < std::size_t S >
   struct BitFieldArrayIntegerDispatch
     : BitFieldArrayInteger< S, IsDivisibleBy< S, 8 >::value, IsDivisibleBy< S, 8*sizeof(std::size_t) >::value >
@@ -234,9 +403,14 @@ namespace
 
 } // anonymous namespace
 
+///////////////////////////////////////////////////////////////////////////////
+// IMPLEMENTATION of inline methods.
+///////////////////////////////////////////////////////////////////////////////
+
 namespace DGtal
 {
 
+// Reads a value
 template < typename T, std::size_t S, std::size_t N >
 inline
 T BitFieldArray<T,S,N>::getValue( std::size_t i ) const
@@ -254,12 +428,13 @@ T BitFieldArray<T,S,N>::getValue( std::size_t i ) const
   return result;
 }
 
+// Writes a value
 template < typename T, std::size_t S, std::size_t N >
 inline
 void BitFieldArray<T,S,N>::setValue( std::size_t i, Value const& value )
 {
   typedef typename BitFieldArrayIntegerDispatch<S>::type Integer;
-  
+
   BitFieldArrayImplDispatch < S, N, Integer >
     ::setValue(
                i,

@@ -162,6 +162,7 @@ struct Bits
      * @tparam    T       The type of the value.
      * @param[in] nthBit  Position of the first set bit.
      * @param[in] width   Number of consecutive set bits.
+     * @warning \p width must be smaller than the bits size of \p T.
      */
     template<typename T>
     static inline
@@ -181,6 +182,7 @@ struct Bits
      * @param[in] toValue   The destination value.
      * @param[in] toPos     The position where to copy the first bit.
      * @param[in] width     Number of consecutive bits to be copied.
+     * @warning \p width must be smaller than the bits size of \p T.
      */
     template < typename T >
     static inline
@@ -196,6 +198,7 @@ struct Bits
      * @param[in] toValue   The destination value.
      * @param[in] toPos     The position where to copy the first bit.
      * @param[in] width     Number of consecutive bits to be copied.
+     * @warning \p width must be smaller than the bits size of \p T.
      */
     template < typename T >
     static inline
@@ -211,6 +214,7 @@ struct Bits
      * @param[in] fromPos   The position of the first bit to be copied in the origin value.
      * @param[in] toValue   The destination value.
      * @param[in] width     Number of consecutive bits to be copied.
+     * @warning \p width must be smaller than the bits size of \p T.
      */
     template < typename T >
     static inline

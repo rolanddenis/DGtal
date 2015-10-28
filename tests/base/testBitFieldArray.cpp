@@ -1,3 +1,31 @@
+/**
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU Lesser General Public License as
+ *  published by the Free Software Foundation, either version 3 of the
+ *  License, or  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ **/
+
+/**
+ * @file testBitFieldArray.cpp
+ * @ingroup Tests
+ * @author Roland Denis (\c roland.denis@univ-smb.fr )
+ *
+ * @date 2015/10/27
+ * 
+ * @brief Test file for BitFieldArray. Benchmark is also available with the [.bench] hidden tag.
+ *
+ * This file is part of the DGtal library
+ */
+
 #include <DGtal/base/BitFieldArray.h>
 #include "DGtalCatch.h"
 
@@ -483,7 +511,7 @@ void initStruct( TStruct& data, unsigned long int seed )
 //////////////////////////////////////////////////////////////////////////////
 //                        Test helpers: test context.
 //////////////////////////////////////////////////////////////////////////////
-/** Test case helper class.
+/** Test fixture.
  * @tparam S  Size of the bit-field in bits.
  * @tparam N  Size of the array.
  */
@@ -560,28 +588,33 @@ TEST_BITFIELDARRAY( 301 )
 //                               Benchmark helper
 //////////////////////////////////////////////////////////////////////////////
 
+/** Benchmark related class and methods.
+ * @tparam S Size, in bits, of the structure used in this benchmark.
+ */
 template < std::size_t S >
 struct BenchHelper
 {
-  typedef StructOfBitSize<S>        BitField;
-  typedef StructOfBitSizeNoLong<S>  BitFieldNoLong;
+  typedef StructOfBitSize<S>        BitField; //< Structure of size S bits.
+  typedef StructOfBitSizeNoLong<S>  BitFieldNoLong; //< Structure of size S bits, without using unsigned long fields.
 
-  BOOST_STATIC_CONSTANT( std::size_t, BitSize = S );
-  BOOST_STATIC_CONSTANT( std::size_t, MaxMemoryUsage = 1 << 27 );
-  BOOST_STATIC_CONSTANT( std::size_t, ArraySize = MaxMemoryUsage / sizeof(BitField) );
+  BOOST_STATIC_CONSTANT( std::size_t, BitSize = S ); //< Size in bits of the structure 
+  BOOST_STATIC_CONSTANT( std::size_t, MaxMemoryUsage = 1 << 26 ); //< Maximum allowed memory usage, in bytes.
+  BOOST_STATIC_CONSTANT( std::size_t, ArraySize = MaxMemoryUsage / sizeof(BitField) ); //< Array size that respect the memory usage restriction.
   
-  typedef DGtal::BitFieldArray<BitField, S, ArraySize> BitFieldArray;
+  typedef DGtal::BitFieldArray<BitField, S, ArraySize> BitFieldArray; //< Typedef on the BitFieldArray.
 
-  BitField*       myBitFieldCArray;
-  BitFieldNoLong* myBitFieldNoLongCArray;
-  BitFieldArray*  myBitFieldArray;
+  BitField*       myBitFieldCArray; //< C-style array of BitField
+  BitFieldNoLong* myBitFieldNoLongCArray; //< C-style array of BitFieldNoLong
+  BitFieldArray*  myBitFieldArray; //< BitFieldArray instance
 
+  /// Constructor (memory allocation).
   BenchHelper()
     : myBitFieldCArray( new BitField[ArraySize] )
     , myBitFieldNoLongCArray( new BitFieldNoLong[ArraySize] )
     , myBitFieldArray( new BitFieldArray )
     {}
 
+  /// Destructor (freeing memory).
   ~BenchHelper()
     {
       delete[] myBitFieldCArray;
@@ -589,7 +622,11 @@ struct BenchHelper
       delete myBitFieldArray;
     }
 
-  // Use a read value to avoid unwanted compiler optimizations
+  /** Uses a value to avoid dead-code elimination.
+   * @tparam T      Value type.
+   * @param  value  The value to be used.
+   * @return a value calculated from the given value.
+   */
   template < typename T >
   static inline
   unsigned long checkRead( T const& value )
@@ -600,6 +637,9 @@ struct BenchHelper
 
   /////////////////// Read Functions ////////////////////
 
+  /** Reads the C-style array of BitField.
+   * @return a value calculated from each BitField, to avoid dead-code elimination.
+   */
   unsigned long readBitFieldCArray() const
     {
       unsigned long sum = 0;
@@ -610,6 +650,9 @@ struct BenchHelper
       return sum;
     }
 
+  /** Reads the C-style array of BitFieldNoLong.
+   * @return a value calculated from each BitFieldNoLong, to avoid dead-code elimination.
+   */
   unsigned long readBitFieldNoLongCArray() const
     {
       unsigned long sum = 0;
@@ -620,6 +663,9 @@ struct BenchHelper
       return sum;
     }
 
+  /** Reads the BitFieldArray.
+   * @return a value calculated from each BitField, to avoid dead-code elimination.
+   */
   unsigned long readBitFieldArray() const
     {
       unsigned long sum = 0;
@@ -632,6 +678,7 @@ struct BenchHelper
 
   /////////////////// Write Functions ////////////////////
   
+  //// Writes into the C-style array of BitField.
   void writeBitFieldCArray()
     {
       BitField value;
@@ -642,6 +689,7 @@ struct BenchHelper
         }
     }
   
+  //// Writes into the C-style array of BitFieldNoLong.
   void writeBitFieldNoLongCArray()
     {
       BitFieldNoLong value;
@@ -652,6 +700,7 @@ struct BenchHelper
         }
     }
   
+  //// Writes into the BitFieldArray.
   void writeBitFieldArray()
     {
       BitField value;
@@ -664,6 +713,9 @@ struct BenchHelper
 
   /////////////////// Bench Functions ////////////////////
 
+  /** Benchmark the reading of the C-style array of BitField.
+   * @return the memory bandwidth (in bits/sec) from the meaningful part of the data (BitSize bits).
+   */
   double benchReadBitFieldCArray() const
     {
       unsigned long int sum = 0;
@@ -675,6 +727,9 @@ struct BenchHelper
       return ArraySize*BitSize*double(1e9) / double(timer.elapsed().wall) + 1e-99*sum;
     }
   
+  /** Benchmark the writing of the C-style array of BitField.
+   * @return the memory bandwidth (in bits/sec) from the meaningful part of the data (BitSize bits).
+   */
   double benchWriteBitFieldCArray()
     {
       writeBitFieldCArray();
@@ -685,6 +740,9 @@ struct BenchHelper
       return ArraySize*BitSize*double(1e9) / double(timer.elapsed().wall);
     }
   
+  /** Benchmark the reading of the C-style array of BitFieldNoLong.
+   * @return the memory bandwidth (in bits/sec) from the meaningful part of the data (BitSize bits).
+   */
   double benchReadBitFieldNoLongCArray() const
     {
       unsigned long int sum = 0;
@@ -696,6 +754,9 @@ struct BenchHelper
       return ArraySize*BitSize*double(1e9) / double(timer.elapsed().wall) + 1e-99*sum;
     }
   
+  /** Benchmark the writing of the C-style array of BitFieldNoLong.
+   * @return the memory bandwidth (in bits/sec) from the meaningful part of the data (BitSize bits).
+   */
   double benchWriteBitFieldNoLongCArray()
     {
       writeBitFieldNoLongCArray();
@@ -706,6 +767,9 @@ struct BenchHelper
       return ArraySize*BitSize*double(1e9) / double(timer.elapsed().wall);
     }
   
+  /** Benchmark the reading of the BitFieldArray.
+   * @return the memory bandwidth (in bits/sec) from the meaningful part of the data (BitSize bits).
+   */
   double benchReadBitFieldArray() const
     {
       unsigned long int sum = 0;
@@ -717,6 +781,9 @@ struct BenchHelper
       return ArraySize*BitSize*double(1e9) / double(timer.elapsed().wall) + 1e-99*sum;
     }
   
+  /** Benchmark the writing of the BitFieldArray.
+   * @return the memory bandwidth (in bits/sec) from the meaningful part of the data (BitSize bits).
+   */
   double benchWriteBitFieldArray()
     {
       writeBitFieldArray();
@@ -727,6 +794,11 @@ struct BenchHelper
       return ArraySize*BitSize*double(1e9) / double(timer.elapsed().wall);
     }
 
+  /** Benchmark read/write of all containers.
+   * Output the results as space separated values in a given stream.
+   * @tparam TStream  The stream type.
+   * @param  os       The output stream.
+   */
   template < typename TStream >
   void benchAll( TStream & os )
     {
@@ -746,6 +818,7 @@ struct BenchHelper
     }
 };
 
+// Benchmark BitFieldArray with different sizes.
 TEST_CASE( "Bench test", "[.bench]" )
 {
 #define BOOST_PP_LOCAL_MACRO(S) \
@@ -754,5 +827,5 @@ TEST_CASE( "Bench test", "[.bench]" )
 #define BOOST_PP_LOCAL_LIMITS (1, 256)
 #include BOOST_PP_LOCAL_ITERATE()
 
-
 }
+
