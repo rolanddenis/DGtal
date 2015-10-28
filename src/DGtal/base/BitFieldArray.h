@@ -19,7 +19,6 @@ struct BitFieldArray
 {
   typedef BitFieldArray<T, S, N>  Self;
   typedef T   Value;
-  typedef std::size_t   Integer;
 
   BOOST_STATIC_CONSTANT( std::size_t, sizeInByte = (S*N+7)/8 );
 

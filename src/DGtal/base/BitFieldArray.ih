@@ -211,6 +211,26 @@ namespace
     {
     };
 
+  template < 
+    std::size_t S,
+    bool IsMultipleOfChar,
+    bool IsMultipleOfLong
+  >
+  struct BitFieldArrayInteger
+    {
+      typedef std::size_t type;
+    };
+
+  template < std::size_t S >
+  struct BitFieldArrayInteger< S, true, false >
+    {
+      typedef unsigned char type;
+    };
+
+  template < std::size_t S >
+  struct BitFieldArrayIntegerDispatch
+    : BitFieldArrayInteger< S, IsDivisibleBy< S, 8 >::value, IsDivisibleBy< S, 8*sizeof(std::size_t) >::value >
+    {};
 
 } // anonymous namespace
 
@@ -221,6 +241,8 @@ template < typename T, std::size_t S, std::size_t N >
 inline
 T BitFieldArray<T,S,N>::getValue( std::size_t i ) const
 {
+  typedef typename BitFieldArrayIntegerDispatch<S>::type Integer;
+
   Value result;
   BitFieldArrayImplDispatch< S, N, Integer >
     ::getValue(
@@ -236,6 +258,8 @@ template < typename T, std::size_t S, std::size_t N >
 inline
 void BitFieldArray<T,S,N>::setValue( std::size_t i, Value const& value )
 {
+  typedef typename BitFieldArrayIntegerDispatch<S>::type Integer;
+  
   BitFieldArrayImplDispatch < S, N, Integer >
     ::setValue(
                i,
