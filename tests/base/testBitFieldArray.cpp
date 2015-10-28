@@ -20,7 +20,7 @@
  * @author Roland Denis (\c roland.denis@univ-smb.fr )
  *
  * @date 2015/10/27
- * 
+ *
  * @brief Test file for BitFieldArray. Benchmark is also available with the [.bench] hidden tag.
  *
  * This file is part of the DGtal library
@@ -68,7 +68,7 @@ struct StructLongArray
     {
       longArray[i] = value;
     }
-  
+
   /** Tests equality between two unsigned long int array.
    * @param other   The other instance.
    */
@@ -100,7 +100,7 @@ struct StructLongArray<0>
   void setValue ( std::size_t /* i */, unsigned long /* value */ )
     {
     }
-  
+
   /** Tests equality between two zero-length unsigned long int array.
    * @return always true.
    */
@@ -168,7 +168,7 @@ struct StructCharArray<0>
   void setValue ( std::size_t /* i */, unsigned long /* value */ )
     {
     }
-  
+
   /** Tests equality between two zero-length unsigned char array.
    * @return always true.
    */
@@ -203,7 +203,7 @@ struct StructBitField
     {
       bitField = static_cast<unsigned char>(value);
     }
-  
+
   /** Tests equality between two bit-field of same size.
    * @param other   The other instance.
    */
@@ -233,7 +233,7 @@ struct StructBitField<0>
   void setValue ( std::size_t /* i */, unsigned long /* value */ )
     {
     }
-  
+
   /** Tests equality between two zero-length bit-fields.
    * @return always true.
    */
@@ -597,10 +597,10 @@ struct BenchHelper
   typedef StructOfBitSize<S>        BitField; //< Structure of size S bits.
   typedef StructOfBitSizeNoLong<S>  BitFieldNoLong; //< Structure of size S bits, without using unsigned long fields.
 
-  BOOST_STATIC_CONSTANT( std::size_t, BitSize = S ); //< Size in bits of the structure 
+  BOOST_STATIC_CONSTANT( std::size_t, BitSize = S ); //< Size in bits of the structure
   BOOST_STATIC_CONSTANT( std::size_t, MaxMemoryUsage = 1 << 26 ); //< Maximum allowed memory usage, in bytes.
   BOOST_STATIC_CONSTANT( std::size_t, ArraySize = MaxMemoryUsage / sizeof(BitField) ); //< Array size that respect the memory usage restriction.
-  
+
   typedef DGtal::BitFieldArray<BitField, S, ArraySize> BitFieldArray; //< Typedef on the BitFieldArray.
 
   BitField*       myBitFieldCArray; //< C-style array of BitField
@@ -677,7 +677,7 @@ struct BenchHelper
     }
 
   /////////////////// Write Functions ////////////////////
-  
+
   //// Writes into the C-style array of BitField.
   void writeBitFieldCArray()
     {
@@ -688,7 +688,7 @@ struct BenchHelper
           myBitFieldCArray[i] = value;
         }
     }
-  
+
   //// Writes into the C-style array of BitFieldNoLong.
   void writeBitFieldNoLongCArray()
     {
@@ -699,7 +699,7 @@ struct BenchHelper
           myBitFieldNoLongCArray[i] = value;
         }
     }
-  
+
   //// Writes into the BitFieldArray.
   void writeBitFieldArray()
     {
@@ -726,7 +726,7 @@ struct BenchHelper
 
       return ArraySize*BitSize*double(1e9) / double(timer.elapsed().wall) + 1e-99*sum;
     }
-  
+
   /** Benchmark the writing of the C-style array of BitField.
    * @return the memory bandwidth (in bits/sec) from the meaningful part of the data (BitSize bits).
    */
@@ -739,7 +739,7 @@ struct BenchHelper
 
       return ArraySize*BitSize*double(1e9) / double(timer.elapsed().wall);
     }
-  
+
   /** Benchmark the reading of the C-style array of BitFieldNoLong.
    * @return the memory bandwidth (in bits/sec) from the meaningful part of the data (BitSize bits).
    */
@@ -753,7 +753,7 @@ struct BenchHelper
 
       return ArraySize*BitSize*double(1e9) / double(timer.elapsed().wall) + 1e-99*sum;
     }
-  
+
   /** Benchmark the writing of the C-style array of BitFieldNoLong.
    * @return the memory bandwidth (in bits/sec) from the meaningful part of the data (BitSize bits).
    */
@@ -766,7 +766,7 @@ struct BenchHelper
 
       return ArraySize*BitSize*double(1e9) / double(timer.elapsed().wall);
     }
-  
+
   /** Benchmark the reading of the BitFieldArray.
    * @return the memory bandwidth (in bits/sec) from the meaningful part of the data (BitSize bits).
    */
@@ -777,10 +777,10 @@ struct BenchHelper
       boost::timer::cpu_timer timer;
       sum += readBitFieldArray();
       timer.stop();
-      
+
       return ArraySize*BitSize*double(1e9) / double(timer.elapsed().wall) + 1e-99*sum;
     }
-  
+
   /** Benchmark the writing of the BitFieldArray.
    * @return the memory bandwidth (in bits/sec) from the meaningful part of the data (BitSize bits).
    */
@@ -802,7 +802,7 @@ struct BenchHelper
   template < typename TStream >
   void benchAll( TStream & os )
     {
-      os  << S << " " 
+      os  << S << " "
           << sizeof(DGtal::BitFieldArray<BitField, S, 1000>) << " "
           << 1000 * sizeof(BitField) << " "
           << 1000 * sizeof(BitFieldNoLong) << " " << std::flush;

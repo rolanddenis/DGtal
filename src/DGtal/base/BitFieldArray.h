@@ -98,7 +98,7 @@ struct BitFieldArray
 {
   BOOST_STATIC_ASSERT_MSG( S > 0, "The element size must be non-null." );
   BOOST_STATIC_ASSERT_MSG( N > 0, "The array capacity must be non-null." );
-  
+
   typedef BitFieldArray<T, S, N>  Self; //< Self type.
   typedef T   Value; //< Type of an element.
 
