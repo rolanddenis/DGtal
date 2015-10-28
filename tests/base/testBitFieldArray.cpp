@@ -803,9 +803,9 @@ struct BenchHelper
   void benchAll( TStream & os )
     {
       os  << S << " " 
-          << sizeof(BitFieldArray) << " "
-          << ArraySize * sizeof(BitField) << " "
-          << ArraySize * sizeof(BitFieldNoLong) << " " << std::flush;
+          << sizeof(DGtal::BitFieldArray<BitField, S, 1000>) << " "
+          << 1000 * sizeof(BitField) << " "
+          << 1000 * sizeof(BitFieldNoLong) << " " << std::flush;
 
       os << benchReadBitFieldArray() << " " << std::flush;
       os << benchReadBitFieldCArray() << " " << std::flush;
@@ -821,6 +821,13 @@ struct BenchHelper
 // Benchmark BitFieldArray with different sizes.
 TEST_CASE( "Bench test", "[.bench]" )
 {
+  std::cout << "# Gnuplot cmd: set logscale y; plot for [i=5:10] 'bench.dat' u 1:i w lp title columnheader(i)" << std::endl
+    << "Value_size "
+    << "BitFieldArray_1000size BitFieldCArray_1000size BitFieldCArrayNoLong_1000size "
+    << "BitFieldArray_read BitFieldCArray_read BitFieldCArrayNoLong_read "
+    << "BitFieldArray_write BitFieldCArray_write BitFieldCArrayNoLong_write"
+    << std::endl;
+
 #define BOOST_PP_LOCAL_MACRO(S) \
   BenchHelper<S>().benchAll( std::cout );
 

@@ -25,6 +25,8 @@
 // Inclusions
 #include <cstring>
 #include <algorithm>
+
+#include <DGtal/base/Assert.h>
 ///////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -415,6 +417,8 @@ template < typename T, std::size_t S, std::size_t N >
 inline
 T BitFieldArray<T,S,N>::getValue( std::size_t i ) const
 {
+  ASSERT_MSG( i < N, "Trying to read out of bounds.");
+  
   typedef typename BitFieldArrayIntegerDispatch<S>::type Integer;
 
   Value result;
@@ -433,6 +437,8 @@ template < typename T, std::size_t S, std::size_t N >
 inline
 void BitFieldArray<T,S,N>::setValue( std::size_t i, Value const& value )
 {
+  ASSERT_MSG( i < N, "Trying to write out of bounds.");
+  
   typedef typename BitFieldArrayIntegerDispatch<S>::type Integer;
 
   BitFieldArrayImplDispatch < S, N, Integer >
