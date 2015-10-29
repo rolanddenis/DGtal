@@ -49,6 +49,8 @@
 
 namespace
 {
+
+  /// Calculates the log2 of an integer.
   template < std::size N >
   struct Log2
     {
@@ -121,7 +123,6 @@ namespace DGtal
 
      @tparam TData the type for the datas stored in the list.
      @tparam L the maximum number of labels.
-     @tparam TWord the integer used to store the labels (if L >= log_2( digits( TWord ) ) then several consecutive words are stored.), e.g. DGtal::uint8_t.
      @tparam N the number of data stored in the first block.
      @tparam M the number of data stored in the further blocks.
 
@@ -129,32 +130,34 @@ namespace DGtal
      - n is the size of the container
      - b is the number of blocks ( b = 1 + (size()-N) / M ).
   */
-  template <typename TData, unsigned int L, typename TWord,
+  template <typename TData, unsigned int L,
             unsigned int N, unsigned int M>
   class BigLabelledMap
   {
     BOOST_STATIC_ASSERT( L >= 1 );
     BOOST_STATIC_ASSERT( N >= 0 );
     BOOST_STATIC_ASSERT( M >= 2 );
-  
+
 public:
     // Maximum number of labels
-    BOOST_STATIC_CONSTANT( std::size_t, LabelSize = Log2<L>::value );
-    BOOST_STATIC_CONSTANT( std::size_t, MaxLabel  = L );
+    BOOST_STATIC_CONSTANT( std::size_t, labelSize = Log2<L>::value ); //< Bit size of a label
+    BOOST_STATIC_CONSTANT( std::size_t, maxLabel  = L ); //< Real maximum number of labels.
+
+    BOOST_STATIC_CONSTANT( std::size_t, firstBlockSize = N ); //< Minimal capacity of the first block.
+    BOOST_STATIC_CONSTANT( std::size_t, nextBlockSize = M ); //< Minimal capacity of the next blocks.
 
     // ----------------------- Public types ------------------------------
-    typedef BigLabelledMap<TData, L, TWord, N, M> Self;
-    typedef TData Data;
-    typedef TWord Word;
+    typedef BigLabelledMap<TData, L, N, M> Self; //< Self type.
+    typedef TData Data; //< Data type.
 
-    typedef std::size_t Label;
-    typedef BitFieldArray< Label, LabelSize, N+2 > FirstLabels;
-    typedef BitFieldArray< Label, LabelSize, M > AnyLabels;
+    typedef std::size_t Label; //< Label type.
+    typedef BitFieldArray< Label, labelSize, firstBlockMaxSize+1 >  FirstLabels; //< Label array in the first block.
+    typedef BitFieldArray< Label, labelSize, nextBlockMaxSize >     NextLabels; //< Label array in the next blocks.
 
-    typedef Label Key;
-    typedef std::pair<const Key, Data> Value;
-    //typedef FakeKeyValuePair<Key, Data> Value;
+    typedef Label Key; //< Key type (i.e. label type).
+    typedef std::pair<const Key, Data> Value; //< Type of a (label,data) pair.
 
+    // Iterator related typedefs
     typedef typename LabelsType::ConstIterator LabelsConstIterator;
     typedef std::ptrdiff_t DifferenceType;
     typedef std::size_t SizeType;
@@ -183,254 +186,301 @@ public:
     typedef KeyCompare key_compare;
     typedef ValueCompare value_compare;
 
-    struct __FirstBlock; ///< Forward declaration
-    struct __AnyBlock; ///< Forward declaration
+    // Data blocks
+    template < std::size_t blockSize, std::size_t labelArrayShift > struct __Block; ///< Forward declaration.
+    typedef __Block<firstBlockSize, 1>  __FirstBlock;
+    typedef __Block<nextBlockSize, 0>   __NextBlock;
 
     union BlockPointer {
       __FirstBlock* first;
-      __AnyBlock* any;
+      __NextBlock* any;
     };
 
-    /// Used in first block to finish it or to point to the next block.
-    union DataOrBlockPointer {
-      Data lastData; // used when at the end of the list
-      __AnyBlock* nextBlock;  // used otherwise
-    };
 
     /// Represents the first block in the container.
     /// Internal structure.
-    struct __FirstBlock
+    template <
+      std::size_t blockSize,
+      std::size_t labelArrayShift = 0
+    >
+    struct __Block
       {
-        inline
-        __FirstBlock() 
-          { 
-            data.nextBlock = 0;
-          }
+        BOOST_STATIC_CONSTANT( std::size_t, extraSpace = sizeof(TData)/sizeof(*TData) ); //< Extra space for storing values when the pointer is not used.
+        BOOST_STATIC_CONSTANT( std::size_t, blockMaxSize = blockSize + extraSpace ); //< Capacity of this block with extra space.
 
-        inline
-        std::size_t getLabel( std::size_t idx )
+        typedef BitFieldArray< Label, labelSize, blockMaxSize + labelArrayShift >  Labels; //< Label array.
+
+        /// Used in any block to finish it or to point to the next block.
+        union DataOrBlockPointer
           {
-            return labels.getValue(idx+1);
-          }
+            Data lastData[extraSpace]; // used when at the end of the list
+            __NextBlock* nextBlock;  // used otherwise
+          };
 
+        /// Constructor.
         inline
-        void setLabel( std::size_t idx, Label label )
+        __Block()
           {
-            labels.setValue( idx+1, label );
+            myTail.nextBlock = 0;
           }
 
+        /** Returns true if the there is a next block
+         * @param size  the current number of stored values in this block and the following.
+         */
         inline
-        Data & insert( unsigned int idx, unsigned int size, const Data & v )
+        bool hasNextBlock( std::size_t size ) const
           {
-            ASSERT( idx <= size );
-            if ( size < N )
-              {
-                datas[size] = datas[idx];
-                setLabel( size, getLabel(idx) );
-                return ( datas[ idx ] = v );
-              }
-            else if ( size == N )
-              {
-                if ( idx < N )
-                  {
-                    data.lastData = datas[idx];
-                    setLabel( N, getLabel(idx) );
-                    return ( datas[ idx ] = v );
-                  }
-                else // idx == N
-                  {
-                    return ( data.lastData = v );
-                  }
-              }
-            else if ( size == (N+1) )
-              {
-                __AnyBlock* next = new __AnyBlock;
-                if ( idx < N )
-                  {
-                    next->datas[ 0 ] = datas[idx];
-                    next->setLabel(0) = getLabel(idx);
-                    data.nextBlock = next;
-                    return ( datas[ idx ] = v );
-                  }
-                else if ( idx == N )
-                  {
-                    next->datas[ 1 ] = data.lastData;
-                    next.setLabel(1, getLabel(N) );
-                    data.nextBlock = next;
-                    return ( next->datas[ 0 ] = v );
-                  }
-                else //if ( idx > N )
-                  {
-                    next->datas[ 0 ] = data.lastData;
-                    next->setLabel(0, getLabel(N) );
-                    data.nextBlock = next;
-                    return ( next->datas[ 1 ] = v );
-                  }
-              }
-            else // size > N + 1
-              {
-                if ( idx < N )
-                  {
-                    Data v1 = datas[ N - 1 ];
-                    std::copy_backward( datas + idx, datas + N - 1, datas + N );
-                    data.nextBlock->insert( 0, size - N, v1 );
-                    return ( datas[ idx ] = v );
-                  }
-                else
-                  return data.nextBlock->insert( idx - N, size - N, v );
-              }
+            return size > blockMaxSize;
           }
 
-      inline 
-      void erase( unsigned int idx, unsigned int size )
-      {
-	// std::cerr << "__FirstBlock::erase(" << idx << ")"
-	// 	  << " this=" << this
-	// 	  << " next=" << data.nextBlock
-	// 	  << std::endl;
-	ASSERT( idx < size );
-	if ( size <= ( N + 1 ) )
-	  {
-	    // works also in the case we use 'data' to store a N+1-th data.
-	    std::copy( datas + idx + 1, datas + size, datas + idx );
-            data.nextBlock = 0;
-	  }
-	else if ( size == N + 2 )
-	  { 
-	    if ( idx < N )
-	      {
-		std::copy( datas + idx + 1, datas + N, datas + idx );
-		datas[ N - 1 ] = data.nextBlock->datas[ 0 ];
-                Data tmp = data.nextBlock->datas[ 1 ];
-		delete data.nextBlock;
-                data.lastData = tmp;
-	      }
-	    else if ( idx == N )
-              {
-                Data tmp = data.nextBlock->datas[ 1 ];
-		delete data.nextBlock;
-                data.lastData = tmp;
-              }
-            else // idx == N + 1
-              {
-                Data tmp = data.nextBlock->datas[ 0 ];
-		delete data.nextBlock;
-                data.lastData = tmp;
-              }
-	  }
-	else // size > N + 2
-	  {
-	    if ( idx < N )
-	      {
-		std::copy( datas + idx + 1, datas + N, datas + idx );
-		datas[ N - 1 ] = data.nextBlock->datas[ 0 ];
-		data.nextBlock = data.nextBlock->erase( 0, size - N );
-	      }
-	    else
-	      data.nextBlock = data.nextBlock->erase( idx - N, size - N );
-	  }
-      }
+        /** Returns the label at position idx in the current block.
+         * @param idx   the position where to read the label.
+         */
+        inline
+        Label getBlockLabel( std::size_t idx ) const
+          {
+            ASSERT( idx < blockMaxSize );
+            return myLabels.getValue( idx + labelArrayShift );
+          }
 
-      FirstLabels labels;
-      Data datas[ N ];
-      DataOrBlockPointer data;
-    };
-
-    /// Represents a block (except the first) in the container.
-    /// Internal structure.
-    struct __AnyBlock {
-      inline __AnyBlock() : next( 0 ) {}
-
-      inline
-      Data & insert( unsigned int idx, unsigned int size, const Data & v )
-      {
-        ASSERT( idx <= size );
-	if ( idx >= M ) 
-	  {
-	    if ( next == 0 )
-	      {
-		ASSERT( size == M );
-		ASSERT( idx == M );
-		next = new __AnyBlock;
-                return ( next->datas[ 0 ] = v );
-	      }
-            else
+        /** Returns the label at position idx, whatever the block where it is.
+         * @param idx   the position where to read the label.
+         * @param size  the current number of stored values in this block and the following.
+         */
+        inline
+        Label getLabel( std::size_t idx, std::size_t size ) const
+          {
+            ASSERT( idx < size );
+            if ( size <= blockMaxSize || idx <= blockSize )
               {
-		ASSERT( size > M );
-                return next->insert( idx - M, size - M, v );
-              }
-	  }
-	else 
-	  { // idx < M
-            if ( size <= ( M - 1) ) // ( size < ( M - 1) )
-              {
-                ASSERT( next == 0 );
-                std::copy_backward( datas + idx, datas + size, 
-                                    datas + size + 1 );
-                return ( datas[ idx ] = v );
+                return getBlockLabel( idx );
               }
             else
               {
-                Data v1 = datas[ M - 1 ];
-                std::copy_backward( datas + idx, datas + M - 1, datas + M );
-                // if ( size >= M )
-                //   {
-                if ( next == 0 )
-                  {
-                    ASSERT( size == M );
-                    next = new __AnyBlock;
-                    next->datas[ 0 ] = v1;
-                  }
-                else
-                  {
-                    ASSERT( size > M );
-                    next->insert( 0, size - M, v1 );
-                  }
-                // }
-                return ( datas[ idx ] = v );
+                return myTail.nextBlock->getLabel( idx - blockSize, size - blockSize );
               }
-	  }
-      }
-
-      inline 
-      __AnyBlock* erase( unsigned int idx, unsigned int size )
-      {
-	// std::cerr << "__AnyBlock::erase(" << idx << "," << size << ")" 
-	// 	  << " this=" << this
-	// 	  << " next=" << next
-	// 	  << std::endl;
-        if ( size == 1 )
-          {
-            ASSERT( idx == 0 );
-            delete this;
-            return 0;
           }
-	if ( idx < M )
-	  {
-	    std::copy( datas + idx + 1, datas + M, datas + idx );
-	    if ( next != 0 )
-	      {
-		ASSERT( size > M );
-		datas[ M - 1 ] = next->datas[ 0 ];
-                next = next->erase( 0, size - M );
-	      }
-	  }
-	else
-	  next = next->erase( idx - M, size - M );
-	return this;
-      }
 
-      AnyLabels labels;
-      Data datas[ M ];
-      __AnyBlock* next;
-    };
+        /** Sets the label at position idx in the current block.
+         * @param idx   the position where to store the label.
+         * @param label the label.
+         */
+        inline
+        void setBlockLabel( std::size_t idx, Label label )
+          {
+            ASSERT( idx < blockMaxSize );
+            myLabels.setValue( idx + labelArrayShift, label );
+          }
+
+        /** Sets the label at position idx, whatever the block where it is (the block must exists).
+         * @param idx     the position where to store the label.
+         * @param label   the label.
+         * @param size    the current number of stored values in this block and the following.
+         */
+        inline
+        void setLabel( std::size_t idx, Label label, std::size_t size )
+          {
+            if ( size <= blockMaxSize || idx <= blockSize )
+              {
+                setBlockLabel( idx );
+              }
+            else
+              {
+                myTail.nextBlock->setLabel( idx - blockSize, size - firstBlockSize );
+              }
+          }
+
+        /** Sets a label and data at given position in this block.
+         * @param idx   the position where to write.
+         * @param label the label.
+         * @param data  the data.
+         * @return a reference to the written data.
+         */
+        inline
+        Data& setBlockValueAt( std::size_t idx, Label const& label, Data const& data )
+          {
+            ASSERT( idx < blockMaxSize );
+            setBlockLabel(idx, label);
+            return ( myData[idx] = data ); // Works also if we use extra space.
+          }
+
+        /** Sets a (label,data) pair at given position in this block.
+         * @param idx   the position where to write.
+         * @param value the (label,data) pair.
+         * @return a reference to the written data.
+         */
+        inline
+        Data& setBlockValueAt( std::size_t idx, Value const& value )
+          {
+            return setBlockData( idx, value.first, value.second );
+          }
+
+        /** Gets a (label,data) pair from given position in this block.
+         * @param idx   the position where to read.
+         * @return the (label,data) pair.
+         */
+        inline
+        Value getBlockValueAt( std::size_t idx ) const
+          {
+            ASSERT( idx < blockMaxSize );
+            return Value( getBlockLabel(idx), myData[idx] );
+          }
+
+        /** Get a data from given position in this block.
+         * @param idx   the position where to read.
+         * @return a mutable reference to the data.
+         */
+        inline
+        Data& getBlockDataAt( std::size_t idx )
+          {
+            ASSERT( idx < blockMaxSize );
+            return myData[idx];
+          }
+
+        /** Get a data from given position in this block.
+         * @param idx   the position where to read.
+         * @return a constant reference to the data.
+         */
+        inline
+        Data const& getBlockDataAt( std::size_t idx ) const
+          {
+            ASSERT( idx < blockMaxSize );
+            return myData[idx];
+          }
+
+        // Forward declaration.
+        Data& pushBack( Value const& value, std::size_t size );
+
+        /** Adds a data with given label.
+         * @param label   the label.
+         * @param data    the data.
+         * @param size    the current number of stored values in this block and the following.
+         */
+        inline
+        Data& pushBack( Label const& label, Data const& data, std::size_t size )
+          {
+            if ( size < blockMaxSize ) // Works also if we use extra space
+              {
+                setBlockLabel(size, label);
+                return ( myData[size] = data );
+              }
+            else if ( size == blockMaxSize )
+              {
+                __NextBlock* next = new __NextBlock;
+
+                // Move the extra space content to the next block.
+                for ( std::size_t i = 0; i < extraSpace; ++i )
+                  {
+                    next->pushBack( getBlockValueAt(i + blockSize), i );
+                  }
+
+                // Push the new value into the next block.
+                myTail.nextBlock = next;
+                return myTail.nextBlock->pushBack( label, data, extraSpace );
+              }
+            else // size > blockMaxSize
+              {
+                // Send the job to the next block.
+                return myTail.nextBlock->pushBack( label, data, size - blockSize );
+              }
+          }
+
+        /** Adds a (label,data) pair.
+         * @param value   the (label,data) pair.
+         * @param size    the current number of stored values in this block and the following.
+         */
+        inline
+        Data& pushBack( Value const& value, std::size_t size )
+          {
+            return pushBack( value.first, value.second, size );
+          }
+
+        /** Removes the last data and returns it.
+         * @param size  the current number of stored values in this blocks and the following.
+         */
+        inline
+        Value popBack( std::size_t size )
+          {
+            ASSERT( size > 0 );
+
+            if ( size <= blockMaxSize ) // Works also if we use extra space.
+              {
+                return getBlockValueAt(size-1);
+              }
+            else if ( size == blockMaxSize + 1)
+              {
+                __NextBlock* nextBlock = myTail.nextBlock;
+
+                const Value value = nextBlock->popBack( extraSpace+1 );
+
+                // Move the next block content into the extra space.
+                for ( std::size_t i = blockSize; i < blockMaxSize; ++i )
+                  {
+                    setBlockValueAt( i, nextBlock->getBlockValueAt( i-blockSize ) );
+                  }
+
+                delete nextBlock;
+                return value;
+              }
+            else // size > blockMaxSize + 1
+              {
+                return myTail.nextBlock->popBack( size - blockSize );
+              }
+          }
+
+        /** Removes the data at the given position.
+         * @param idx   the position of the data.
+         * @param size  the current number of stored values in this blocks and the following.
+         */
+        inline
+        void eraseAt( std::size_t idx, std::size_t size )
+          {
+            ASSERT( idx < size );
+
+            if ( idx == size-1 )
+              {
+                popBack( size );
+              }
+            else if ( size <= blockMaxSize ) // Works also if we use extra space.
+              {
+                setBlockValueAt( idx, getBlockValueAt(size-1) );
+              }
+            else if ( size == blockMaxSize + 1 )
+              {
+                __NextBlock* const nextBlock = myTail.nextBlock;
+
+                if ( idx < blockSize )
+                  setBlockValueAt( idx, nextBlock->getBlockValueAt( size-blockSize-1 ) );
+                else
+                  nextBlock->eraseAt( idx-blockSize, size-blockSize );
+
+                // Move the next block content into the extra space.
+                for ( std::size_t i = blockSize; i < blockMaxSize; ++i )
+                  {
+                    setBlockValueAt( i, nextBlock->getBlockValueAt( i-blockSize ) );
+                  }
+
+                delete nextBlock;
+              }
+            else // size > blockMaxSize + 1
+              {
+                myTail.nextBlock->eraseAt( idx - blockSize, size - blockSize );
+              }
+          }
+
+        Labels myLabels;
+        Data myData[ blockSize ];
+        DataOrBlockPointer myTail;
+      }; // end of class __Block
+
 
     /**
        Pseudo-random iterator to visit BigLabelledMap (it is
        only a random forward iterator).  Model of
        boost::ForwardIterator. Provides also + and += arithmetic.
     */
-    class BlockIterator {
+    class BlockIterator
+      {
     public:
       typedef BlockIterator Self;
       typedef TData Value;
@@ -458,25 +508,25 @@ public:
 
     protected:
       /**
-	 Constructor from first block and index. Used by class BigLabelledMap.
-      */
+       * Constructor from first block and index. Used by class BigLabelledMap.
+       */
       BlockIterator( __FirstBlock & block, unsigned int idx, unsigned int size );
-      
+
     public:
       /**
-	 Default destructor.
-      */
+       * Default destructor.
+       */
       ~BlockIterator();
 
       /**
-	 Default constructor.
-      */
+       * Default constructor.
+       */
       BlockIterator();
 
       /**
-	 Copy constructor.
-	 @param other the object to clone.
-      */
+       * Copy constructor.
+       * @param other the object to clone.
+       */
       BlockIterator( const BlockIterator & other );
 
       /**
@@ -485,60 +535,59 @@ public:
        * @return a reference on 'this'.
        */
       Self & operator= ( const Self & other );
-      
+
       /**
-	 Dereference operator.
-	 @return the current data of the iterator, if valid.
-      */
+       * Dereference operator.
+       * @return the current data of the iterator, if valid.
+       */
       Reference operator*() const;
-     
+
       /**
-	 Pointer dereference operator.
-	 @return a non-mutable pointer on the current data.
-      */  
+       * Pointer dereference operator.
+       * @return a non-mutable pointer on the current data.
+       */
       Pointer operator->() const;
-      
-      /** 
-	  Pre-increment operator.
-	  @return a reference to itself.
-      */
+
+      /**
+       * Pre-increment operator.
+       * @return a reference to itself.
+       */
       Self& operator++();
-      
-      /** 
-	  Post-increment operator.
-	  @return a reference to itself.
-      */
+
+      /**
+       * Post-increment operator.
+       * @return a reference to itself.
+       */
       Self operator++( int );
 
-      /** 
-	  Addition operator. Moves the iterator at position + \a n.
-	  @param n any positive integer
-	  @return a reference to itself.
-      */
+      /**
+       * Addition operator. Moves the iterator at position + \a n.
+       * @param n any positive integer
+       * @return a reference to itself.
+       */
       Self& operator+=( DifferenceType n );
 
-      /** 
-	  Positive offset dereference operator. Moves the iterator at position + \a n.
-	  @param n any positive integer
-	  @return a reference to itself.
-      */
+      /**
+       * Positive offset dereference operator. Moves the iterator at position + \a n.
+       * @param n any positive integer
+       * @return a reference to itself.
+       */
       Reference operator[]( DifferenceType n ) const;
-    
+
       /**
-	 Equality operator.
-	 @param other any other iterator.
-	 @return 'true' iff the iterators points on the same element.
-      */
+       * Equality operator.
+       * @param other any other iterator.
+       * @return 'true' iff the iterators points on the same element.
+       */
       bool operator==( const Self & other ) const;
-      
+
       /**
-	 Inequality operator.
-	 @param other any other iterator.
-	 @return 'true' iff the iterators points on different elements.
-      */
+       * Inequality operator.
+       * @param other any other iterator.
+       * @return 'true' iff the iterators points on different elements.
+       */
       bool operator!=( const Self & other ) const;
-      
-      
+
     };
 
 
@@ -579,7 +628,7 @@ public:
          Used by class BigLabelledMap.
       */
       BlockConstIterator( const __FirstBlock & block, unsigned int idx, unsigned int size );
-      
+
     public:
       /**
 	 Default destructor.
@@ -603,60 +652,60 @@ public:
        * @return a reference on 'this'.
        */
       Self & operator= ( const Self & other );
-      
+
       /**
 	 Dereference operator.
 	 @return the current data of the iterator, if valid.
       */
       Reference operator*() const;
-     
+
       /**
 	 Pointer dereference operator.
 	 @return a non-mutable pointer on the current data.
-      */  
+      */
       Pointer operator->() const;
-      
-      /** 
+
+      /**
 	  Pre-increment operator.
 	  @return a reference to itself.
       */
       Self& operator++();
-      
-      /** 
+
+      /**
 	  Post-increment operator.
 	  @return a reference to itself.
       */
       Self operator++( int );
 
-      /** 
+      /**
 	  Addition operator. Moves the iterator at position + \a n.
 	  @param n any positive integer
 	  @return a reference to itself.
       */
       Self& operator+=( DifferenceType n );
 
-      /** 
+      /**
 	  Positive offset dereference operator. Moves the iterator at position + \a n.
 	  @param n any positive integer
 	  @return a reference to itself.
       */
       Reference operator[]( DifferenceType n ) const;
-    
+
       /**
 	 Equality operator.
 	 @param other any other iterator.
 	 @return 'true' iff the iterators points on the same element.
       */
       bool operator==( const Self & other ) const;
-      
+
       /**
 	 Inequality operator.
 	 @param other any other iterator.
 	 @return 'true' iff the iterators points on different elements.
       */
       bool operator!=( const Self & other ) const;
-      
-      
+
+
     };
 
     // ----------------------- Iterator services ------------------------------
@@ -669,7 +718,7 @@ public:
     public:
       friend class BigLabelledMap;
       typedef ConstIterator Self;
-      // The following line is removed so that gcc-4.2 and gcc-4.6 compiles. 
+      // The following line is removed so that gcc-4.2 and gcc-4.6 compiles.
       //typedef typename BigLabelledMap<TData, L, TWord, N, M>::Value Value;
       typedef const Value* Pointer;
       /// Note the trick here. The reference is a rvalue. Works only for const iterator.
@@ -687,7 +736,7 @@ public:
 
     private:
       /// ConstIterator to visit keys.
-      LabelsConstIterator myLabelsIt; 
+      LabelsConstIterator myLabelsIt;
       /// ConstIterator to visit datas.
       BlockConstIterator myBlockIt;
 
@@ -720,27 +769,27 @@ public:
        * @return a reference on 'this'.
        */
       Self & operator= ( const Self & other );
-      
+
       /**
 	 Dereference operator.
 	 @return the current data of the iterator, if valid.
       */
       Reference operator*() const;
-     
+
       /**
 	 Pointer dereference operator.
          \b Warning: Not thread-safe !! Use operator* instead.
 	 @return a non-mutable pointer on the current data.
-      */  
+      */
       Pointer operator->() const;
-      
-      /** 
+
+      /**
 	  Pre-increment operator.
 	  @return a reference to itself.
       */
       Self& operator++();
-      
-      /** 
+
+      /**
 	  Post-increment operator.
 	  @return a reference to itself.
       */
@@ -752,7 +801,7 @@ public:
 	 @return 'true' iff the iterators points on the same element.
       */
       bool operator==( const Self & other ) const;
-      
+
       /**
 	 Inequality operator.
 	 @param other any other iterator.
@@ -764,7 +813,7 @@ public:
       Data & _data() const;
       const Data & _const_data() const;
     };
-    
+
     /// non-mutable class via iterators.
     typedef ConstIterator Iterator;
     /// Key comparator class. Always natural ordering.
@@ -786,7 +835,7 @@ public:
       }
     };
 
-    
+
     // ----------------------- Standard services ------------------------------
   public:
 
@@ -803,10 +852,10 @@ public:
 
     /**
        Constructor from range.
-       
+
        @tparam InputIterator model of boost::InputIterator whose
        value type is convertible to Value.
-       
+
        @param first an iterator on the first value of the range.
        @param last an iterator after the last value of the range.
     */
@@ -870,7 +919,7 @@ public:
 
        After the call to this member function, the elements in this
        container are those which were in mp before the call, and the
-       elements of mp are those which were in this. 
+       elements of mp are those which were in this.
 
        NB: not exactly standard ! The iterators pointing on the first
        block change roles ! The other references and pointers remain
@@ -879,12 +928,12 @@ public:
     void swap( Self & other );
 
     /**
-       Removes all the datas stored in the structure. 
+       Removes all the datas stored in the structure.
      */
     void clear();
 
     /**
-       Follows std::count. 
+       Follows std::count.
 
        @param key any label
        @return 0 if the key is not present in container, 1 otherwise.
@@ -930,11 +979,11 @@ public:
        return a pair<iterator,bool>).  Note that the data is
        associated to key only if key was not present in the container.
 
-       @param val a pair<key,data>. 
+       @param val a pair<key,data>.
 
        @return a pair <iterator,bool> where iterator points on the
        pair (key,data) while the boolean is true if a new element was
-       indeed created. 
+       indeed created.
 
        NB: This method is provided to follow the
        std::AssociativeContainer concept. You are discourage to use
@@ -962,10 +1011,10 @@ public:
        Insertion from range. Insert all values in the range. Be
        careful that if a value in the container has the same key as a
        value in the range, then the mapped data is not changed.
-       
+
        @tparam InputIterator model of boost::InputIterator whose
        value type is convertible to Value.
-       
+
        @param first an iterator on the first value of the range.
        @param last an iterator after the last value of the range.
     */
@@ -981,7 +1030,7 @@ public:
 
     /**
        Erases the element of key \a key.
-       
+
        @param key any key (in 0..L-1)
        @return the number of elements deleted (0 or 1).
     */
@@ -1035,7 +1084,7 @@ public:
 
     /**
        Get range of equal elements.
-       
+
        Returns the bounds of a range that includes all the elements in
        the container with a key that compares equal to x. Here, the range will
        include one element at most.
@@ -1187,7 +1236,7 @@ public:
 
 
     /**
-       Removes all the datas stored in the block structure. 
+       Removes all the datas stored in the block structure.
        @param size must be the current size of the block structure.
      */
     void blockClear( unsigned int size );
@@ -1291,7 +1340,7 @@ public:
   template  <typename TData, unsigned int L, typename TWord,
              unsigned int N, unsigned int M>
   std::ostream&
-  operator<< ( std::ostream & out, 
+  operator<< ( std::ostream & out,
                const BigLabelledMap<TData, L, TWord, N, M> & object );
 
   namespace detail {
@@ -1300,11 +1349,11 @@ public:
        Functor used to compute the best parameters for minimizing the
        memory usage of a BigLabelledMap structure.
     */
-    struct BigLabelledMapMemFunctor 
-    { 
+    struct BigLabelledMapMemFunctor
+    {
       double _p; double _q;
       unsigned int _sL;
-      unsigned int _sV;      
+      unsigned int _sV;
       unsigned int _sP;
       unsigned int _sA;
       BigLabelledMapMemFunctor( double p, double q,
@@ -1312,15 +1361,15 @@ public:
                              unsigned int sP, unsigned int sA )
         : _p( p ), _q( q ), _sL( sL ), _sV( sV ), _sP( sP ), _sA( sA )
       {}
-      
+
       inline
       double fctNM( unsigned int N, unsigned int M ) const
       {
         double alpha0 = _sL + _sV * ( N+1 );
         double beta0 = _sV * M + _sA + _sP;
-        return alpha0 
-          + beta0 * _q * pow(1.0 - _p, (double)N+1) 
-          * ( 1.0 + pow(1.0 - _p, (double)M-1 ) 
+        return alpha0
+          + beta0 * _q * pow(1.0 - _p, (double)N+1)
+          * ( 1.0 + pow(1.0 - _p, (double)M-1 )
               / ( 1.0 - pow(1.0 - _p, (double)M ) ) );
       }
       inline
@@ -1328,9 +1377,9 @@ public:
       {
         double alpha0 = _sL + _sV * ( N+1 );
         double beta0 = _sV * M + _sA + _sP;
-        return alpha0 
-          + beta0 * q * pow(1.0 - p, (double)N+1) 
-          * ( 1.0 + pow(1.0 - p, (double)M-1 ) 
+        return alpha0
+          + beta0 * q * pow(1.0 - p, (double)N+1)
+          * ( 1.0 + pow(1.0 - p, (double)M-1 )
               / ( 1.0 - pow(1.0 - p, (double)M ) ) );
       }
 
@@ -1340,18 +1389,18 @@ public:
        Tries to find the best values N and M which will minimized the
        memory usage of a BigLabelledMap, for the distribution specified by
        the parameters.
-     
+
        @tparam TData the type of data that will be stored.
 
        @param L the total number of labels.
 
        @param prob_no_data Probability that there is no data at this location.
-     
+
        @param prob_one_data If there is a possibility to have a data,
        this probability is used to define a geometric distribution that
        defines the number of data (ie valid labels) at this place. The
        smaller, the higher is the expectation. 0.5 means E(X) = 1.
-     
+
        @return the pair (N,M) that minimizes the memory usage of a
        BigLabelledMap for the given distribution.
     */
