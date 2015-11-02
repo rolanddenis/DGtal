@@ -12,7 +12,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * @file BitFieldArray
+ * @file BitFieldArray.ih
  * @author Roland Denis (\c roland.denis@univ-smb.fr )
  * LAboratory of MAthematics - LAMA (CNRS, UMR 5127), University of Savoie, France
  *
@@ -448,6 +448,23 @@ void BitFieldArray<T,S,N>::setValue( std::size_t i, Value const& value )
                reinterpret_cast<Integer const*>(&value)
   );
 
+}
+
+/// Reads nothing.
+template < typename T, std::size_t S >
+inline
+T BitFieldArray<T,S,0>::getValue( std::size_t /* i */ )
+{
+  ASSERT_MSG( false, "Cannot read an empty array." );
+  return *reinterpret_cast<T*>(0); // Undefined return
+}
+
+/// Writes nowhere.
+template < typename T, std::size_t S >
+inline
+void BitFieldArray<T,S,0>::setValue( std::size_t /* i */, Value const& /* aValue */ )
+{
+  ASSERT_MSG( false, "Cannot write into an empty array." );
 }
 
 } // namespace DGtal

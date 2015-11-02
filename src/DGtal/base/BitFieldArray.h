@@ -17,7 +17,7 @@
 #pragma once
 
 /**
- * @file BitFieldArray
+ * @file BitFieldArray.h
  * @author Roland Denis (\c roland.denis@univ-smb.fr )
  * LAboratory of MAthematics - LAMA (CNRS, UMR 5127), University of Savoie, France
  *
@@ -94,8 +94,10 @@ template <
   std::size_t S,
   std::size_t N
 >
-struct BitFieldArray
+class BitFieldArray
 {
+public:
+
   BOOST_STATIC_ASSERT_MSG( S > 0, "The element size must be non-null." );
   BOOST_STATIC_ASSERT_MSG( N > 0, "The array capacity must be non-null." );
 
@@ -104,7 +106,7 @@ struct BitFieldArray
 
   BOOST_STATIC_CONSTANT( std::size_t, sizeInByte = (S*N+7)/8 ); //< Memory usage, in bytes, of this array.
 
-  /**
+  /** Capacity of this array.
    * @return the capacity of this array.
    */
   static inline
@@ -128,6 +130,43 @@ private:
   char myMemory[sizeInByte]; //< Internal storage.
 
 }; // end of class BitFieldArray
+
+
+/** Specialization for empty  BitFieldArray
+ * @tparam T  Type of the elements.
+ * @tparam S  Size, in bits, of an element (can be lower than 8*sizeof(T)).
+ */
+template <
+  typename T,
+  std::size_t S
+>
+class BitFieldArray<T, S, 0>
+{
+public:
+
+  typedef BitFieldArray<T, S, 0>  Self; //< Self type.
+  typedef T   Value; //< Type of an element.
+
+  BOOST_STATIC_CONSTANT( std::size_t, sizeInByte = 0 ); //< Memory usage, in bytes, of this array.
+
+  /** Capacity of this array.
+   * @return 0.
+   */
+  static inline
+  std::size_t size()
+    {
+      return 0;
+    }
+
+  /// Reads nothing.
+  static inline
+  Value getValue( std::size_t /* i */ );
+
+  /// Writes nowhere.
+  static inline
+  void setValue( std::size_t /* i */, Value const& /* aValue */ );
+
+};
 
 } // namespace DGtal
 

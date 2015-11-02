@@ -567,6 +567,11 @@ struct TestHelper
 //                                 Test cases
 //////////////////////////////////////////////////////////////////////////////
 
+TEST_CASE( "Checking empty BitFieldArray.", "[empty]" )
+{
+  REQUIRE( ( DGtal::BitFieldArray< char, 8, 0 >::size() ) == 0 );
+}
+
 #define TEST_BITFIELDARRAY( N ) \
 TEST_CASE_METHOD( TestHelper<N>, "Checking BitFieldArray of size " #N " bits.", "[" #N "bits]" ) \
 { \
