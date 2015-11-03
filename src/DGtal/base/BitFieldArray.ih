@@ -415,7 +415,7 @@ namespace DGtal
 // Reads a value
 template < typename T, std::size_t S, std::size_t N >
 inline
-T BitFieldArray<T,S,N>::getValue( std::size_t i ) const
+T BitFieldArray<T,S,N>::getValue( SizeType i ) const
 {
   ASSERT_MSG( i < N, "Trying to read out of bounds.");
 
@@ -425,7 +425,7 @@ T BitFieldArray<T,S,N>::getValue( std::size_t i ) const
   BitFieldArrayImplDispatch< S, N, Integer >
     ::getValue(
                i,
-               reinterpret_cast<Integer const*>(myMemory),
+               reinterpret_cast<Integer const*>(&(myStorage[0])),
                reinterpret_cast<Integer*>(&result)
   );
 
@@ -435,7 +435,7 @@ T BitFieldArray<T,S,N>::getValue( std::size_t i ) const
 // Writes a value
 template < typename T, std::size_t S, std::size_t N >
 inline
-void BitFieldArray<T,S,N>::setValue( std::size_t i, Value const& value )
+void BitFieldArray<T,S,N>::setValue( SizeType i, Value const& value )
 {
   ASSERT_MSG( i < N, "Trying to write out of bounds.");
 
@@ -444,27 +444,10 @@ void BitFieldArray<T,S,N>::setValue( std::size_t i, Value const& value )
   BitFieldArrayImplDispatch < S, N, Integer >
     ::setValue(
                i,
-               reinterpret_cast<Integer*>(myMemory),
+               reinterpret_cast<Integer*>(&(myStorage[0])),
                reinterpret_cast<Integer const*>(&value)
   );
 
-}
-
-/// Reads nothing.
-template < typename T, std::size_t S >
-inline
-T BitFieldArray<T,S,0>::getValue( std::size_t /* i */ )
-{
-  ASSERT_MSG( false, "Cannot read an empty array." );
-  return *reinterpret_cast<T*>(0); // Undefined return
-}
-
-/// Writes nowhere.
-template < typename T, std::size_t S >
-inline
-void BitFieldArray<T,S,0>::setValue( std::size_t /* i */, Value const& /* aValue */ )
-{
-  ASSERT_MSG( false, "Cannot write into an empty array." );
 }
 
 } // namespace DGtal

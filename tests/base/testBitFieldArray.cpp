@@ -256,9 +256,9 @@ struct StructBitField<0>
  */
 template < std::size_t Size >
 struct StructOfBitSize
-  : StructLongArray< Size / (8*sizeof(unsigned long)) >
-  , StructCharArray< (Size % (8*sizeof(unsigned long))) / 8 >
-  , StructBitField< Size % 8 >
+  : private StructLongArray< Size / (8*sizeof(unsigned long)) >
+  , private StructCharArray< (Size % (8*sizeof(unsigned long))) / 8 >
+  , private StructBitField< Size % 8 >
 {
   typedef StructLongArray< Size / (8*sizeof(unsigned long)) >         LongArray;  //< Type of the unsigned long int array component.
   typedef StructCharArray< (Size % (8*sizeof(unsigned long))) / 8 >   CharArray;  //< Type of the unsigned char array component.
@@ -531,9 +531,9 @@ struct TestHelper
       return BitFieldArray::size() == N;
     }
 
-  /// Checks BitFieldArray read/write
+  /// Checks BitFieldArray read/write using getValue/setValue.
   static
-  bool checkReadWrite()
+  bool checkReadWriteUsingAccessors()
     {
       // Initializes reference data
       BitField refData[N];
@@ -560,6 +560,61 @@ struct TestHelper
 
       return true;
     }
+  
+  /// Checks BitFieldArray read/write using operator[]
+  static
+  bool checkReadWriteUsingSquareBrackets()
+    {
+      // Initializes reference data
+      BitField refData[N];
+      for ( std::size_t i = 0; i < N; ++i )
+        {
+          initStruct( refData[i], 3*(i+1) );
+        }
+
+      // Fills a BitFieldArray
+      BitFieldArray myData;
+      for ( std::size_t i = 0; i < N; ++i )
+        {
+          myData[i] = refData[i];
+        }
+
+      // Reads and compares values
+      for ( std::size_t i = 0; i < N; ++i )
+        {
+          //if ( ! ( refData[i] == myData[i] ) )
+          if ( ! ( myData[i] == refData[i] ) )
+            {
+              return false;
+            }
+        }
+
+      return true;
+    }
+  
+  /// Checks BitFieldArray read/write using iterators.
+  static
+  bool checkReadWriteUsingIterators()
+    {
+      // Initializes reference data
+      BitField refData[N];
+      for ( std::size_t i = 0; i < N; ++i )
+        {
+          initStruct( refData[i], 3*(i+1) );
+        }
+
+      // Fills a BitFieldArray
+      BitFieldArray myData;
+      std::copy( refData, refData+N, myData.begin() );
+
+      // Reads and compares values
+      BitFieldArray const& myConstData = myData;
+
+      return 
+            static_cast<std::size_t>(myData.end() - myData.begin()) == N
+        &&  std::equal( myData.begin(), myData.end(), refData )
+        &&  std::equal( myConstData.begin(), myConstData.end(), refData );
+    }
 };
 
 
@@ -576,7 +631,9 @@ TEST_CASE( "Checking empty BitFieldArray.", "[empty]" )
 TEST_CASE_METHOD( TestHelper<N>, "Checking BitFieldArray of size " #N " bits.", "[" #N "bits]" ) \
 { \
   REQUIRE( checkSize() ); \
-  REQUIRE( checkReadWrite() ); \
+  REQUIRE( checkReadWriteUsingAccessors() ); \
+  REQUIRE( checkReadWriteUsingSquareBrackets() ); \
+  REQUIRE( checkReadWriteUsingIterators() ); \
 }
 
 TEST_BITFIELDARRAY( 7 )

@@ -45,6 +45,7 @@
 #include <boost/config.hpp> // BOOST_STATIC_CONSTANT
 #include <boost/static_assert.hpp>
 #include <boost/iterator/iterator_facade.hpp>
+#include <boost/array.hpp>
 
 #include <DGtal/base/Bits.h>
 
@@ -100,8 +101,9 @@ class BitFieldArray
 public:
 
   BOOST_STATIC_ASSERT_MSG( S > 0, "The element size must be non-null." );
-  BOOST_STATIC_ASSERT_MSG( N > 0, "The array capacity must be non-null." );
-  
+
+  BOOST_STATIC_CONSTANT( std::size_t, sizeInByte = (S*N+7)/8 ); //< Memory usage, in bytes, of this array.
+
   /** Proxy to a stored value.
    * @warning it is readable and writable but does not behave like a lvalue reference.
    */
@@ -135,14 +137,11 @@ public:
   typedef Iterator        iterator;
   typedef ConstIterator   const_iterator;
 
-
-  BOOST_STATIC_CONSTANT( std::size_t, sizeInByte = (S*N+7)/8 ); //< Memory usage, in bytes, of this array.
-
   /** Capacity of this array.
    * @return the capacity of this array.
    */
   static inline
-  std::size_t size()
+  SizeType size()
     {
       return N;
     }
@@ -150,59 +149,64 @@ public:
   /** Reads an element.
    * @param i The index of the element.
    */
-  Value getValue( std::size_t i ) const;
+  Value getValue( SizeType i ) const;
 
   /** Writes an element.
    * @param i       The index of the element.
    * @param aValue  The value to be writed.
    */
-  void setValue( std::size_t i, Value const& aValue );
+  void setValue( SizeType i, Value const& aValue );
+
+  /** Read-write access to an element.
+   * @param i The index of the element.
+   * @warning It returns a proxy that do not behaves like a lvalue reference.
+   */
+  inline Reference operator[] ( SizeType i )
+    {
+      return Reference( *this, i );
+    }
+
+  /** Read only access to an element.
+   * @param i The index of the element.
+   */
+  inline ConstReference operator[] ( SizeType i ) const
+    {
+      return getValue( i );
+    }
+
+  /// Returns a mutable iterator to the beginning.
+  inline Iterator begin()
+    {
+      return Iterator( *this );
+    }
+
+  /// Returns a mutable iterator to the end.
+  inline Iterator end()
+    {
+      return Iterator( *this, N );
+    }
+
+  /// Returns a constant iterator to the beginning.
+  inline ConstIterator begin() const
+    {
+      return ConstIterator( *this );
+    }
+
+  /// Returns a constant iterator to the end.
+  inline ConstIterator end() const
+    {
+      return ConstIterator( *this, N );
+    }
+
 
 private:
-  char myMemory[sizeInByte]; //< Internal storage.
+  boost::array<char, sizeInByte> myStorage; //< Internal storage.
 
 }; // end of class BitFieldArray
 
-
-/** Specialization for empty  BitFieldArray
- * @tparam T  Type of the elements.
- * @tparam S  Size, in bits, of an element (can be lower than 8*sizeof(T)).
- */
-template <
-  typename T,
-  std::size_t S
->
-class BitFieldArray<T, S, 0>
-{
-public:
-
-  typedef BitFieldArray<T, S, 0>  Self; //< Self type.
-  typedef T   Value; //< Type of an element.
-
-  BOOST_STATIC_CONSTANT( std::size_t, sizeInByte = 0 ); //< Memory usage, in bytes, of this array.
-
-  /** Capacity of this array.
-   * @return 0.
-   */
-  static inline
-  std::size_t size()
-    {
-      return 0;
-    }
-
-  /// Reads nothing.
-  static inline
-  Value getValue( std::size_t /* i */ );
-
-  /// Writes nowhere.
-  static inline
-  void setValue( std::size_t /* i */, Value const& /* aValue */ );
-
-};
-
-
 /** Proxy to a stored value.
  * @warning it is readable and writable but does not behave like a lvalue reference.
+ * @todo the implicit conversion does not work in comparison ...
  */
 template < typename T, std::size_t S, std::size_t N >
 class BitFieldArray<T, S, N>::Proxy
@@ -290,7 +294,7 @@ private:
     }
 
   /// Distance to.
-  inline DifferenceType distance_to( Self const& other ) const
+  inline DifferenceType distance_to( Self::Iterator const& other ) const
     {
       return other.myIndex - myIndex;
     }
@@ -356,7 +360,7 @@ private:
     }
 
   /// Distance to.
-  inline DifferenceType distance_to( Self const& other ) const
+  inline DifferenceType distance_to( Self::ConstIterator const& other ) const
     {
       return other.myIndex - myIndex;
     }
