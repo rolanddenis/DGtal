@@ -44,6 +44,7 @@
 
 #include <boost/config.hpp> // BOOST_STATIC_CONSTANT
 #include <boost/static_assert.hpp>
+#include <boost/iterator/iterator_facade.hpp>
 
 #include <DGtal/base/Bits.h>
 
@@ -100,9 +101,40 @@ public:
 
   BOOST_STATIC_ASSERT_MSG( S > 0, "The element size must be non-null." );
   BOOST_STATIC_ASSERT_MSG( N > 0, "The array capacity must be non-null." );
+  
+  /** Proxy to a stored value.
+   * @warning it is readable and writable but does not behave like a lvalue reference.
+   */
+  class Proxy;
 
+  /** Readable, writable (but not lvalue) and random access traversal iterator.
+   *
+   * The fact that it is not a Lvalue Iterator means that, if T is a class, the syntax
+   * it->aMember = something;
+   * is not valid.
+   */
+  class Iterator;
+
+  /// Readable and random access traversal iterator.
+  class ConstIterator;
+
+  // DGtal typedefs
   typedef BitFieldArray<T, S, N>  Self; //< Self type.
-  typedef T   Value; //< Type of an element.
+  typedef T     Value; //< Type of an element.
+  typedef Proxy Reference; //< Proxy to an element (does not behaves like a lvalue reference!).
+  typedef Value ConstReference; //< Constant reference (in fact, a rvalue).
+  typedef std::size_t     SizeType;
+  typedef std::ptrdiff_t  DifferenceType;
+
+  // Standard typedefs
+  typedef Value           value_type;
+  typedef Reference       reference;
+  typedef ConstReference  const_reference;
+  typedef SizeType        size_type;
+  typedef DifferenceType  difference_type;
+  typedef Iterator        iterator;
+  typedef ConstIterator   const_iterator;
+
 
   BOOST_STATIC_CONSTANT( std::size_t, sizeInByte = (S*N+7)/8 ); //< Memory usage, in bytes, of this array.
 
@@ -166,6 +198,178 @@ public:
   static inline
   void setValue( std::size_t /* i */, Value const& /* aValue */ );
 
+};
+
+
+/** Proxy to a stored value.
+ * @warning it is readable and writable but does not behave like a lvalue reference.
+ */
+template < typename T, std::size_t S, std::size_t N >
+class BitFieldArray<T, S, N>::Proxy
+{
+public:
+  /** Constructor.
+   * @param aBitFieldArray  The underlying BitFieldArray.
+   * @param anIndex         The index of the proxified element.
+   */
+  Proxy( Self& aBitFieldArray, SizeType anIndex )
+    : myBitFieldArray( aBitFieldArray )
+      , myIndex( anIndex )
+    {
+      ASSERT_MSG( anIndex < N, "Access to out of bounds element." );
+    }
+
+  /// Read the value.
+  inline
+  operator T() const
+    {
+      return myBitFieldArray.getValue(myIndex);
+    }
+
+  /// Write a value.
+  inline
+  T operator= ( T const& aValue )
+    {
+      myBitFieldArray.setValue( myIndex, aValue );
+      return aValue;
+    }
+
+private:
+  Self& myBitFieldArray;
+  SizeType const myIndex;
+
+};
+
+/// Readable, writable (but not lvalue) and random access traversal iterator.
+template < typename T, std::size_t S, std::size_t N >
+class BitFieldArray<T, S, N>::Iterator
+  : public boost::iterator_facade <
+      BitFieldArray<T, S, N>::Iterator,
+      T, // Value type.
+      boost::random_access_traversal_tag, // Iterator traversal model.
+      BitFieldArray<T, S, N>::Reference, // Reference type.
+      BitFieldArray<T, S, N>::DifferenceType
+    >
+{
+public:
+  /** Constructor.
+   * @param aBitFieldArray  The underlying BitFieldArray.
+   * @param anIndex         The index of the pointed to element.
+   */
+  Iterator( Self& aBitFieldArray, SizeType anIndex = 0 )
+    : myBitFieldArray( &aBitFieldArray )
+    , myIndex( anIndex )
+    {}
+
+private:
+  // Boost iterator_facade core operations.
+  friend class boost::iterator_core_access;
+
+  /// Increment of one position.
+  inline void increment()
+    {
+      ++myIndex;
+    }
+
+  /// Decrement of one position.
+  inline void decrement()
+    {
+      --myIndex;
+    }
+
+  /// Test equality with other iterator.
+  inline bool equal( Self const& other ) const
+    {
+      return myIndex == other.myIndex;
+    }
+
+  /// Dereference.
+  inline Reference dereference() const
+    {
+      return Reference( *myBitFieldArray, myIndex );
+    }
+
+  /// Distance to.
+  inline DifferenceType distance_to( Self const& other ) const
+    {
+      return other.myIndex - myIndex;
+    }
+
+  /// Advance by \p n positions.
+  inline void advance ( DifferenceType n )
+    {
+      myIndex += n;
+    }
+
+private:
+  Self*     myBitFieldArray;
+  SizeType  myIndex;
+};
+
+/// Readable and random access traversal iterator.
+template < typename T, std::size_t S, std::size_t N >
+class BitFieldArray<T, S, N>::ConstIterator
+  : public boost::iterator_facade <
+      BitFieldArray<T, S, N>::Iterator,
+      const T, // Value type.
+      boost::random_access_traversal_tag, // Iterator traversal model.
+      BitFieldArray<T, S, N>::ConstReference, // Reference type.
+      BitFieldArray<T, S, N>::DifferenceType
+    >
+{
+public:
+  /** Constructor.
+   * @param aBitFieldArray  The underlying BitFieldArray.
+   * @param anIndex         The index of the pointed to element.
+   */
+  ConstIterator( Self const& aBitFieldArray, SizeType anIndex = 0 )
+    : myBitFieldArray( &aBitFieldArray )
+    , myIndex( anIndex )
+    {}
+
+private:
+  // Boost iterator_facade core operations.
+  friend class boost::iterator_core_access;
+
+  /// Increment of one position.
+  inline void increment()
+    {
+      ++myIndex;
+    }
+
+  /// Decrement of one position.
+  inline void decrement()
+    {
+      --myIndex;
+    }
+
+  /// Test equality with other iterator.
+  inline bool equal( Self const& other ) const
+    {
+      return myIndex == other.myIndex;
+    }
+
+  /// Dereference.
+  inline ConstReference dereference() const
+    {
+      return myBitFieldArray->getValue( myIndex );
+    }
+
+  /// Distance to.
+  inline DifferenceType distance_to( Self const& other ) const
+    {
+      return other.myIndex - myIndex;
+    }
+
+  /// Advance by \p n positions.
+  inline void advance ( DifferenceType n )
+    {
+      myIndex += n;
+    }
+
+private:
+  Self const* myBitFieldArray;
+  SizeType    myIndex;
 };
 
 } // namespace DGtal
