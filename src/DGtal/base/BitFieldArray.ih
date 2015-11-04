@@ -135,7 +135,7 @@ namespace
        * @tparam  Integer The working integer type.
        * @param[in]     i       The value index.
        * @param[in,out] data    A pointer to the internal storage.
-       * @param[in]    result  A pointer to value to be writed.
+       * @param[in]     value  A pointer to value to be writed.
        */
       template < typename Integer >
       static inline
@@ -175,7 +175,7 @@ namespace
        * @tparam  Integer The working integer type.
        * @param[in]     i       The value index.
        * @param[in,out] data    A pointer to the internal storage.
-       * @param[in]    result  A pointer to value to be writed.
+       * @param[in]     value  A pointer to value to be writed.
        */
       template < typename Integer >
       static inline
@@ -219,7 +219,7 @@ namespace
        * @tparam  Integer The working integer type.
        * @param[in]     i       The value index.
        * @param[in,out] data    A pointer to the internal storage.
-       * @param[in]     result  A pointer to value to be writed.
+       * @param[in]     value  A pointer to value to be writed.
        */
       template < typename Integer >
       static inline
@@ -297,7 +297,7 @@ namespace
        * @tparam  Integer The working integer type.
        * @param[in]     i       The value index.
        * @param[in,out] data    A pointer to the internal storage.
-       * @param[in]     result  A pointer to value to be writed.
+       * @param[in]     value  A pointer to value to be writed.
        */
       template < typename Integer >
       static inline

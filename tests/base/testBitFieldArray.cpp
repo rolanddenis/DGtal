@@ -48,7 +48,7 @@
 template < std::size_t Size >
 struct StructLongArray
 {
-  unsigned long int longArray[Size]; //< The array.
+  unsigned long int longArray[Size]; ///< The array.
 
   /** Reads a value
    * @param i Index of the value.
@@ -117,7 +117,7 @@ struct StructLongArray<0>
 template < std::size_t Size >
 struct StructCharArray
 {
-  unsigned char charArray[Size]; //< The array.
+  unsigned char charArray[Size]; ///< The array.
 
   /** Reads a value
    * @param i Index of the value.
@@ -185,7 +185,7 @@ struct StructCharArray<0>
 template < std::size_t Size >
 struct StructBitField
 {
-  unsigned char bitField:Size; //< The bit-field.
+  unsigned char bitField:Size; ///< The bit-field.
 
   /** Reads the value
    */
@@ -260,20 +260,25 @@ struct StructOfBitSize
   , private StructCharArray< (Size % (8*sizeof(unsigned long))) / 8 >
   , private StructBitField< Size % 8 >
 {
-  typedef StructLongArray< Size / (8*sizeof(unsigned long)) >         LongArray;  //< Type of the unsigned long int array component.
-  typedef StructCharArray< (Size % (8*sizeof(unsigned long))) / 8 >   CharArray;  //< Type of the unsigned char array component.
-  typedef StructBitField< Size % 8 >                                  BitField;   //< Type of the bit-field component.
+  typedef StructLongArray< Size / (8*sizeof(unsigned long)) >         LongArray;  ////< Type of the unsigned long int array component.
+  typedef StructCharArray< (Size % (8*sizeof(unsigned long))) / 8 >   CharArray;  ///< Type of the unsigned char array component.
+  typedef StructBitField< Size % 8 >                                  BitField;   ///< Type of the bit-field component.
 
   /** Tests equality between two structures of same size.
-   * @param other The other instance.
+   * @param lhs The left hand side.
+   * @param rhs The right hand size.
+   *
+   * It is declare as non-member to allow implicit conversion to work on both side.
+   * In addition, as this struct is templated, implicit conversion needs the operator to be instanciated for each different template parameters (ie declared inside the class, as friend).
+   * @see http://stackoverflow.com/questions/9787593/c-implicit-type-conversion-with-template 
    */
   inline
-  bool operator== ( StructOfBitSize<Size> const& other ) const
+  friend bool operator== ( StructOfBitSize<Size> const& lhs, StructOfBitSize<Size> const& rhs )
     {
       return
-            *static_cast< LongArray const* >(this) == *static_cast< LongArray const* >(&other)
-        &&  *static_cast< CharArray const* >(this) == *static_cast< CharArray const* >(&other)
-        &&  *static_cast< BitField  const* >(this) == *static_cast< BitField  const* >(&other);
+        *static_cast< LongArray const* >(&lhs) == *static_cast< LongArray const* >(&rhs)
+        &&  *static_cast< CharArray const* >(&lhs) == *static_cast< CharArray const* >(&rhs)
+        &&  *static_cast< BitField  const* >(&lhs) == *static_cast< BitField  const* >(&rhs);
     }
 
   /** Returns the number of components in the structure.
@@ -343,21 +348,28 @@ struct StructOfBitSize
  */
 template < std::size_t Size >
 struct StructOfBitSizeNoLong
-  : StructCharArray< Size / 8 >
-  , StructBitField< Size % 8 >
+  : private StructCharArray< Size / 8 >
+  , private StructBitField< Size % 8 >
 {
-  typedef StructCharArray< Size / 8 >   CharArray; //< Type of the unsigned char array component.
-  typedef StructBitField<  Size % 8 >   BitField;  //< Type of the bitfield component
+  typedef StructCharArray< Size / 8 >   CharArray; ///< Type of the unsigned char array component.
+  typedef StructBitField<  Size % 8 >   BitField;  ///< Type of the bitfield component
 
   /** Tests equality between two structures of same size.
-   * @param other The other instance.
+   * @param lhs The left hand side.
+   * @param rhs The right hand size.
+   *
+   * It is declare as non-member to allow implicit conversion to work on both side.
+   * In addition, as this struct is templated, implicit conversion needs the operator to be instanciated for each different template parameters (ie declared inside the class, as friend).
+   * @see http://stackoverflow.com/questions/9787593/c-implicit-type-conversion-with-template 
    */
   inline
-  bool operator== ( StructOfBitSizeNoLong<Size> const& other ) const
+  friend bool operator== ( StructOfBitSizeNoLong<Size> const& lhs, StructOfBitSizeNoLong<Size> const& rhs )
     {
+      typedef typename StructOfBitSizeNoLong<Size>::CharArray  CharArray;
+      typedef typename StructOfBitSizeNoLong<Size>::BitField   BitField;
       return
-            *static_cast< CharArray const* >(this) == *static_cast< CharArray const* >(&other)
-        &&  *static_cast< BitField  const* >(this) == *static_cast< BitField  const* >(&other);
+        *static_cast< CharArray const* >(&lhs) == *static_cast< CharArray const* >(&rhs)
+        &&  *static_cast< BitField  const* >(&lhs) == *static_cast< BitField  const* >(&rhs);
     }
 
   /** Returns the number of components in the structure.
@@ -521,8 +533,8 @@ template <
 >
 struct TestHelper
 {
-  typedef StructOfBitSizeNoLong<S> BitField; //< Type of the bit-field.
-  typedef DGtal::BitFieldArray<BitField, S, N> BitFieldArray; //< Type of the array of bit-field.
+  typedef StructOfBitSizeNoLong<S> BitField; ///< Type of the bit-field.
+  typedef DGtal::BitFieldArray<BitField, S, N> BitFieldArray; ///< Type of the array of bit-field.
 
   /// Checks BitFieldArray size
   static
@@ -582,7 +594,6 @@ struct TestHelper
       // Reads and compares values
       for ( std::size_t i = 0; i < N; ++i )
         {
-          //if ( ! ( refData[i] == myData[i] ) )
           if ( ! ( myData[i] == refData[i] ) )
             {
               return false;
@@ -656,18 +667,18 @@ TEST_BITFIELDARRAY( 301 )
 template < std::size_t S >
 struct BenchHelper
 {
-  typedef StructOfBitSize<S>        BitField; //< Structure of size S bits.
-  typedef StructOfBitSizeNoLong<S>  BitFieldNoLong; //< Structure of size S bits, without using unsigned long fields.
+  typedef StructOfBitSize<S>        BitField; ///< Structure of size S bits.
+  typedef StructOfBitSizeNoLong<S>  BitFieldNoLong; ///< Structure of size S bits, without using unsigned long fields.
 
-  BOOST_STATIC_CONSTANT( std::size_t, BitSize = S ); //< Size in bits of the structure
-  BOOST_STATIC_CONSTANT( std::size_t, MaxMemoryUsage = 1 << 26 ); //< Maximum allowed memory usage, in bytes.
-  BOOST_STATIC_CONSTANT( std::size_t, ArraySize = MaxMemoryUsage / sizeof(BitField) ); //< Array size that respect the memory usage restriction.
+  BOOST_STATIC_CONSTANT( std::size_t, BitSize = S ); ///< Size in bits of the structure
+  BOOST_STATIC_CONSTANT( std::size_t, MaxMemoryUsage = 1 << 26 ); ///< Maximum allowed memory usage, in bytes.
+  BOOST_STATIC_CONSTANT( std::size_t, ArraySize = MaxMemoryUsage / sizeof(BitField) ); ///< Array size that respect the memory usage restriction.
 
-  typedef DGtal::BitFieldArray<BitField, S, ArraySize> BitFieldArray; //< Typedef on the BitFieldArray.
+  typedef DGtal::BitFieldArray<BitField, S, ArraySize> BitFieldArray; ///< Typedef on the BitFieldArray.
 
-  BitField*       myBitFieldCArray; //< C-style array of BitField
-  BitFieldNoLong* myBitFieldNoLongCArray; //< C-style array of BitFieldNoLong
-  BitFieldArray*  myBitFieldArray; //< BitFieldArray instance
+  BitField*       myBitFieldCArray; ///< C-style array of BitField
+  BitFieldNoLong* myBitFieldNoLongCArray; ///< C-style array of BitFieldNoLong
+  BitFieldArray*  myBitFieldArray; ///< BitFieldArray instance
 
   /// Constructor (memory allocation).
   BenchHelper()

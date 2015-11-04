@@ -102,7 +102,7 @@ public:
 
   BOOST_STATIC_ASSERT_MSG( S > 0, "The element size must be non-null." );
 
-  BOOST_STATIC_CONSTANT( std::size_t, sizeInByte = (S*N+7)/8 ); //< Memory usage, in bytes, of this array.
+  BOOST_STATIC_CONSTANT( std::size_t, sizeInByte = (S*N+7)/8 ); ///< Memory usage, in bytes, of this array.
 
   /** Proxy to a stored value.
    * @warning it is readable and writable but does not behave like a lvalue reference.
@@ -121,10 +121,10 @@ public:
   class ConstIterator;
 
   // DGtal typedefs
-  typedef BitFieldArray<T, S, N>  Self; //< Self type.
-  typedef T     Value; //< Type of an element.
-  typedef Proxy Reference; //< Proxy to an element (does not behaves like a lvalue reference!).
-  typedef Value ConstReference; //< Constant reference (in fact, a rvalue).
+  typedef BitFieldArray<T, S, N>  Self; ///< Self type.
+  typedef T     Value; ///< Type of an element.
+  typedef Proxy Reference; ///< Proxy to an element (does not behaves like a lvalue reference!).
+  typedef Value ConstReference; ///< Constant reference (in fact, a rvalue).
   typedef std::size_t     SizeType;
   typedef std::ptrdiff_t  DifferenceType;
 
@@ -200,13 +200,12 @@ public:
 
 
 private:
-  boost::array<char, sizeInByte> myStorage; //< Internal storage.
+  boost::array<char, sizeInByte> myStorage; ///< Internal storage.
 
 }; // end of class BitFieldArray
 
 /** Proxy to a stored value.
  * @warning it is readable and writable but does not behave like a lvalue reference.
- * @todo the implicit conversion does not work in comparison ...
  */
 template < typename T, std::size_t S, std::size_t N >
 class BitFieldArray<T, S, N>::Proxy
@@ -244,7 +243,9 @@ private:
 
 };
 
-/// Readable, writable (but not lvalue) and random access traversal iterator.
+/** Readable, writable (but not lvalue) and random access traversal iterator.
+ * @todo Interoperability !
+ */
 template < typename T, std::size_t S, std::size_t N >
 class BitFieldArray<T, S, N>::Iterator
   : public boost::iterator_facade <
@@ -282,7 +283,7 @@ private:
     }
 
   /// Test equality with other iterator.
-  inline bool equal( Self const& other ) const
+  inline bool equal( Self::Iterator const& other ) const
     {
       return myIndex == other.myIndex;
     }
@@ -314,7 +315,7 @@ private:
 template < typename T, std::size_t S, std::size_t N >
 class BitFieldArray<T, S, N>::ConstIterator
   : public boost::iterator_facade <
-      BitFieldArray<T, S, N>::Iterator,
+      BitFieldArray<T, S, N>::ConstIterator,
       const T, // Value type.
       boost::random_access_traversal_tag, // Iterator traversal model.
       BitFieldArray<T, S, N>::ConstReference, // Reference type.
@@ -348,7 +349,7 @@ private:
     }
 
   /// Test equality with other iterator.
-  inline bool equal( Self const& other ) const
+  inline bool equal( Self::ConstIterator const& other ) const
     {
       return myIndex == other.myIndex;
     }
