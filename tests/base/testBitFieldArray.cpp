@@ -624,7 +624,8 @@ struct TestHelper
       return 
             static_cast<std::size_t>(myData.end() - myData.begin()) == N
         &&  std::equal( myData.begin(), myData.end(), refData )
-        &&  std::equal( myConstData.begin(), myConstData.end(), refData );
+        &&  std::equal( myConstData.begin(), myConstData.end(), refData )
+        &&  std::equal( myData.begin(), myData.end(), myConstData.begin() );
     }
 };
 

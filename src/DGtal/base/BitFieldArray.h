@@ -243,9 +243,7 @@ private:
 
 };
 
-/** Readable, writable (but not lvalue) and random access traversal iterator.
- * @todo Interoperability !
- */
+/// Readable, writable (but not lvalue) and random access traversal iterator.
 template < typename T, std::size_t S, std::size_t N >
 class BitFieldArray<T, S, N>::Iterator
   : public boost::iterator_facade <
@@ -257,6 +255,10 @@ class BitFieldArray<T, S, N>::Iterator
     >
 {
 public:
+
+  // Interoperability
+  friend class Self::ConstIterator;
+
   /** Constructor.
    * @param aBitFieldArray  The underlying BitFieldArray.
    * @param anIndex         The index of the pointed to element.
@@ -282,8 +284,14 @@ private:
       --myIndex;
     }
 
-  /// Test equality with other iterator.
+  /// Test equality with other mutable iterator.
   inline bool equal( Self::Iterator const& other ) const
+    {
+      return myIndex == other.myIndex;
+    }
+  
+  /// Test equality with a constant iterator.
+  inline bool equal( Self::ConstIterator const& other ) const
     {
       return myIndex == other.myIndex;
     }
@@ -323,6 +331,10 @@ class BitFieldArray<T, S, N>::ConstIterator
     >
 {
 public:
+
+  // Interoperability
+  friend class Self::Iterator;
+
   /** Constructor.
    * @param aBitFieldArray  The underlying BitFieldArray.
    * @param anIndex         The index of the pointed to element.
@@ -330,6 +342,14 @@ public:
   ConstIterator( Self const& aBitFieldArray, SizeType anIndex = 0 )
     : myBitFieldArray( &aBitFieldArray )
     , myIndex( anIndex )
+    {}
+
+  /** Interoperability constructor.
+   * @param anIterator  A mutable iterator.
+   */
+  ConstIterator( Self::Iterator const& anIterator )
+    : myBitFieldArray( anIterator.myBitFieldArray )
+    , myIndex( anIterator.myIndex )
     {}
 
 private:
@@ -348,11 +368,18 @@ private:
       --myIndex;
     }
 
-  /// Test equality with other iterator.
+  /// Test equality with other constant iterator.
   inline bool equal( Self::ConstIterator const& other ) const
     {
       return myIndex == other.myIndex;
     }
+
+  /// Test equality with a mutable iterator.
+  inline bool equal( Self::Iterator const& other ) const
+    {
+      return myIndex == other.myIndex;
+    }
+
 
   /// Dereference.
   inline ConstReference dereference() const
