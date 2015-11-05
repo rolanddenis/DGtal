@@ -16,6 +16,13 @@
  - Minor improvements of default settings in Viewer3D. (David
    Coeurjolly, [#1066](https://github.com/DGtal-team/DGtal/pull/1066))
 
+ - New possibility to move the light source direction using the mouse move
+   in Viewer3D (with the key SHIFT+CTRL (SHIFT+CMD on mac)). The light source
+   direction is now defined according the main coordinate system (no more from
+   the camera center).
+   (Bertrand Kerautret [#1070](https://github.com/DGtal-team/DGtal/pull/1070))
+
+
 ## Bug Fixes
 
 - *Configuration/General*
@@ -24,8 +31,8 @@
  - Fixing boost include path issue when building tools using DGtal and
    its cmake DGtalConfig.cmake. (David Coeurjolly,
    [#1059](https://github.com/DGtal-team/DGtal/pull/1059))
- 
-
+ - Fixing parenthese warnings in Catch. Waiting for an official fix.
+   (Roland Denis, [#1069](https://github.com/DGtal-team/DGtal/pull/1069))
 
 - *Base Package*
  - Fix wrong initialization of reverse iterators in SimpleRandomAccess(Const)RangeFromPoint.
