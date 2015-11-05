@@ -41,6 +41,7 @@
 //////////////////////////////////////////////////////////////////////////////
 // Inclusions
 #include <cstring>
+#include <cstddef>
 #include <cmath>
 #include <iostream>
 #include <DGtal/base/Common.h>
@@ -51,16 +52,16 @@ namespace
 {
 
   /// Calculates the log2 of an integer.
-  template < std::size N >
+  template < std::size_t N >
   struct Log2
     {
-      enum { value = 1 + Log2<N/2>::value; };
+      enum { value = 1 + Log2<N/2>::value };
     };
 
   template <>
   struct Log2<0>
     {
-      enum { value = 0; };
+      enum { value = 0 };
     };
 
 }
@@ -151,8 +152,6 @@ public:
     typedef TData Data; //< Data type.
 
     typedef std::size_t Label; //< Label type.
-    typedef BitFieldArray< Label, labelSize, firstBlockMaxSize+1 >  FirstLabels; //< Label array in the first block.
-    typedef BitFieldArray< Label, labelSize, nextBlockMaxSize >     NextLabels; //< Label array in the next blocks.
 
     typedef Label Key; //< Key type (i.e. label type).
     typedef std::pair<const Key, Data> Value; //< Type of a (label,data) pair.
@@ -188,8 +187,8 @@ public:
 
     // Data blocks
     template < std::size_t blockSize, std::size_t labelArrayShift > struct __Block; ///< Forward declaration.
-    typedef __Block<firstBlockSize, 1>  __FirstBlock;
-    typedef __Block<nextBlockSize, 0>   __NextBlock;
+    typedef __Block<firstBlockSize, 1>  __FirstBlock; //< First block with label count.
+    typedef __Block<nextBlockSize, 0>   __NextBlock;  //< Next blocks.
 
     union BlockPointer {
       __FirstBlock* first;
@@ -205,7 +204,7 @@ public:
     >
     struct __Block
       {
-        BOOST_STATIC_CONSTANT( std::size_t, extraSpace = sizeof(TData)/sizeof(*TData) ); //< Extra space for storing values when the pointer is not used.
+        BOOST_STATIC_CONSTANT( std::size_t, extraSpace = sizeof(TData)/sizeof(TData*) ); //< Extra space for storing values when the pointer is not used.
         BOOST_STATIC_CONSTANT( std::size_t, blockMaxSize = blockSize + extraSpace ); //< Capacity of this block with extra space.
 
         typedef BitFieldArray< Label, labelSize, blockMaxSize + labelArrayShift >  Labels; //< Label array.
@@ -349,7 +348,8 @@ public:
           }
 
         // Forward declaration.
-        Data& pushBack( Value const& value, std::size_t size );
+        //inline
+        //Data& pushBack( Value const& value, std::size_t size );
 
         /** Adds a data with given label.
          * @param label   the label.
@@ -468,6 +468,25 @@ public:
               }
           }
 
+        /** Finds a label in the current block and returns its index.
+         *
+         * Returns blockMaxSize if not found.
+         * @param label The label to found.
+         * @param size  The current number of stored value in this blocks and the following.
+         * @param idx   Where to start the search.
+         */
+        SizeType findBlockLabel( Label const& label, std::size_t size, std::size_t idx = 0 )
+          {
+            const std::size_t maxIndex = ( size <= blockSize ) ? blockSize : blockMaxSize;
+
+            for ( std::size_t i = 0; i < maxIndex; ++i )
+              {
+                if ( getBlockLabel(i) == label )
+                  return i;
+              }
+            return blockMaxSize;
+          }
+
         Labels myLabels;
         Data myData[ blockSize ];
         DataOrBlockPointer myTail;
@@ -502,7 +521,7 @@ public:
       unsigned int myIdx;      ///< current index in \a myDatas of the iterator
       unsigned int myNbDatas; ///< number of valid datas in array \a myDatas
       Data* myDatas;         ///< array of \a myNbDatas datas.
-      __AnyBlock* myNext;        ///< pointer to next block or 0 if last block.
+      __NextBlock* myNext;        ///< pointer to next block or 0 if last block.
 
       friend class BigLabelledMap;
 
@@ -618,32 +637,32 @@ public:
       unsigned int myIdx;      ///< current index in \a myDatas of the iterator
       unsigned int myNbDatas; ///< number of valid datas in array \a myDatas
       const Data* myDatas;   ///< array of \a myNbDatas datas.
-      const __AnyBlock* myNext;  ///< pointer to next block or 0 if last block.
+      const __NextBlock* myNext;  ///< pointer to next block or 0 if last block.
 
       friend class BigLabelledMap;
 
     protected:
       /**
-	 Constructor from first block and index.
-         Used by class BigLabelledMap.
-      */
+       * Constructor from first block and index.
+       * Used by class BigLabelledMap.
+       */
       BlockConstIterator( const __FirstBlock & block, unsigned int idx, unsigned int size );
 
     public:
       /**
-	 Default destructor.
-      */
+       * Default destructor.
+       */
       ~BlockConstIterator();
 
       /**
-	 Default constructor.
-      */
+       * Default constructor.
+       */
       BlockConstIterator();
 
       /**
-	 Copy constructor.
-	 @param other the object to clone.
-      */
+       * Copy constructor.
+       * @param other the object to clone.
+       */
       BlockConstIterator( const BlockConstIterator & other );
 
       /**
@@ -654,57 +673,56 @@ public:
       Self & operator= ( const Self & other );
 
       /**
-	 Dereference operator.
-	 @return the current data of the iterator, if valid.
-      */
+       * Dereference operator.
+       * @return the current data of the iterator, if valid.
+       */
       Reference operator*() const;
 
       /**
-	 Pointer dereference operator.
-	 @return a non-mutable pointer on the current data.
-      */
+       * Pointer dereference operator.
+       * @return a non-mutable pointer on the current data.
+       */
       Pointer operator->() const;
 
       /**
-	  Pre-increment operator.
-	  @return a reference to itself.
-      */
+       * Pre-increment operator.
+       * @return a reference to itself.
+       */
       Self& operator++();
 
       /**
-	  Post-increment operator.
-	  @return a reference to itself.
-      */
+       * Post-increment operator.
+       * @return a reference to itself.
+       */
       Self operator++( int );
 
       /**
-	  Addition operator. Moves the iterator at position + \a n.
-	  @param n any positive integer
-	  @return a reference to itself.
-      */
+       * Addition operator. Moves the iterator at position + \a n.
+       * @param n any positive integer
+       * @return a reference to itself.
+       */
       Self& operator+=( DifferenceType n );
 
       /**
-	  Positive offset dereference operator. Moves the iterator at position + \a n.
-	  @param n any positive integer
-	  @return a reference to itself.
-      */
+       * Positive offset dereference operator. Moves the iterator at position + \a n.
+       * @param n any positive integer
+       * @return a reference to itself.
+       */
       Reference operator[]( DifferenceType n ) const;
 
       /**
-	 Equality operator.
-	 @param other any other iterator.
-	 @return 'true' iff the iterators points on the same element.
-      */
+       * Equality operator.
+       * @param other any other iterator.
+       * @return 'true' iff the iterators points on the same element.
+       */
       bool operator==( const Self & other ) const;
 
       /**
-	 Inequality operator.
-	 @param other any other iterator.
-	 @return 'true' iff the iterators points on different elements.
-      */
+       * Inequality operator.
+       * @param other any other iterator.
+       * @return 'true' iff the iterators points on different elements.
+       */
       bool operator!=( const Self & other ) const;
-
 
     };
 
@@ -742,25 +760,25 @@ public:
 
     protected:
       /**
-	 Constructor. Internal. Used by BigLabelledMap.
-      */
+       * Constructor. Internal. Used by BigLabelledMap.
+       */
       ConstIterator( LabelsConstIterator lIt, BlockConstIterator bIt );
 
     public:
       /**
-	 Default destructor.
-      */
+       * Default destructor.
+       */
       ~ConstIterator();
 
       /**
-	 Default constructor.
-      */
+       * Default constructor.
+       */
       ConstIterator();
 
       /**
-	 Copy constructor.
-	 @param other the object to clone.
-      */
+       * Copy constructor.
+       * @param other the object to clone.
+       */
       ConstIterator( const ConstIterator & other );
 
       /**
@@ -771,42 +789,42 @@ public:
       Self & operator= ( const Self & other );
 
       /**
-	 Dereference operator.
-	 @return the current data of the iterator, if valid.
-      */
+       * Dereference operator.
+       * @return the current data of the iterator, if valid.
+       */
       Reference operator*() const;
 
       /**
-	 Pointer dereference operator.
-         \b Warning: Not thread-safe !! Use operator* instead.
-	 @return a non-mutable pointer on the current data.
-      */
+       * Pointer dereference operator.
+       * \b Warning: Not thread-safe !! Use operator* instead.
+       * @return a non-mutable pointer on the current data.
+       */
       Pointer operator->() const;
 
       /**
-	  Pre-increment operator.
-	  @return a reference to itself.
-      */
+       * Pre-increment operator.
+       * @return a reference to itself.
+       */
       Self& operator++();
 
       /**
-	  Post-increment operator.
-	  @return a reference to itself.
-      */
+       * Post-increment operator.
+       * @return a reference to itself.
+       */
       Self operator++( int );
 
       /**
-	 Equality operator.
-	 @param other any other iterator.
-	 @return 'true' iff the iterators points on the same element.
-      */
+       * Equality operator.
+       * @param other any other iterator.
+       * @return 'true' iff the iterators points on the same element.
+       */
       bool operator==( const Self & other ) const;
 
       /**
-	 Inequality operator.
-	 @param other any other iterator.
-	 @return 'true' iff the iterators points on different elements.
-      */
+       * Inequality operator.
+       * @param other any other iterator.
+       * @return 'true' iff the iterators points on different elements.
+       */
       bool operator!=( const Self & other ) const;
 
 
@@ -817,14 +835,16 @@ public:
     /// non-mutable class via iterators.
     typedef ConstIterator Iterator;
     /// Key comparator class. Always natural ordering.
-    class KeyCompare {
+    class KeyCompare
+      {
     public:
       inline KeyCompare() {}
       inline bool operator()( Key k1, Key k2 ) const
-      {
-        return k1 < k2;
-      }
-    };
+        {
+          return k1 < k2;
+        }
+      };
+
     /// Value comparator class. Always natural ordering between keys.
     class ValueCompare {
     public:
@@ -851,14 +871,14 @@ public:
     BigLabelledMap ( const BigLabelledMap & other );
 
     /**
-       Constructor from range.
-
-       @tparam InputIterator model of boost::InputIterator whose
-       value type is convertible to Value.
-
-       @param first an iterator on the first value of the range.
-       @param last an iterator after the last value of the range.
-    */
+     *  Constructor from range.
+     *
+     * @tparam InputIterator model of boost::InputIterator whose
+     * value type is convertible to Value.
+     *
+     * @param first an iterator on the first value of the range.
+     * @param last an iterator after the last value of the range.
+     */
     template <typename InputIterator>
     BigLabelledMap( InputIterator first, InputIterator last );
 
@@ -878,53 +898,53 @@ public:
   public:
 
     /**
-       @return a reference to the labels.
-    */
+     * @return a reference to the labels.
+     */
     const LabelsType & labels() const;
 
     /**
-       The number of datas stored in the structure. O(1) complexity.
+     * The number of datas stored in the structure. O(1) complexity.
      */
     SizeType size() const;
 
     /**
-       @return 'true' if and only if the container is empty. O(1)
+     * @return 'true' if and only if the container is empty. O(1)
      */
     bool empty() const;
 
     /**
-       The maximum number of datas storable in the structure.
+     * The maximum number of datas storable in the structure.
      */
     SizeType max_size() const;
 
     /**
-       The number of datas currently allocated in the structure.
+     * The number of datas currently allocated in the structure.
      */
     SizeType capacity() const;
 
     /**
-       @return a comparator object for two keys. Corresponds to k1 < k2.
-    */
+     * @return a comparator object for two keys. Corresponds to k1 < k2.
+     */
     KeyCompare key_comp() const;
 
     /**
-       @return a comparator object for two values. Corresponds to v1.first < v2.first.
-    */
+     * @return a comparator object for two values. Corresponds to v1.first < v2.first.
+     */
     ValueCompare value_comp() const;
 
     /**
-       Swap content. Exchanges the content of the container with the
-       content of mp, which is another map object containing elements
-       of the same type. Sizes may differ.
-
-       After the call to this member function, the elements in this
-       container are those which were in mp before the call, and the
-       elements of mp are those which were in this.
-
-       NB: not exactly standard ! The iterators pointing on the first
-       block change roles ! The other references and pointers remain
-       valid for the swapped objects.
-    */
+     * Swap content. Exchanges the content of the container with the
+     * content of mp, which is another map object containing elements
+     * of the same type. Sizes may differ.
+     *
+     * After the call to this member function, the elements in this
+     * container are those which were in mp before the call, and the
+     * elements of mp are those which were in this.
+     *
+     * NB: not exactly standard ! The iterators pointing on the first
+     * block change roles ! The other references and pointers remain
+     * valid for the swapped objects.
+     */
     void swap( Self & other );
 
     /**
@@ -1341,7 +1361,7 @@ public:
              unsigned int N, unsigned int M>
   std::ostream&
   operator<< ( std::ostream & out,
-               const BigLabelledMap<TData, L, TWord, N, M> & object );
+               const BigLabelledMap<TData, L, N, M> & object );
 
   namespace detail {
 
