@@ -23,7 +23,7 @@
  * Laboratory of Mathematics (CNRS, UMR 5807), University of Savoie, France
  *
  * @date 2010/09/02
- * 
+ *
  */
 #ifndef BITS_HPP
 #define BITS_HPP
@@ -36,7 +36,7 @@
 namespace DGtal
 {
 
-  struct Bits
+struct Bits
   {
     /**
      * @brief Bits Structs grouping all the functions of this tiny
@@ -45,152 +45,290 @@ namespace DGtal
      * @todo Check that T is CInteger.
      */
 
-     
+
     /**
      * Returns a string containing value's bits. Mainly designed for debugging purposes.
-     * 
+     *
      * @param value The value that you need to dipslay as a bit string.
      * @param nbBits number of bits to be displayed. If equal to 0, the number of bits will
      * correspond to the size of the type T.
      */
     template <typename T>
     static std::string bitString(T value, unsigned nbBits = 0)
-    {
-      std::string bitStr;
-      /*functors::Min<unsigned int> min;*/
+      {
+        std::string bitStr;
+        /*functors::Min<unsigned int> min;*/
 
-      // if the requested number of bit is 0, use the size of the data type instead
-      if(nbBits == 0) nbBits = sizeof(T)*8;
-      int i = (int)(std::min((DGtal::int64_t)sizeof(T)*8-1, (DGtal::int64_t)nbBits-1));
+        // if the requested number of bit is 0, use the size of the data type instead
+        if(nbBits == 0) nbBits = sizeof(T)*8;
+        int i = (int)(std::min((DGtal::int64_t)sizeof(T)*8-1, (DGtal::int64_t)nbBits-1));
 
-      for(; i>=0; i--)
-	{
-	  T mask = ((T)1) << i; // if you take these parenthesis out,
-	  // a mountain of incredible runtime
-	  // errors will jump on you.(I warned
-	  // ya !)
-	  if(value & mask)
-	    bitStr += "1" ;
-	  else
-	    bitStr += "0" ;
-	}
-      return bitStr;
-    }
+        for(; i>=0; i--)
+          {
+            T mask = ((T)1) << i; // if you take these parenthesis out,
+            // a mountain of incredible runtime
+            // errors will jump on you.(I warned
+            // ya !)
+            if(value & mask)
+              bitStr += "1" ;
+            else
+              bitStr += "0" ;
+          }
+        return bitStr;
+      }
+
+    // ---------------------------------------------------------------------
+    //  Bit shift functions
+    // ---------------------------------------------------------------------
+
+    /** Returns a given value whose bits have been left-shifted.
+     * @tparam    T   The type of the value.
+     * @param[in] val The value to be shifted.
+     * @param[in] n   Shift count.
+     */
+    template < typename T >
+    static inline
+    T leftShift( T val, unsigned n )
+      {
+        return val << n;
+      }
+
+    /** Returns a given value whose bits have been right-shifted.
+     * @tparam    T   The type of the value.
+     * @param[in] val The value to be shifted.
+     * @param[in] n   Shift count.
+     */
+    template < typename T >
+    static inline
+    T rightShift( T val, unsigned n )
+      {
+        return val >> n;
+      }
+
+    /** Returns a given value whose bits have been left or right shifted depending of the sign of \p n.
+     * It is equivalent to a left-shift if \p n is positive, right-shift otherwise.
+     * @tparam    T   The type of the value.
+     * @param[in] val The value to be shifted.
+     * @param[in] n   Shift count.
+     */
+    template < typename T >
+    static inline
+    T signedShift( T val, signed n )
+      {
+        return ( n > 0 ) ? leftShift(val, static_cast<unsigned>(n)) : rightShift(val, static_cast<unsigned>(-n));
+      }
+
+    /** Returns a given value whose bits have been shifted so that the bit at position \p fromPos has been moved to the position \p toPos.
+     * @tparam    T       The type of the value.
+     * @param[in] val     The value to be shifted.
+     * @param[in] fromPos Position of the bit to be moved.
+     * @param[in] toPos   Destination position of the same bit.
+     */
+    template < typename T >
+    static inline
+    T diffShift( T val, unsigned fromPos, unsigned toPos )
+      {
+        return ( fromPos < toPos ) ? leftShift(val, toPos - fromPos) : rightShift(val, fromPos - toPos);
+      }
+    
+    // ---------------------------------------------------------------------
+    //  Bit mask functions
+    // ---------------------------------------------------------------------
+
+    /** Returns a value with only one bit set, preceded by \p nthBit zero bits.
+     * @tparam    T       The type of the value.
+     * @param[in] nthBit  Position of the set bit.
+     */
+    template< typename T >
+    static inline 
+    T mask(unsigned nthBit)
+      {
+        return T(1) << nthBit;
+      }
+
+    /** Returns a value with only \p width consecutive bits equal to 1, starting with the first bit.
+     * @tparam    T     The type of the value.
+     * @param[in] width Number of consecutive set bits.
+     * @warning \p width must be smaller than the bits size of \p T.
+     */
+    template < typename T >
+    static inline
+    T wideMask( unsigned width )
+      {
+        return ( T(1) << width ) - 1;
+      }
+
+    /** Returns a value with only \p width consecutive bits equal to 1, preceded by \p nthBit zero bits.
+     * @tparam    T       The type of the value.
+     * @param[in] nthBit  Position of the first set bit.
+     * @param[in] width   Number of consecutive set bits.
+     * @warning \p width must be smaller than the bits size of \p T.
+     */
+    template<typename T>
+    static inline
+    T wideMask(unsigned width, unsigned nthBit)
+      {
+        return leftShift( wideMask<T>(width), nthBit );
+      }
+    
+    // ---------------------------------------------------------------------
+    //  Bit copy functions
+    // ---------------------------------------------------------------------
+     
+    /** Copy consecutive bits from a value to another one, with different bit positions.
+     * @tparam    T   The type of the values.
+     * @param[in] fromValue The origin value.
+     * @param[in] fromPos   The position of the first bit to be copied in the origin value.
+     * @param[in] toValue   The destination value.
+     * @param[in] toPos     The position where to copy the first bit.
+     * @param[in] width     Number of consecutive bits to be copied.
+     * @warning \p width must be smaller than the bits size of \p T.
+     */
+    template < typename T >
+    static inline
+    T wideCopy( T fromValue, unsigned fromPos, T toValue, unsigned toPos, unsigned width )
+      {
+        const T toMask = wideMask<T>( width, toPos );
+        return ( toValue & ~toMask ) | ( diffShift(fromValue, fromPos, toPos) & toMask );
+      }
+
+    /** Copy consecutive bits from a value to another one, where the first copied bit is at the beginning of the origin value.
+     * @tparam    T   The type of the values.
+     * @param[in] fromValue The origin value.
+     * @param[in] toValue   The destination value.
+     * @param[in] toPos     The position where to copy the first bit.
+     * @param[in] width     Number of consecutive bits to be copied.
+     * @warning \p width must be smaller than the bits size of \p T.
+     */
+    template < typename T >
+    static inline
+    T wideCopyFromStart( T fromValue, T toValue, unsigned toPos, unsigned width )
+      {
+        const T toMask = wideMask<T>( width, toPos );
+        return ( toValue & ~toMask ) | ( leftShift(fromValue, toPos) & toMask );
+      }
+    
+    /** Copy consecutive bits from a value to another one, where the first copied bit is at the beginning of the destination value.
+     * @tparam    T   The type of the values.
+     * @param[in] fromValue The origin value.
+     * @param[in] fromPos   The position of the first bit to be copied in the origin value.
+     * @param[in] toValue   The destination value.
+     * @param[in] width     Number of consecutive bits to be copied.
+     * @warning \p width must be smaller than the bits size of \p T.
+     */
+    template < typename T >
+    static inline
+    T wideCopyToStart( T fromValue, unsigned fromPos, T toValue, unsigned width )
+      {
+        const T toMask = wideMask<T>( width );
+        return ( toValue & ~toMask ) | ( rightShift(fromValue, fromPos) & toMask );
+      }
 
 
     // ---------------------------------------------------------------------
-    //  Other functions
+    //  Bit query functions
     // ---------------------------------------------------------------------
-
-    /**
-     * Returns an value which bits are of the form 0..010..0 with the nthBit equal to 1.
-     */ 
-    template<typename T> 
-    static inline T mask(unsigned nthBit)
-    {
-      return static_cast<T>(static_cast<T>(1) << nthBit); 
-    }
-
+    
     /**
      *  Returns the state of key's nthBit bit.
-     */ 
+     */
     template <typename T>
     static inline bool getBit(T key, unsigned nthBit)
-    {
-      return ( key & mask<T>(nthBit) );
-    }
+      {
+        return ( key & mask<T>(nthBit) );
+      }
 
-  
-    /** 
+
+    /**
      * Returns a value such that only its bit corresponding to the
      * first (least important) set bit of val, is set.
-     */ 
+     */
     template <typename T>
     static inline  T firstSetBit(T val)
-    {
-      return ( (val & -val) | (val & (~val + 1)) );
-    }
+      {
+        return ( (val & -val) | (val & (~val + 1)) );
+      }
 
 
     /**
      * Returns a value such that only its bit corresponding to the
      * first (least important) unset bit of val, is set.
-     */ 
+     */
     template <typename T>
     static inline T firstUnsetBit(T val)
-    {
-      return ~val & (val + 1);
-    }
+      {
+        return ~val & (val + 1);
+      }
 
 
     /**
      * Returns the amount of set bits in val.
-     */ 
+     */
     template <typename T>
     static inline unsigned int nbSetBits(T val)
-    {
+      {
 #ifdef TRACE_BITS
-      std::cerr << "unsigned int nbSetBits(T val)" << std::endl;
+        std::cerr << "unsigned int nbSetBits(T val)" << std::endl;
 #endif
-      unsigned int i = 0;
-      for ( ; val; ++i) {val ^= val & -val; }
-      return i;
-    }
+        unsigned int i = 0;
+        for ( ; val; ++i) { val ^= val & -val; }
+        return i;
+      }
 
     /**
        Overloading for type uint8_t
        Returns the amount of set bits in val.
-    */ 
-    static inline 
+    */
+    static inline
     unsigned int nbSetBits( DGtal::uint8_t val )
-    {
+      {
 #ifdef TRACE_BITS
-      std::cerr << "unsigned int nbSetBits( DGtal::uint8_t val )" << std::endl;
+        std::cerr << "unsigned int nbSetBits( DGtal::uint8_t val )" << std::endl;
 #endif
-      return myBitCount[ val ];
-    }
+        return myBitCount[ val ];
+      }
 
     /**
        Overloading for type uint16_t
        Returns the amount of set bits in val.
-    */ 
-    static inline 
+    */
+    static inline
     unsigned int nbSetBits( DGtal::uint16_t val )
-    {
+      {
 #ifdef TRACE_BITS
-      std::cerr << "unsigned int nbSetBits( DGtal::uint16_t val )" << std::endl;
+        std::cerr << "unsigned int nbSetBits( DGtal::uint16_t val )" << std::endl;
 #endif
-      return nbSetBits( static_cast<DGtal::uint8_t>( val & 0xff ) ) 
-	+ nbSetBits( static_cast<DGtal::uint8_t>( val >> 8 ) );
-    }
+        return nbSetBits( static_cast<DGtal::uint8_t>( val & 0xff ) )
+          + nbSetBits( static_cast<DGtal::uint8_t>( val >> 8 ) );
+      }
 
     /**
        Overloading for type uint32_t
        Returns the amount of set bits in val.
-    */ 
-    static inline 
+    */
+    static inline
     unsigned int nbSetBits( DGtal::uint32_t val )
-    {
+      {
 #ifdef TRACE_BITS
-      std::cerr << "unsigned int nbSetBits( DGtal::uint32_t val )" << std::endl;
+        std::cerr << "unsigned int nbSetBits( DGtal::uint32_t val )" << std::endl;
 #endif
-      return nbSetBits( static_cast<DGtal::uint16_t>( val & 0xffff ) ) 
-	+ nbSetBits( static_cast<DGtal::uint16_t>( val >> 16 ) );
-    }
+        return nbSetBits( static_cast<DGtal::uint16_t>( val & 0xffff ) )
+          + nbSetBits( static_cast<DGtal::uint16_t>( val >> 16 ) );
+      }
 
     /**
        Overloading for type uint64_t
        Returns the amount of set bits in val.
-    */ 
-    static inline 
+    */
+    static inline
     unsigned int nbSetBits( DGtal::uint64_t val )
-    {
+      {
 #ifdef TRACE_BITS
-      std::cerr << "unsigned int nbSetBits( DGtal::uint64_t val )" << std::endl;
+        std::cerr << "unsigned int nbSetBits( DGtal::uint64_t val )" << std::endl;
 #endif
-      return nbSetBits( static_cast<DGtal::uint32_t>( val & 0xffffffffLL ) ) 
-	+ nbSetBits( static_cast<DGtal::uint32_t>( val >> 32 ) );
-    }
+        return nbSetBits( static_cast<DGtal::uint32_t>( val & 0xffffffffLL ) )
+          + nbSetBits( static_cast<DGtal::uint32_t>( val >> 32 ) );
+      }
 
     /**
        Specialization for uint8_t.
@@ -203,12 +341,12 @@ namespace DGtal
        @param n a number in 0..255
        @return this index or 0 if the bit is not set.
     */
-    static inline 
+    static inline
     unsigned int indexInSetBits( DGtal::uint8_t n, unsigned int b )
-    {
-      ASSERT( b < 8 );
-      return myIndexInSetBits[ b ][ n ];
-    }
+      {
+        ASSERT( b < 8 );
+        return myIndexInSetBits[ b ][ n ];
+      }
 
     /**
        Specialization for uint16_t.
@@ -221,20 +359,20 @@ namespace DGtal
        @param n a number in 0..65535
        @return this index or 0 if the bit is not set.
     */
-    static inline 
+    static inline
     unsigned int indexInSetBits( DGtal::uint16_t n, unsigned int b )
-    {
-      ASSERT( b < 16 );
-      if ( b < 8 ) 
-	return indexInSetBits( static_cast<DGtal::uint8_t>( n & 0xff ), b );
-      else 
-	{
-	  unsigned int idx = indexInSetBits( static_cast<DGtal::uint8_t>( n >> 8 ), b - 8 );
-	  return ( idx == 0 )
-	    ? 0 // bit b is not set
-	    : idx + nbSetBits( static_cast<DGtal::uint8_t>( n & 0xff ) );
-	}
-    }
+      {
+        ASSERT( b < 16 );
+        if ( b < 8 )
+          return indexInSetBits( static_cast<DGtal::uint8_t>( n & 0xff ), b );
+        else
+          {
+            unsigned int idx = indexInSetBits( static_cast<DGtal::uint8_t>( n >> 8 ), b - 8 );
+            return ( idx == 0 )
+              ? 0 // bit b is not set
+              : idx + nbSetBits( static_cast<DGtal::uint8_t>( n & 0xff ) );
+          }
+      }
 
     /**
        Specialization for uint32_t.
@@ -247,20 +385,20 @@ namespace DGtal
        @param n a number in 0..2^32-1
        @return this index or 0 if the bit is not set.
     */
-    static inline 
+    static inline
     unsigned int indexInSetBits( DGtal::uint32_t n, unsigned int b )
-    {
-      ASSERT( b < 32 );
-      if ( b < 16 ) 
-	return indexInSetBits( static_cast<DGtal::uint16_t>( n & 0xffff ), b );
-      else 
-	{
-	  unsigned int idx = indexInSetBits( static_cast<DGtal::uint16_t>( n >> 16 ), b - 16 );
-	  return ( idx == 0 )
-	    ? 0 // bit b is not set
-	    : idx + nbSetBits( static_cast<DGtal::uint16_t>( n & 0xffff ) );
-	}
-    }
+      {
+        ASSERT( b < 32 );
+        if ( b < 16 )
+          return indexInSetBits( static_cast<DGtal::uint16_t>( n & 0xffff ), b );
+        else
+          {
+            unsigned int idx = indexInSetBits( static_cast<DGtal::uint16_t>( n >> 16 ), b - 16 );
+            return ( idx == 0 )
+              ? 0 // bit b is not set
+              : idx + nbSetBits( static_cast<DGtal::uint16_t>( n & 0xffff ) );
+          }
+      }
 
    /**
        Specialization for uint64_t.
@@ -273,116 +411,116 @@ namespace DGtal
        @param n a number in 0..2^64-1
        @return this index or 0 if the bit is not set.
     */
-    static inline 
+    static inline
     unsigned int indexInSetBits( DGtal::uint64_t n, unsigned int b )
-    {
-      ASSERT( b < 64 );
-      if ( b < 32 ) 
-	return indexInSetBits( static_cast<DGtal::uint32_t>( n & 0xffffffffLL ), b );
-      else 
-	{
-	  unsigned int idx = indexInSetBits( static_cast<DGtal::uint32_t>( n >> 32 ), b - 32 );
-	  return ( idx == 0 )
-	    ? 0 // bit b is not set
-	    : idx + nbSetBits( static_cast<DGtal::uint32_t>( n & 0xffffffffLL ) );
-	}
-    }
+      {
+        ASSERT( b < 64 );
+        if ( b < 32 )
+          return indexInSetBits( static_cast<DGtal::uint32_t>( n & 0xffffffffLL ), b );
+        else
+          {
+            unsigned int idx = indexInSetBits( static_cast<DGtal::uint32_t>( n >> 32 ), b - 32 );
+            return ( idx == 0 )
+              ? 0 // bit b is not set
+              : idx + nbSetBits( static_cast<DGtal::uint32_t>( n & 0xffffffffLL ) );
+          }
+      }
 
-    
+
     /**
        @param n any number
        @return the index (0..) of the least significant bit.
     */
-    static inline 
+    static inline
     unsigned int leastSignificantBit( DGtal::uint8_t n )
-    {
-      return myLSB[ n ];
-    }
+      {
+        return myLSB[ n ];
+      }
 
     /**
        @param n any number
        @return the index (0..) of the least significant bit.
     */
-    static inline 
+    static inline
     unsigned int leastSignificantBit( DGtal::uint16_t n )
-    {
-      return ( n & 0xff ) 
-        ? leastSignificantBit( (DGtal::uint8_t) n )
-        : 8 + leastSignificantBit( (DGtal::uint8_t) (n>>8) );
-    }
+      {
+        return ( n & 0xff )
+          ? leastSignificantBit( (DGtal::uint8_t) n )
+          : 8 + leastSignificantBit( (DGtal::uint8_t) (n>>8) );
+      }
 
     /**
        @param n any number
        @return the index (0..) of the least significant bit.
     */
-    static inline 
+    static inline
     unsigned int leastSignificantBit( DGtal::uint32_t n )
-    {
-      return ( n & 0xffff ) 
-        ? leastSignificantBit( (DGtal::uint16_t) n )
-        : 16 + leastSignificantBit( (DGtal::uint16_t) (n>>16) );
-    }
+      {
+        return ( n & 0xffff )
+          ? leastSignificantBit( (DGtal::uint16_t) n )
+          : 16 + leastSignificantBit( (DGtal::uint16_t) (n>>16) );
+      }
 
     /**
        @param n any number
        @return the index (0..) of the least significant bit.
     */
-    static inline 
+    static inline
     unsigned int leastSignificantBit( DGtal::uint64_t n )
-    {
-      return ( n & 0xffffffffLL ) 
-        ? leastSignificantBit( (DGtal::uint32_t) n )
-        : 32 + leastSignificantBit( (DGtal::uint32_t) (n>>32) );
-    }
- 
+      {
+        return ( n & 0xffffffffLL )
+          ? leastSignificantBit( (DGtal::uint32_t) n )
+          : 32 + leastSignificantBit( (DGtal::uint32_t) (n>>32) );
+      }
+
     /**
        @param n any number
        @return the index (..0) of the most significant bit.
     */
-    static inline 
+    static inline
     unsigned int mostSignificantBit( DGtal::uint8_t n )
-    {
-      return myMSB[ n ];
-    }
+      {
+        return myMSB[ n ];
+      }
 
     /**
        @param n any number
        @return the index (..0) of the mot significant bit.
     */
-    static inline 
+    static inline
     unsigned int mostSignificantBit( DGtal::uint16_t n )
-    {
-      return ( n & 0xff00 ) 
-        ? 8 + mostSignificantBit( (DGtal::uint8_t) (n>>8) )
-        :  mostSignificantBit((DGtal::uint8_t) (n) );
-    }
- 
+      {
+        return ( n & 0xff00 )
+          ? 8 + mostSignificantBit( (DGtal::uint8_t) (n>>8) )
+          :  mostSignificantBit((DGtal::uint8_t) (n) );
+      }
+
     /**
        @param n any number
        @return the index (..0) of the most significant bit.
     */
-    static inline 
+    static inline
     unsigned int mostSignificantBit( DGtal::uint32_t n )
-    {
-      return ( n & 0xffff0000 ) 
-        ? 16 + mostSignificantBit( (DGtal::uint16_t) (n>>16) )
-        :  mostSignificantBit((DGtal::uint16_t) (n) );
-    }
+      {
+        return ( n & 0xffff0000 )
+          ? 16 + mostSignificantBit( (DGtal::uint16_t) (n>>16) )
+          :  mostSignificantBit((DGtal::uint16_t) (n) );
+      }
 
     /**
        @param n any number
        @return the index (..0) of the most significant bit.
     */
-    static inline 
+    static inline
     unsigned int mostSignificantBit( DGtal::uint64_t n )
-    {
-      return ( n & 0xffffffff00000000LL ) 
-        ? 32 + mostSignificantBit( (DGtal::uint32_t) (n>>32) )
-        :  mostSignificantBit((DGtal::uint32_t) (n) );      
-    }
-    
+      {
+        return ( n & 0xffffffff00000000LL )
+          ? 32 + mostSignificantBit( (DGtal::uint32_t) (n>>32) )
+          :  mostSignificantBit((DGtal::uint32_t) (n) );
+      }
 
-    	  
+
+
     /**
        Lookup table for counting the number of bits set to 1 in a byte.
        ( Taken from STL <bitset> )
@@ -410,7 +548,7 @@ namespace DGtal
     */
     static const DGtal::uint8_t myIndexInSetBits[ 8 ][ 256 ];
 
-    
+
   };//struct
 }
 #endif

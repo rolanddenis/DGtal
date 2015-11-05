@@ -27,7 +27,8 @@ SET(DGTAL_TESTS_SRC
    testOwningOrAliasingPtr
    testCatch
    testSimpleRandomAccessRangeFromPoint
-   )
+   testBitFieldArray
+)
 
 FOREACH(FILE ${DGTAL_TESTS_SRC})
   add_executable(${FILE} ${FILE})
@@ -35,6 +36,7 @@ FOREACH(FILE ${DGTAL_TESTS_SRC})
   add_test(${FILE} ${FILE})
 ENDFOREACH(FILE)
 
+target_link_libraries(testBitFieldArray boost_system boost_timer)
 
 #--- Benchmark specific
 if (WITH_BENCHMARK)
