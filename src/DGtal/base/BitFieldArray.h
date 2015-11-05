@@ -46,6 +46,7 @@
 #include <boost/static_assert.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/array.hpp>
+#include <boost/core/addressof.hpp> // To get memory adresse even when & is overloaded.
 
 #include <DGtal/base/Bits.h>
 
@@ -124,7 +125,7 @@ public:
   typedef BitFieldArray<T, S, N>  Self; ///< Self type.
   typedef T     Value; ///< Type of an element.
   typedef Proxy Reference; ///< Proxy to an element (does not behaves like a lvalue reference!).
-  typedef Value ConstReference; ///< Constant reference (in fact, a rvalue).
+  typedef const Value     ConstReference; ///< Constant reference (in fact, a rvalue).
   typedef std::size_t     SizeType;
   typedef std::ptrdiff_t  DifferenceType;
 
@@ -267,6 +268,27 @@ public:
     : myBitFieldArray( &aBitFieldArray )
     , myIndex( anIndex )
     {}
+
+  /** Pointer proxy in order to avoid static temporary when using operator->
+   * @note It is a trick coming from boost::iterator_facade. Don't sure if it is
+   * safer than using a static temporary.
+   */
+  struct PtrProxy
+    {
+      explicit PtrProxy( T const& aValue ) : myValue(aValue) {}
+      T const* operator->() const { return boost::addressof(myValue); }
+      operator T const* () const { return boost::addressof(myValue); }
+      T myValue;
+    };
+
+  /** Member access of the underlying type.
+   * This overrides -> from iterator_facade and return his own pointer proxy.
+   * @note If a static conversion is made to iterator_facade, this override will be ignored...
+   */
+  PtrProxy operator-> () const
+    {
+      return PtrProxy( myBitFieldArray->getValue(myIndex) );
+    }
 
 private:
   // Boost iterator_facade core operations.
