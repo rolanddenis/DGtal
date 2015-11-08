@@ -35,522 +35,31 @@
 // IMPLEMENTATION of inline methods.
 ///////////////////////////////////////////////////////////////////////////////
 
-///////////////////////////////////////////////////////////////////////////////
-// ----------------------- Standard services ------------------------------
-
-///////////////////////////////////////////////////////////////////////////////
-// class BigLabelledMap::BlockIterator
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockIterator::
-~BlockIterator()
-{}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockIterator::
-BlockIterator()
-  : myIdx( 0 ), myDatas( 0 )
-{}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockIterator::
-BlockIterator( const Self & other)
-  : myIdx( other.myIdx ), myNbDatas( other.myNbDatas ), 
-    myDatas( other.myDatas ), myNext( other.myNext )
-{}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockIterator::
-BlockIterator( __FirstBlock & block, unsigned int idx, unsigned int size )
-{
-  ASSERT( idx <= size );
-  if ( size <= N+1 )
-    {
-      if ( idx <= N )
-	{
-	  myIdx = idx;
-	  myNbDatas = N + 1;
-	  myDatas = block.datas;
-	  myNext = 0;
-	}
-      else
-	{ // end iterator.
-	  myIdx = 0;
-	  myNbDatas = 0;
-	  myDatas = 0;
-	  myNext = 0;
-	}
-    }
-  else
-    {
-      ASSERT( block.data.nextBlock != 0 );
-      myNext = block.data.nextBlock;
-      if ( idx < N )
-	{
-	  myIdx = idx;
-	  myNbDatas = N;
-	  myDatas = block.datas;
-	}
-      else
-	{
-	  idx -= N;
-	  while ( idx >= M )
-	    {
-	      idx -= M;
-	      myNext = ( myNext != 0 ) ? myNext->next : 0;
-	    }
-	  if ( myNext == 0 )
-	    {
-	      myIdx = 0;
-	      myNbDatas = 0;
-	      myDatas = 0;
-	    }
-	  else
-	    {
-	      myIdx = idx;
-	      myNbDatas = M;
-	      myDatas = myNext->datas;
-	    }
-	}
-    }
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockIterator::Self &
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockIterator::
-operator=( const Self & other )
-{
-  if ( this != &other )
-    {
-      myIdx = other.myIdx; 
-      myNbDatas = other.myNbDatas; 
-      myDatas = other.myDatas;
-      myNext = other.myNext;
-    }
-  return *this;
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockIterator::Reference
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockIterator::
-operator*() const
-{
-  ASSERT( myDatas != 0 );
-  return myDatas[ myIdx ];
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockIterator::Pointer 
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockIterator::
-operator->() const
-{
-  ASSERT( myDatas != 0 );
-  return myDatas + myIdx;
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockIterator::Self &
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockIterator::
-operator++()
-{
-  return this->operator+=( 1 );
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockIterator::Self
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockIterator::
-operator++( int )
-{
-  Self tmp( *this );
-  this->operator++();
-  return tmp;
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-inline
-bool
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockIterator::
-operator==( const Self & other ) const
-{
-  return ( myDatas == other.myDatas ) && ( myIdx == other.myIdx );
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-inline
-bool
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockIterator::
-operator!=( const Self & other ) const
-{
-  return ( myDatas != other.myDatas ) || ( myIdx != other.myIdx );
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockIterator::Self &
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockIterator::
-operator+=( DifferenceType n ) 
-{
-  myIdx += n;
-  while ( myIdx >= myNbDatas )
-    {
-      if ( myNext == 0 )
-	{
-	  myDatas = 0;
-	  myIdx = 0;
-	  break;
-	}
-      myIdx -= myNbDatas;
-      myDatas = myNext->datas;
-      myNbDatas = M;
-      myNext = myNext->next;
-    }
-  return *this;  
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockIterator::Reference
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockIterator::
-operator[]( DifferenceType n ) const
-{
-  Self tmp( *this );
-  tmp += n;
-  return *tmp;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// class BigLabelledMap::BlockConstIterator
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockConstIterator::
-~BlockConstIterator()
-{}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockConstIterator::
-BlockConstIterator()
-  : myIdx( 0 ), myDatas( 0 )
-{}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockConstIterator::
-BlockConstIterator( const Self & other)
-  : myIdx( other.myIdx ), myNbDatas( other.myNbDatas ), 
-    myDatas( other.myDatas ), myNext( other.myNext )
-{}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockConstIterator::
-BlockConstIterator( const __FirstBlock & block, unsigned int idx, unsigned int size )
-{
-  ASSERT( idx <= size );
-  if ( size <= N+1 )
-    {
-      if ( idx <= N )
-	{
-	  myIdx = idx;
-	  myNbDatas = N + 1;
-	  myDatas = block.datas;
-	  myNext = 0;
-	}
-      else
-	{ // end iterator.
-	  myIdx = 0;
-	  myNbDatas = 0;
-	  myDatas = 0;
-	  myNext = 0;
-	}
-    }
-  else
-    {
-      ASSERT( block.data.nextBlock != 0 );
-      myNext = block.data.nextBlock;
-      if ( idx < N )
-	{
-	  myIdx = idx;
-	  myNbDatas = N;
-	  myDatas = block.datas;
-	}
-      else
-	{
-	  idx -= N;
-	  while ( idx >= M )
-	    {
-	      idx -= M;
-	      myNext = ( myNext != 0 ) ? myNext->next : 0;
-	    }
-	  if ( myNext == 0 )
-	    {
-	      myIdx = 0;
-	      myNbDatas = 0;
-	      myDatas = 0;
-	    }
-	  else
-	    {
-	      myIdx = idx;
-	      myNbDatas = M;
-	      myDatas = myNext->datas;
-	    }
-	}
-    }
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockConstIterator::Self &
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockConstIterator::
-operator=( const Self & other )
-{
-  if ( this != &other )
-    {
-      myIdx = other.myIdx; 
-      myNbDatas = other.myNbDatas; 
-      myDatas = other.myDatas;
-      myNext = other.myNext;
-    }
-  return *this;
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockConstIterator::Reference
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockConstIterator::
-operator*() const
-{
-  ASSERT( myDatas != 0 );
-  return myDatas[ myIdx ];
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockConstIterator::Pointer 
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockConstIterator::
-operator->() const
-{
-  ASSERT( myDatas != 0 );
-  return myDatas + myIdx;
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockConstIterator::Self &
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockConstIterator::
-operator++()
-{
-  return this->operator+=( 1 );
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockConstIterator::Self
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockConstIterator::
-operator++( int )
-{
-  Self tmp( *this );
-  this->operator++();
-  return tmp;
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-inline
-bool
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockConstIterator::
-operator==( const Self & other ) const
-{
-  return ( myDatas == other.myDatas ) && ( myIdx == other.myIdx );
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-inline
-bool
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockConstIterator::
-operator!=( const Self & other ) const
-{
-  return ( myDatas != other.myDatas ) || ( myIdx != other.myIdx );
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockConstIterator::Self &
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockConstIterator::
-operator+=( DifferenceType n ) 
-{
-  myIdx += n;
-  while ( myIdx >= myNbDatas )
-    {
-      if ( myNext == 0 )
-	{
-	  myDatas = 0;
-	  myIdx = 0;
-	  break;
-	}
-      myIdx -= myNbDatas;
-      myDatas = myNext->datas;
-      myNbDatas = M;
-      myNext = myNext->next;
-    }
-  return *this;  
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockConstIterator::Reference
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockConstIterator::
-operator[]( DifferenceType n ) const
-{
-  Self tmp( *this );
-  tmp += n;
-  return *tmp;
-}
-      
-///////////////////////////////////////////////////////////////////////////////
-// class BigLabelledMap::ConstIterator
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-inline
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::ConstIterator::
-ConstIterator( LabelsConstIterator lIt, BlockConstIterator bIt )
-  : myLabelsIt( lIt ), myBlockIt( bIt )
-{}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-inline
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::ConstIterator::
-~ConstIterator()
-{}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-inline
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::ConstIterator::
-ConstIterator()
-{}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-inline
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::ConstIterator::
-ConstIterator( const ConstIterator & other )
-  : myLabelsIt( other.myLabelsIt ), myBlockIt( other.myBlockIt )
-{}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::ConstIterator::Self &
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::ConstIterator::
-operator= ( const Self & other )
-{
-  if ( this != &other )
-    {
-      myLabelsIt = other.myLabelsIt;
-      myBlockIt = other.myBlockIt;
-    }
-  return *this;
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::ConstIterator::Reference
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::ConstIterator::
-operator*() const
-{
-  return std::make_pair( *myLabelsIt, *myBlockIt );
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::ConstIterator::Pointer
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::ConstIterator::
-operator->() const
-{
-  // Warning: not thread-safe.
-  static Value __static_tmp;
-  __static_tmp = this->operator*();
-  return &__static_tmp;
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::ConstIterator::Self&
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::ConstIterator::
-operator++()
-{
-  ++myLabelsIt;
-  ++myBlockIt;
-  return *this;
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::ConstIterator::Self
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::ConstIterator::
-operator++( int )
-{
-  Self tmp( *this );
-  this->operator++();
-  return tmp;
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-inline
-bool
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::ConstIterator::
-operator==( const Self & other ) const
-{
-  return myLabelsIt == other.myLabelsIt;
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-inline
-bool
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::ConstIterator::
-operator!=( const Self & other ) const
-{
-  return myLabelsIt != other.myLabelsIt;
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::Data&
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::ConstIterator::
-_data() const
-{
-  return const_cast<Data&>( *myBlockIt );
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-inline
-const typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::Data&
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::ConstIterator::
-_const_data() const
-{
-  return *myBlockIt;
-}
 
 ///////////////////////////////////////////////////////////////////////////////
 // class BigLabelledMap
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+DGtal::BigLabelledMap<TData, L, N, M>::
 BigLabelledMap()
 { // default constructor of myLabels and myFirstBlock is automatically called.
+  myFirstBlock.myLabels.setValue(0, 0);
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+DGtal::BigLabelledMap<TData, L, N, M>::
 ~BigLabelledMap()
 {
-  blockClear( size() );
+  myFirstBlock.clear( size() );
 }
+
+#if 0
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+DGtal::BigLabelledMap<TData, L, N, M>::
 BigLabelledMap( const BigLabelledMap & other )
   : myLabels( other.myLabels ),
     myFirstBlock( other.myFirstBlock )
@@ -570,24 +79,31 @@ BigLabelledMap( const BigLabelledMap & other )
         }
     }
 }
+#endif
+
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 template <typename InputIterator>
 inline
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+DGtal::BigLabelledMap<TData, L, N, M>::
 BigLabelledMap( InputIterator first, InputIterator last )
 { // default constructor of myLabels and myFirstBlock is automatically called.
   BOOST_CONCEPT_ASSERT(( boost::InputIterator< InputIterator > ));
+  myFirstBlock.myLabels.setValue( 0, 0);
   for ( ; first != last; ++first )
     {
-      this->operator[]( first->first ) = first->second;
+      // this->operator[]( first->first ) = first->second;
+      myFirstBlock.pushBack( *first, size() );
+      myFirstBlock.myLabels.setValue( 0, size() + 1);
     }
 }
+
+#if 0
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-DGtal::BigLabelledMap<TData, L, TWord, N, M> &
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+DGtal::BigLabelledMap<TData, L, N, M> &
+DGtal::BigLabelledMap<TData, L, N, M>::
 operator=( const BigLabelledMap & other )
 {
   if ( this != &other )
@@ -614,20 +130,20 @@ operator=( const BigLabelledMap & other )
   return *this;
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
 void
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+DGtal::BigLabelledMap<TData, L, N, M>::
 clear()
 {
   blockClear( size() );
   myLabels.reset();
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
 void
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+DGtal::BigLabelledMap<TData, L, N, M>::
 blockClear( unsigned int theSize )
 {
   if ( theSize != N+1 )
@@ -642,50 +158,45 @@ blockClear( unsigned int theSize )
     }
   myFirstBlock.data.nextBlock = 0;
 }
+
+#endif
+
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-const typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::LabelsType &
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
-labels() const
-{
-  return myLabels;
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
-inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::SizeType
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+typename DGtal::BigLabelledMap<TData, L, N, M>::SizeType
+DGtal::BigLabelledMap<TData, L, N, M>::
 size() const
 {
-  return myLabels.count();
+  return myFirstBlock.myLabels.getValue(0, SizeType(0));
 }
 
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
 bool
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+DGtal::BigLabelledMap<TData, L, N, M>::
 empty() const
 {
   return size() == 0;
 }
 
+#if 0
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::SizeType
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+typename DGtal::BigLabelledMap<TData, L, N, M>::SizeType
+DGtal::BigLabelledMap<TData, L, N, M>::
 max_size() const
 {
   return MaxLabel;
 }
 
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::SizeType
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+typename DGtal::BigLabelledMap<TData, L, N, M>::SizeType
+DGtal::BigLabelledMap<TData, L, N, M>::
 capacity() const
 {
   return ( size() <= (N+1) )
@@ -694,47 +205,47 @@ capacity() const
 }
 
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::KeyCompare
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+typename DGtal::BigLabelledMap<TData, L, N, M>::KeyCompare
+DGtal::BigLabelledMap<TData, L, N, M>::
 key_comp() const
 {
   return KeyCompare();
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::ValueCompare
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+typename DGtal::BigLabelledMap<TData, L, N, M>::ValueCompare
+DGtal::BigLabelledMap<TData, L, N, M>::
 value_comp() const
 {
   return ValueCompare();
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
 void
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+DGtal::BigLabelledMap<TData, L, N, M>::
 swap( Self & other )
 {
   std::swap( myLabels, other.myLabels );
   std::swap( myFirstBlock, other.myFirstBlock );
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::SizeType
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+typename DGtal::BigLabelledMap<TData, L, N, M>::SizeType
+DGtal::BigLabelledMap<TData, L, N, M>::
 count( const Key & key ) const
 {
   return myLabels.test( key ) ? 1 : 0;
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-const typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::Data &
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+const typename DGtal::BigLabelledMap<TData, L, N, M>::Data &
+DGtal::BigLabelledMap<TData, L, N, M>::
 blockAt( unsigned int idx ) const
 {
   ASSERT( idx < size() );
@@ -753,10 +264,10 @@ blockAt( unsigned int idx ) const
   return ptr->datas[ idx ];
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::Data &
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+typename DGtal::BigLabelledMap<TData, L, N, M>::Data &
+DGtal::BigLabelledMap<TData, L, N, M>::
 blockAt( unsigned int idx )
 {
   ASSERT( idx < size() );
@@ -775,10 +286,10 @@ blockAt( unsigned int idx )
   return ptr->datas[ idx ];
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-const typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::Data &
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+const typename DGtal::BigLabelledMap<TData, L, N, M>::Data &
+DGtal::BigLabelledMap<TData, L, N, M>::
 operator[]( const Key & key ) const
 {
   ASSERT( key < L ); 
@@ -795,10 +306,10 @@ operator[]( const Key & key ) const
     }
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::Data &
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+typename DGtal::BigLabelledMap<TData, L, N, M>::Data &
+DGtal::BigLabelledMap<TData, L, N, M>::
 operator[]( const Key & key )
 {
   ASSERT( key < L ); 
@@ -815,10 +326,10 @@ operator[]( const Key & key )
     }
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-const typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::Data &
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+const typename DGtal::BigLabelledMap<TData, L, N, M>::Data &
+DGtal::BigLabelledMap<TData, L, N, M>::
 fastAt( const Key & key ) const
 {
   ASSERT( key < L ); 
@@ -826,10 +337,10 @@ fastAt( const Key & key ) const
   return blockAt( myLabels.index( key ) );
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::Data &
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+typename DGtal::BigLabelledMap<TData, L, N, M>::Data &
+DGtal::BigLabelledMap<TData, L, N, M>::
 fastAt( const Key & key )
 {
   ASSERT( key < L ); 
@@ -837,10 +348,10 @@ fastAt( const Key & key )
   return blockAt( myLabels.index( key ) );
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
 void
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+DGtal::BigLabelledMap<TData, L, N, M>::
 erase( Iterator position )
 {
   Key key = (*position).first;
@@ -849,10 +360,10 @@ erase( Iterator position )
   myLabels.reset( key );
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::SizeType
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+typename DGtal::BigLabelledMap<TData, L, N, M>::SizeType
+DGtal::BigLabelledMap<TData, L, N, M>::
 erase( Key key )
 {
   if ( myLabels.test( key ) )
@@ -864,10 +375,10 @@ erase( Key key )
   return 0;
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
 void
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+DGtal::BigLabelledMap<TData, L, N, M>::
 erase( Iterator first, Iterator last )
 {
   for ( ; first != last; ++first )
@@ -875,10 +386,10 @@ erase( Iterator first, Iterator last )
 }
 
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-std::pair<typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::Iterator, bool>
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+std::pair<typename DGtal::BigLabelledMap<TData, L, N, M>::Iterator, bool>
+DGtal::BigLabelledMap<TData, L, N, M>::
 insert( const Value & val )
 {
   ASSERT( val.first < L ); 
@@ -898,10 +409,10 @@ insert( const Value & val )
   return std::make_pair( position, exists );
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::Iterator
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+typename DGtal::BigLabelledMap<TData, L, N, M>::Iterator
+DGtal::BigLabelledMap<TData, L, N, M>::
 insert ( Iterator position, const Value & val )
 {
   ASSERT( val.first < L ); 
@@ -920,11 +431,11 @@ insert ( Iterator position, const Value & val )
   return position;
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 template <typename InputIterator>
 inline
 void
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+DGtal::BigLabelledMap<TData, L, N, M>::
 insert( InputIterator first, InputIterator last )
 { 
   BOOST_CONCEPT_ASSERT(( boost::InputIterator< InputIterator > ));
@@ -940,11 +451,11 @@ insert( InputIterator first, InputIterator last )
     }
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-std::pair< typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::Iterator,
-           typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::Iterator >
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+std::pair< typename DGtal::BigLabelledMap<TData, L, N, M>::Iterator,
+           typename DGtal::BigLabelledMap<TData, L, N, M>::Iterator >
+DGtal::BigLabelledMap<TData, L, N, M>::
 equal_range( const Key & x )
 {
   Iterator it = begin(), it_end = end();
@@ -962,11 +473,11 @@ equal_range( const Key & x )
   return std::make_pair( it_end, it_end );
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-std::pair< typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::ConstIterator,
-           typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::ConstIterator >
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+std::pair< typename DGtal::BigLabelledMap<TData, L, N, M>::ConstIterator,
+           typename DGtal::BigLabelledMap<TData, L, N, M>::ConstIterator >
+DGtal::BigLabelledMap<TData, L, N, M>::
 equal_range( const Key & x ) const
 {
   ConstIterator it = begin(), it_end = end();
@@ -978,10 +489,10 @@ equal_range( const Key & x ) const
   return std::make_pair( it_end, it_end );
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::Iterator
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+typename DGtal::BigLabelledMap<TData, L, N, M>::Iterator
+DGtal::BigLabelledMap<TData, L, N, M>::
 find( const Key & x )
 {
   Iterator it = begin(), it_end = end();
@@ -993,10 +504,10 @@ find( const Key & x )
   return it_end;
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::ConstIterator
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+typename DGtal::BigLabelledMap<TData, L, N, M>::ConstIterator
+DGtal::BigLabelledMap<TData, L, N, M>::
 find( const Key & x ) const
 {
   ConstIterator it = begin(), it_end = end();
@@ -1008,10 +519,10 @@ find( const Key & x ) const
   return it_end;
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::Iterator
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+typename DGtal::BigLabelledMap<TData, L, N, M>::Iterator
+DGtal::BigLabelledMap<TData, L, N, M>::
 lower_bound( const Key & x )
 {
   Iterator it = begin(), it_end = end();
@@ -1022,10 +533,10 @@ lower_bound( const Key & x )
   return it_end;
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::ConstIterator
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+typename DGtal::BigLabelledMap<TData, L, N, M>::ConstIterator
+DGtal::BigLabelledMap<TData, L, N, M>::
 lower_bound( const Key & x ) const
 {
   ConstIterator it = begin(), it_end = end();
@@ -1036,10 +547,10 @@ lower_bound( const Key & x ) const
   return it_end;
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::Iterator
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+typename DGtal::BigLabelledMap<TData, L, N, M>::Iterator
+DGtal::BigLabelledMap<TData, L, N, M>::
 upper_bound( const Key & x )
 {
   Iterator it = begin(), it_end = end();
@@ -1050,10 +561,10 @@ upper_bound( const Key & x )
   return it_end;
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::ConstIterator
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+typename DGtal::BigLabelledMap<TData, L, N, M>::ConstIterator
+DGtal::BigLabelledMap<TData, L, N, M>::
 upper_bound( const Key & x ) const
 {
   ConstIterator it = begin(), it_end = end();
@@ -1065,96 +576,96 @@ upper_bound( const Key & x ) const
 }
 
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::Data &
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+typename DGtal::BigLabelledMap<TData, L, N, M>::Data &
+DGtal::BigLabelledMap<TData, L, N, M>::
 blockInsert( unsigned int idx, unsigned int block_size, const Data & data )
 {
   ASSERT( idx <= block_size ); // end is ok.
   return myFirstBlock.insert( idx, block_size, data );
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
 void
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+DGtal::BigLabelledMap<TData, L, N, M>::
 blockErase( unsigned int idx )
 {
   ASSERT( idx < size() ); // end is not ok.
   myFirstBlock.erase( idx, size() );
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::Iterator
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+typename DGtal::BigLabelledMap<TData, L, N, M>::Iterator
+DGtal::BigLabelledMap<TData, L, N, M>::
 begin()
 {
   const Self* ptr = (const Self *) this;
   return Iterator( myLabels.begin(), ptr->blockBegin() );
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::Iterator
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+typename DGtal::BigLabelledMap<TData, L, N, M>::Iterator
+DGtal::BigLabelledMap<TData, L, N, M>::
 end()
 {
   const Self* ptr = (const Self *) this;
   return Iterator( myLabels.end(), ptr->blockEnd() );
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::ConstIterator
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+typename DGtal::BigLabelledMap<TData, L, N, M>::ConstIterator
+DGtal::BigLabelledMap<TData, L, N, M>::
 begin() const
 {
   return ConstIterator( myLabels.begin(), blockBegin() );
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::ConstIterator
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+typename DGtal::BigLabelledMap<TData, L, N, M>::ConstIterator
+DGtal::BigLabelledMap<TData, L, N, M>::
 end() const
 {
   return ConstIterator( myLabels.end(), blockEnd() );
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockIterator
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+typename DGtal::BigLabelledMap<TData, L, N, M>::BlockIterator
+DGtal::BigLabelledMap<TData, L, N, M>::
 blockBegin()
 {
   return BlockIterator( myFirstBlock, 0, size() );
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockIterator
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+typename DGtal::BigLabelledMap<TData, L, N, M>::BlockIterator
+DGtal::BigLabelledMap<TData, L, N, M>::
 blockEnd()
 {
   SizeType s = size();
   return BlockIterator( myFirstBlock, s, s );
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockConstIterator
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+typename DGtal::BigLabelledMap<TData, L, N, M>::BlockConstIterator
+DGtal::BigLabelledMap<TData, L, N, M>::
 blockBegin() const
 {
   return BlockConstIterator( myFirstBlock, 0, size() );
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
-typename DGtal::BigLabelledMap<TData, L, TWord, N, M>::BlockConstIterator
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+typename DGtal::BigLabelledMap<TData, L, N, M>::BlockConstIterator
+DGtal::BigLabelledMap<TData, L, N, M>::
 blockEnd() const
 {
   SizeType s = size();
@@ -1168,10 +679,10 @@ blockEnd() const
  * Writes/Displays the object on an output stream.
  * @param out the output stream where the object is written.
  */
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
 void
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::
+DGtal::BigLabelledMap<TData, L, N, M>::
 selfDisplay( std::ostream & out ) const
 {
   if ( size() == 0 ) out << "()";
@@ -1205,32 +716,33 @@ selfDisplay( std::ostream & out ) const
     // }
 }
 
+
 /**
  * Checks the validity/consistency of the object.
  * @return 'true' if the object is valid, 'false' otherwise.
  */
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
 bool
-DGtal::BigLabelledMap<TData, L, TWord, N, M>::isValid() const
+DGtal::BigLabelledMap<TData, L, N, M>::isValid() const
 {
     return true;
 }
 
 
-
 ///////////////////////////////////////////////////////////////////////////////
 // Implementation of inline functions                                        //
 
-template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
+template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
 std::ostream&
 DGtal::operator<< ( std::ostream & out, 
-		    const BigLabelledMap<TData, L, TWord, N, M> & object )
+		    const BigLabelledMap<TData, L, N, M> & object )
 {
   object.selfDisplay( out );
   return out;
 }
+#endif
 
 template <typename TData>
 std::pair< unsigned int, unsigned int >

@@ -141,34 +141,35 @@ namespace DGtal
 
 public:
     // Maximum number of labels
-    BOOST_STATIC_CONSTANT( std::size_t, labelSize = Log2<L>::value ); //< Bit size of a label
-    BOOST_STATIC_CONSTANT( std::size_t, maxLabel  = L ); //< Real maximum number of labels.
+    BOOST_STATIC_CONSTANT( std::size_t, labelSize = Log2<L>::value ); ///< Bit size of a label
+    BOOST_STATIC_CONSTANT( std::size_t, maxLabel  = L ); ///< Real maximum number of labels.
 
-    BOOST_STATIC_CONSTANT( std::size_t, firstBlockSize = N ); //< Minimal capacity of the first block.
-    BOOST_STATIC_CONSTANT( std::size_t, nextBlockSize = M ); //< Minimal capacity of the next blocks.
+    BOOST_STATIC_CONSTANT( std::size_t, firstBlockSize = N ); ///< Minimal capacity of the first block.
+    BOOST_STATIC_CONSTANT( std::size_t, nextBlockSize = M ); ///< Minimal capacity of the next blocks.
 
     // ----------------------- Public types ------------------------------
-    typedef BigLabelledMap<TData, L, N, M> Self; //< Self type.
-    typedef TData Data; //< Data type.
+    typedef BigLabelledMap<TData, L, N, M> Self; ///< Self type.
+    typedef TData Data; ///< Data type.
 
-    typedef std::size_t Label; //< Label type.
+    typedef std::size_t Label; ///< Label type.
 
-    typedef Label Key; //< Key type (i.e. label type).
-    typedef std::pair<const Key, Data> Value; //< Type of a (label,data) pair.
+    typedef Label Key; ///< Key type (i.e. label type).
+    typedef std::pair<Key, Data> Value; ///< Type of a (label,data) pair.
 
     // Iterator related typedefs
-    typedef typename LabelsType::ConstIterator LabelsConstIterator;
     typedef std::ptrdiff_t DifferenceType;
     typedef std::size_t SizeType;
-    typedef Value& Reference;
-    typedef Value* Pointer;
-    typedef const Value& ConstReference;
-    typedef const Value* ConstPointer;
 
-    //class Iterator;      ///< Forward declaration
+    typedef std::pair<const Key, Data&> Reference;
+    typedef Reference*    Pointer;
+    typedef const Value   ConstReference;
+    typedef const Value*  ConstPointer;
+
+    class Iterator;      ///< Forward declaration
     class ConstIterator; ///< Forward declaration
     class KeyCompare;    ///< Forward declaration
     class ValueCompare;  ///< Forward declaration
+
     // ----------------------- Standard types ------------------------------
     typedef Key key_type;
     typedef Value value_type;
@@ -187,8 +188,8 @@ public:
 
     // Data blocks
     template < std::size_t blockSize, std::size_t labelArrayShift > struct __Block; ///< Forward declaration.
-    typedef __Block<firstBlockSize, 1>  __FirstBlock; //< First block with label count.
-    typedef __Block<nextBlockSize, 0>   __NextBlock;  //< Next blocks.
+    typedef __Block<firstBlockSize, 1>  __FirstBlock; ///< First block with label count.
+    typedef __Block<nextBlockSize, 0>   __NextBlock;  ///< Next blocks.
 
     union BlockPointer {
       __FirstBlock* first;
@@ -196,18 +197,20 @@ public:
     };
 
 
-    /// Represents the first block in the container.
-    /// Internal structure.
+    /** Represents any block of data in the container.
+     * @tparam blockSize  The capacity of this block (without extra space).
+     * @tparam labelArrayShift  Padding length at start of labels storage (=1 for the first block).
+     */
     template <
       std::size_t blockSize,
       std::size_t labelArrayShift = 0
     >
     struct __Block
       {
-        BOOST_STATIC_CONSTANT( std::size_t, extraSpace = sizeof(TData)/sizeof(TData*) ); //< Extra space for storing values when the pointer is not used.
-        BOOST_STATIC_CONSTANT( std::size_t, blockMaxSize = blockSize + extraSpace ); //< Capacity of this block with extra space.
+        BOOST_STATIC_CONSTANT( std::size_t, extraSpace = sizeof(TData)/sizeof(TData*) ); ///< Extra space for storing values when the pointer is not used.
+        BOOST_STATIC_CONSTANT( std::size_t, blockMaxSize = blockSize + extraSpace ); ///< Capacity of this block with extra space.
 
-        typedef BitFieldArray< Label, labelSize, blockMaxSize + labelArrayShift >  Labels; //< Label array.
+        typedef BitFieldArray< Label, labelSize, blockMaxSize + labelArrayShift >  Labels; ///< Label array.
 
         /// Used in any block to finish it or to point to the next block.
         union DataOrBlockPointer
@@ -226,10 +229,20 @@ public:
         /** Returns true if the there is a next block
          * @param size  the current number of stored values in this block and the following.
          */
-        inline
-        bool hasNextBlock( std::size_t size ) const
+        static inline
+        bool hasNextBlock( std::size_t size )
           {
             return size > blockMaxSize;
+          }
+
+        /** Returns true if the data at given index is stored in this block.
+         * @param idx   the position of the data.
+         * @param size  the current number of stored values in this block and the following.
+         */
+        static inline
+        bool isInThisBlock( std::size_t idx, std::size_t size )
+          {
+            return size <= blockMaxSize || idx < blockSize;
           }
 
         /** Returns the label at position idx in the current block.
@@ -250,7 +263,7 @@ public:
         Label getLabel( std::size_t idx, std::size_t size ) const
           {
             ASSERT( idx < size );
-            if ( size <= blockMaxSize || idx <= blockSize )
+            if ( isInThisBlock( idx, size ) )
               {
                 return getBlockLabel( idx );
               }
@@ -279,7 +292,8 @@ public:
         inline
         void setLabel( std::size_t idx, Label label, std::size_t size )
           {
-            if ( size <= blockMaxSize || idx <= blockSize )
+            ASSERT( idx < size );
+            if ( isInThisBlock( idx, size ) )
               {
                 setBlockLabel( idx );
               }
@@ -314,15 +328,26 @@ public:
             return setBlockData( idx, value.first, value.second );
           }
 
-        /** Gets a (label,data) pair from given position in this block.
+        /** Gets a constant (label,data) pair from given position in this block.
          * @param idx   the position where to read.
          * @return the (label,data) pair.
          */
         inline
-        Value getBlockValueAt( std::size_t idx ) const
+        ConstReference getBlockValueAt( std::size_t idx ) const
           {
             ASSERT( idx < blockMaxSize );
-            return Value( getBlockLabel(idx), myData[idx] );
+            return ConstReference( getBlockLabel(idx), myData[idx] );
+          }
+        
+        /** Gets a (label,data) pair, where the data is mutable, from given position in this block.
+         * @param idx   the position where to read.
+         * @return the (label,data) pair.
+         */
+        inline
+        Reference getBlockValueAt( std::size_t idx )
+          {
+            ASSERT( idx < blockMaxSize );
+            return Reference( getBlockLabel(idx), myData[idx] );
           }
 
         /** Get a data from given position in this block.
@@ -464,7 +489,22 @@ public:
               }
             else // size > blockMaxSize + 1
               {
-                myTail.nextBlock->eraseAt( idx - blockSize, size - blockSize );
+                if ( idx < blockSize )
+                  setBlockValueAt( idx, myTail.nextBlock->popBack( size - blockSize ) );
+                else
+                  myTail.nextBlock->eraseAt( idx - blockSize, size - blockSize );
+              }
+          }
+
+        /** Clear this block and the following blocks.
+         * @param size  The current number of stored value in this block and the following.
+         */
+        void clear( std::size_t size )
+          {
+            if ( size > blockMaxSize )
+              {
+                myTail.nextBlock->clear( size - blockSize );
+                delete myTail.nextBlock;
               }
           }
 
@@ -472,7 +512,7 @@ public:
          *
          * Returns blockMaxSize if not found.
          * @param label The label to found.
-         * @param size  The current number of stored value in this blocks and the following.
+         * @param size  The current number of stored value in this block and the following.
          * @param idx   Where to start the search.
          */
         SizeType findBlockLabel( Label const& label, std::size_t size, std::size_t idx = 0 )
@@ -492,348 +532,193 @@ public:
         DataOrBlockPointer myTail;
       }; // end of class __Block
 
-
-    /**
-       Pseudo-random iterator to visit BigLabelledMap (it is
-       only a random forward iterator).  Model of
-       boost::ForwardIterator. Provides also + and += arithmetic.
-    */
-    class BlockIterator
+    template < typename TFirstBlock, typename TAnyBlock >
+    class IteratorBase
       {
+      protected:
+      
+        // Boost iterator_facade core operations.
+        friend class boost::iterator_core_access;
+
+        IteratorBase ( TFirstBlock& aFirstBlock, std::size_t anIndex, std::size_t aSize )
+          : myFirstBlock( &aFirstBlock)
+          , myIndex( anIndex )
+          , mySize( aSize )
+          , myAnyBlockStack(0)
+        {
+          advance( myIndex );
+        }
+
+        virtual ~IteratorBase()
+          {
+          }
+
+        /// Increment of one position.
+        inline void increment()
+          {
+            advance(1);
+          }
+
+        /// Decrement of one position.
+        inline void decrement()
+          {
+            advance(-1);
+          }
+
+        /// Test equality with other constant iterator.
+        template < typename TOtherFirstBlock, typename TOtherAnyBlock >
+        inline bool equal( IteratorBase<TOtherFirstBlock, TOtherAnyBlock> const& other ) const
+          {
+            return 
+                  myIndex == other.myIndex
+              &&  mySize  == other.mySize
+              &&  myAnyBlockStack.size() == other.myAnyBlockStack.size();
+          }
+
+        /// Distance to.
+        template < typename TOtherFirstBlock, typename TOtherAnyBlock >
+        inline std::ptrdiff_t distance_to( IteratorBase<TOtherFirstBlock, TOtherAnyBlock> const& other ) const
+          {
+            return other.myIndex - myIndex;
+          }
+
+        /// Advance by \p n positions.
+        inline void advance ( DifferenceType n )
+          {
+            if ( n > 0 )
+              {
+                myIndex += n;
+
+                if ( myAnyBlockStack.size() > 0 || ! myFirstBlock->isInThisBlock( myIndex, mySize ) )
+                  {
+                    if ( myAnyBlockStack.size() == 0 )
+                      {
+                        myAnyBlockStack.push( &( myFirstBlock->myTail.nextBlock ) );
+                        myIndex -= __FirstBlock::blockSize;
+                        mySize  -= __FirstBlock::blockSize;
+                      }
+
+                    while ( myAnyBlockStack.top()->isInThisBlock( myIndex, mySize ) )
+                      {
+                        myAnyBlockStack.push( &( myAnyBlockStack.top()->myTail.nextBlock ) );
+                        myIndex -= __NextBlock::blockSize;
+                        mySize  -= __NextBlock::blockSize;
+                      }
+                  }
+              }
+            else 
+              {
+                n = -n; // For clarity of the following algo.
+
+                while ( n > 0 )
+                  {
+                    if ( n <= myIndex )
+                      {
+                        myIndex -= n;
+                        n = 0;
+                      }
+                    else
+                      {
+                        n -= myIndex + 1;
+                        myAnyBlockStack.pop();
+                        if ( myAnyBlockStack.size() > 0 )
+                          myIndex = mySize = __NextBlock::blockSize;
+                        else
+                          myIndex = mySize = __FirstBlock::blockSize;
+                      }
+                  }
+              }
+          }
+
+      protected:
+        TFirstBlock* myFirstBlock;
+        std::size_t myIndex;
+        std::size_t mySize;
+        std::stack< TAnyBlock* > myAnyBlockStack;
+         
+      };
+
+    class Iterator
+      : private IteratorBase< __FirstBlock, __NextBlock >
+      , public  boost::iterator_facade <
+          Iterator,
+          Value,
+          boost::random_access_traversal_tag,
+          Reference
+        >
+    {
+
     public:
-      typedef BlockIterator Self;
-      typedef TData Value;
-      typedef Value* Pointer;
-      typedef Value& Reference;
-      typedef std::ptrdiff_t DifferenceType; ///< only positive offsets allowed.
+      Iterator ( __FirstBlock& aFirstBlock, std::size_t anIndex, std::size_t aSize )
+        : IteratorBase< __FirstBlock, __NextBlock >( aFirstBlock, anIndex, aSize )
+      {
+      }
+    
+    private:
+      
+      // Boost iterator_facade core operations.
+      friend class boost::iterator_core_access;
 
-      // ----------------------- std types ----------------------------------
-      typedef Value value_type;
-      typedef std::size_t size_type;
-      typedef DifferenceType difference_type;
-      typedef Pointer pointer;
-      typedef Reference reference;
-      //typedef const Reference const_reference;
-      typedef std::forward_iterator_tag iterator_category;
+      /// Dereference.
+      inline Reference dereference() const
+        {
+          if ( this->myAnyBlockStack.size() == 0 )
+            {
+              return this->myFirstBlock->getBlockDataAt( this->myIndex );
+            }
+          else
+            {
+              return this->myAnyBlockStack.top()->getBlockDataAt( this->myIndex );
+            }
+        }
 
-
-    protected:
-      unsigned int myIdx;      ///< current index in \a myDatas of the iterator
-      unsigned int myNbDatas; ///< number of valid datas in array \a myDatas
-      Data* myDatas;         ///< array of \a myNbDatas datas.
-      __NextBlock* myNext;        ///< pointer to next block or 0 if last block.
-
-      friend class BigLabelledMap;
-
-    protected:
-      /**
-       * Constructor from first block and index. Used by class BigLabelledMap.
-       */
-      BlockIterator( __FirstBlock & block, unsigned int idx, unsigned int size );
-
+    };
+          
+    class ConstIterator
+      : private IteratorBase< const __FirstBlock, const __NextBlock >
+      , public boost::iterator_facade <
+          Iterator,
+          const Value,
+          boost::random_access_traversal_tag,
+          ConstReference
+        >
+    {
     public:
-      /**
-       * Default destructor.
-       */
-      ~BlockIterator();
+      ConstIterator ( __FirstBlock const& aFirstBlock, std::size_t anIndex, std::size_t aSize )
+        : IteratorBase< const __FirstBlock, const __NextBlock >( &aFirstBlock, anIndex, aSize )
+        {
+        }
+    
+    private:
+      
+      // Boost iterator_facade core operations.
+      friend class boost::iterator_core_access;
 
-      /**
-       * Default constructor.
-       */
-      BlockIterator();
-
-      /**
-       * Copy constructor.
-       * @param other the object to clone.
-       */
-      BlockIterator( const BlockIterator & other );
-
-      /**
-       * Assignment.
-       * @param other the object to copy.
-       * @return a reference on 'this'.
-       */
-      Self & operator= ( const Self & other );
-
-      /**
-       * Dereference operator.
-       * @return the current data of the iterator, if valid.
-       */
-      Reference operator*() const;
-
-      /**
-       * Pointer dereference operator.
-       * @return a non-mutable pointer on the current data.
-       */
-      Pointer operator->() const;
-
-      /**
-       * Pre-increment operator.
-       * @return a reference to itself.
-       */
-      Self& operator++();
-
-      /**
-       * Post-increment operator.
-       * @return a reference to itself.
-       */
-      Self operator++( int );
-
-      /**
-       * Addition operator. Moves the iterator at position + \a n.
-       * @param n any positive integer
-       * @return a reference to itself.
-       */
-      Self& operator+=( DifferenceType n );
-
-      /**
-       * Positive offset dereference operator. Moves the iterator at position + \a n.
-       * @param n any positive integer
-       * @return a reference to itself.
-       */
-      Reference operator[]( DifferenceType n ) const;
-
-      /**
-       * Equality operator.
-       * @param other any other iterator.
-       * @return 'true' iff the iterators points on the same element.
-       */
-      bool operator==( const Self & other ) const;
-
-      /**
-       * Inequality operator.
-       * @param other any other iterator.
-       * @return 'true' iff the iterators points on different elements.
-       */
-      bool operator!=( const Self & other ) const;
+      /// Dereference.
+      inline ConstReference dereference() const
+        {
+          if ( this->myAnyBlockStack.size() == 0 )
+            {
+              return this->myFirstBlock->getBlockDataAt( this->myIndex );
+            }
+          else
+            {
+              return this->myAnyBlockStack.top()->getBlockDataAt( this->myIndex );
+            }
+        }
 
     };
 
-
-    /**
-       Pseudo-random iterator to visit BigLabelledMap (it is
-       only a random forward iterator).  Model of
-       boost::ForwardIterator. Provides also + and += arithmetic.
-    */
-    class BlockConstIterator {
-    public:
-      typedef BlockConstIterator Self;
-      typedef TData Value;
-      typedef const Value* Pointer;
-      typedef const Value& Reference;
-      typedef std::ptrdiff_t DifferenceType; ///< only positive offsets allowed.
-
-      // ----------------------- std types ----------------------------------
-      typedef Value value_type;
-      typedef std::size_t size_type;
-      typedef DifferenceType difference_type;
-      typedef Pointer pointer;
-      typedef Reference reference;
-      // typedef Reference const_reference;
-      typedef std::forward_iterator_tag iterator_category;
+          
+          
 
 
-    protected:
-      unsigned int myIdx;      ///< current index in \a myDatas of the iterator
-      unsigned int myNbDatas; ///< number of valid datas in array \a myDatas
-      const Data* myDatas;   ///< array of \a myNbDatas datas.
-      const __NextBlock* myNext;  ///< pointer to next block or 0 if last block.
-
-      friend class BigLabelledMap;
-
-    protected:
-      /**
-       * Constructor from first block and index.
-       * Used by class BigLabelledMap.
-       */
-      BlockConstIterator( const __FirstBlock & block, unsigned int idx, unsigned int size );
-
-    public:
-      /**
-       * Default destructor.
-       */
-      ~BlockConstIterator();
-
-      /**
-       * Default constructor.
-       */
-      BlockConstIterator();
-
-      /**
-       * Copy constructor.
-       * @param other the object to clone.
-       */
-      BlockConstIterator( const BlockConstIterator & other );
-
-      /**
-       * Assignment.
-       * @param other the object to copy.
-       * @return a reference on 'this'.
-       */
-      Self & operator= ( const Self & other );
-
-      /**
-       * Dereference operator.
-       * @return the current data of the iterator, if valid.
-       */
-      Reference operator*() const;
-
-      /**
-       * Pointer dereference operator.
-       * @return a non-mutable pointer on the current data.
-       */
-      Pointer operator->() const;
-
-      /**
-       * Pre-increment operator.
-       * @return a reference to itself.
-       */
-      Self& operator++();
-
-      /**
-       * Post-increment operator.
-       * @return a reference to itself.
-       */
-      Self operator++( int );
-
-      /**
-       * Addition operator. Moves the iterator at position + \a n.
-       * @param n any positive integer
-       * @return a reference to itself.
-       */
-      Self& operator+=( DifferenceType n );
-
-      /**
-       * Positive offset dereference operator. Moves the iterator at position + \a n.
-       * @param n any positive integer
-       * @return a reference to itself.
-       */
-      Reference operator[]( DifferenceType n ) const;
-
-      /**
-       * Equality operator.
-       * @param other any other iterator.
-       * @return 'true' iff the iterators points on the same element.
-       */
-      bool operator==( const Self & other ) const;
-
-      /**
-       * Inequality operator.
-       * @param other any other iterator.
-       * @return 'true' iff the iterators points on different elements.
-       */
-      bool operator!=( const Self & other ) const;
-
-    };
 
     // ----------------------- Iterator services ------------------------------
   public:
 
-    /**
-       This class allows to visit all stored pairs (key,value).
-    */
-    class ConstIterator {
-    public:
-      friend class BigLabelledMap;
-      typedef ConstIterator Self;
-      // The following line is removed so that gcc-4.2 and gcc-4.6 compiles.
-      //typedef typename BigLabelledMap<TData, L, TWord, N, M>::Value Value;
-      typedef const Value* Pointer;
-      /// Note the trick here. The reference is a rvalue. Works only for const iterator.
-      typedef Value Reference;
-      typedef std::ptrdiff_t DifferenceType;
+#if 0
 
-      // ----------------------- std types ----------------------------------
-      typedef Value value_type;
-      typedef std::size_t size_type;
-      typedef DifferenceType difference_type;
-      typedef Pointer pointer;
-      typedef Reference reference;
-      // typedef Reference const_reference;
-      typedef std::forward_iterator_tag iterator_category;
-
-    private:
-      /// ConstIterator to visit keys.
-      LabelsConstIterator myLabelsIt;
-      /// ConstIterator to visit datas.
-      BlockConstIterator myBlockIt;
-
-    protected:
-      /**
-       * Constructor. Internal. Used by BigLabelledMap.
-       */
-      ConstIterator( LabelsConstIterator lIt, BlockConstIterator bIt );
-
-    public:
-      /**
-       * Default destructor.
-       */
-      ~ConstIterator();
-
-      /**
-       * Default constructor.
-       */
-      ConstIterator();
-
-      /**
-       * Copy constructor.
-       * @param other the object to clone.
-       */
-      ConstIterator( const ConstIterator & other );
-
-      /**
-       * Assignment.
-       * @param other the object to copy.
-       * @return a reference on 'this'.
-       */
-      Self & operator= ( const Self & other );
-
-      /**
-       * Dereference operator.
-       * @return the current data of the iterator, if valid.
-       */
-      Reference operator*() const;
-
-      /**
-       * Pointer dereference operator.
-       * \b Warning: Not thread-safe !! Use operator* instead.
-       * @return a non-mutable pointer on the current data.
-       */
-      Pointer operator->() const;
-
-      /**
-       * Pre-increment operator.
-       * @return a reference to itself.
-       */
-      Self& operator++();
-
-      /**
-       * Post-increment operator.
-       * @return a reference to itself.
-       */
-      Self operator++( int );
-
-      /**
-       * Equality operator.
-       * @param other any other iterator.
-       * @return 'true' iff the iterators points on the same element.
-       */
-      bool operator==( const Self & other ) const;
-
-      /**
-       * Inequality operator.
-       * @param other any other iterator.
-       * @return 'true' iff the iterators points on different elements.
-       */
-      bool operator!=( const Self & other ) const;
-
-
-      Data & _data() const;
-      const Data & _const_data() const;
-    };
-
-    /// non-mutable class via iterators.
-    typedef ConstIterator Iterator;
     /// Key comparator class. Always natural ordering.
     class KeyCompare
       {
@@ -854,7 +739,7 @@ public:
         return v1.first < v2.first;
       }
     };
-
+#endif
 
     // ----------------------- Standard services ------------------------------
   public:
@@ -864,11 +749,15 @@ public:
      */
     BigLabelledMap();
 
+#if 0
+
     /**
      * Copy constructor.
      * @param other the object to clone.
      */
     BigLabelledMap ( const BigLabelledMap & other );
+#endif
+
 
     /**
      *  Constructor from range.
@@ -882,12 +771,14 @@ public:
     template <typename InputIterator>
     BigLabelledMap( InputIterator first, InputIterator last );
 
+#if 0
     /**
      * Assignment.
      * @param other the object to copy.
      * @return a reference on 'this'.
      */
     BigLabelledMap & operator= ( const BigLabelledMap & other );
+#endif
 
     /**
      * Destructor.
@@ -896,11 +787,6 @@ public:
 
     // ----------------------- Container services -----------------------------
   public:
-
-    /**
-     * @return a reference to the labels.
-     */
-    const LabelsType & labels() const;
 
     /**
      * The number of datas stored in the structure. O(1) complexity.
@@ -912,6 +798,7 @@ public:
      */
     bool empty() const;
 
+#if 0
     /**
      * The maximum number of datas storable in the structure.
      */
@@ -947,10 +834,12 @@ public:
      */
     void swap( Self & other );
 
+#endif
     /**
        Removes all the datas stored in the structure.
      */
     void clear();
+
 
     /**
        Follows std::count.
@@ -1327,8 +1216,8 @@ public:
      */
     bool isValid() const;
 
-    // ------------------------- Protected Datas ------------------------------
-  private:
+#endif
+
     // ------------------------- Private Datas --------------------------------
   private:
 
@@ -1337,14 +1226,8 @@ public:
     */
     __FirstBlock myFirstBlock;
 
-    // ------------------------- Hidden services ------------------------------
-  protected:
-
-    // ------------------------- Internals ------------------------------------
-  private:
 
   }; // end of class BigLabelledMap
-
 
   /**
    * Overloads 'operator<<' for displaying objects of class 'BigLabelledMap'.

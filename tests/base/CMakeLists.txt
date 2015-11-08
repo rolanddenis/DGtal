@@ -28,6 +28,7 @@ SET(DGTAL_TESTS_SRC
    testCatch
    testBitFieldArray
    testSimpleRandomAccessRangeFromPoint
+   testBigLabelledMap
    )
 
 FOREACH(FILE ${DGTAL_TESTS_SRC})

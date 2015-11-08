@@ -149,8 +149,18 @@ public:
 
   /** Reads an element.
    * @param i The index of the element.
+   * @param aRefValue A reference value that will be overwrited with the readed value.
+   *                  Only useful if the given bit size is lower than the real size of \p Value, 
+   *                  in order to avoid random values on the others bits.
    */
-  Value getValue( SizeType i ) const;
+  Value getValue( SizeType i, Value aRefValue = Value() ) const;
+
+  /** Reads an element into a given address.
+   * @param i The index of the element.
+   * @param aValuePtr address where to write the element.
+   */
+  
+  void getValueInto( SizeType i, Value* aValuePtr ) const;
 
   /** Writes an element.
    * @param i       The index of the element.
