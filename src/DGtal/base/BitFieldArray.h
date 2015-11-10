@@ -46,7 +46,13 @@
 #include <boost/static_assert.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/array.hpp>
-#include <boost/core/addressof.hpp> // To get memory adresse even when & is overloaded.
+#include <boost/version.hpp>
+
+#if BOOST_VERSION >= 105600
+#   include <boost/core/addressof.hpp> // To get memory adresse even when & is overloaded.
+#else
+#   include <boost/utility.hpp>
+#endif
 
 #include <DGtal/base/Bits.h>
 

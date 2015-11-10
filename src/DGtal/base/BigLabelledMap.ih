@@ -16,10 +16,10 @@
 
 /**
  * @file BigLabelledMap.ih
- * @author Jacques-Olivier Lachaud (\c jacques-olivier.lachaud@univ-savoie.fr )
- * Laboratory of Mathematics (CNRS, UMR 5127), University of Savoie, France
+ * @author Roland Denis (\c roland.denis@univ-smb.fr )
+ * LAboratory of MAthematics - LAMA (CNRS, UMR 5127), University of Savoie, France
  *
- * @date 2012/07/05
+ * @date 2015/11/10
  *
  * Implementation of inline methods defined in BigLabelledMap.h
  *
@@ -29,77 +29,726 @@
 
 //////////////////////////////////////////////////////////////////////////////
 #include <cstdlib>
+#include <stdexcept>
 //////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////////
 // IMPLEMENTATION of inline methods.
 ///////////////////////////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////////////////////////
+// class BigLabelledMap::__Block
+//-----------------------------------------------------------------------------
+
+/** Represents any block of data in the container.
+ * @tparam blockCapacity  The capacity of this block (without extra space).
+ * @tparam labelArrayShift  Padding length at start of labels storage (=1 for the first block).
+ */
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
+template <std::size_t blockCapacity, std::size_t labelArrayShift>
+struct DGtal::BigLabelledMap<TData, L, N, M>::__Block
+{
+  BOOST_STATIC_CONSTANT( std::size_t, extraSpace = sizeof(TData)/sizeof(TData*) ); ///< Extra space for storing values when the pointer is not used.
+  BOOST_STATIC_CONSTANT( std::size_t, blockMaxCapacity = blockCapacity + extraSpace ); ///< Capacity of this block with extra space.
+
+  typedef BitFieldArray< Label, labelSize, blockMaxCapacity + labelArrayShift >  Labels; ///< Label array.
+
+  /// Used in any block to finish it or to point to the next block.
+  union DataOrBlockPointer
+    {
+      Data lastData[extraSpace]; // used when at the end of the list
+      __NextBlock* nextBlock;  // used otherwise
+    };
+
+  /// Constructor.
+  __Block()
+    {
+      myTail.nextBlock = 0;
+    }
+
+  /** Returns true if the there is a next block
+   * @param size  the current number of stored values in this block and the following.
+   */
+  static inline
+  bool hasNextBlock( std::size_t size )
+    {
+      return size > blockMaxCapacity;
+    }
+
+  /** Returns true if the data at given index is stored in this block.
+   * @param idx   the position of the data.
+   * @param size  the current number of stored values in this block and the following.
+   */
+  static inline
+  bool isInThisBlock( std::size_t idx, std::size_t size )
+    {
+      return size <= blockMaxCapacity || idx < blockCapacity;
+    }
+
+  /** Returns the number of stored values in this block
+   * @param size  the current number of stored values in this block and the following.
+   */
+  static inline
+  std::size_t blockSize( std::size_t size )
+    {
+      return (size < blockMaxCapacity) ? size : blockCapacity;
+    }
+
+  /** Returns the label at position idx in the current block.
+   * @param idx   the position where to read the label.
+   */
+  inline
+  Label getBlockLabel( std::size_t idx ) const
+    {
+      ASSERT( idx < blockMaxCapacity );
+      return myLabels.getValue( idx + labelArrayShift );
+    }
+
+  /** Returns the label at position idx, whatever the block where it is.
+   * @param idx   the position where to read the label.
+   * @param size  the current number of stored values in this block and the following.
+   */
+  inline
+  Label getLabel( std::size_t idx, std::size_t size ) const
+    {
+      ASSERT( idx < size );
+      if ( isInThisBlock( idx, size ) )
+        {
+          return getBlockLabel( idx );
+        }
+      else
+        {
+          return myTail.nextBlock->getLabel( idx - blockCapacity, size - blockCapacity );
+        }
+    }
+
+  /** Sets the label at position idx in the current block.
+   * @param idx   the position where to store the label.
+   * @param label the label.
+   */
+  inline
+  void setBlockLabel( std::size_t idx, Label label )
+    {
+      ASSERT( idx < blockMaxCapacity );
+      myLabels.setValue( idx + labelArrayShift, label );
+    }
+
+  /** Sets the label at position idx, whatever the block where it is (the block must exists).
+   * @param idx     the position where to store the label.
+   * @param label   the label.
+   * @param size    the current number of stored values in this block and the following.
+   */
+  inline
+  void setLabel( std::size_t idx, Label label, std::size_t size )
+    {
+      ASSERT( idx < size );
+      if ( isInThisBlock( idx, size ) )
+        {
+          setBlockLabel( idx );
+        }
+      else
+        {
+          myTail.nextBlock->setLabel( idx - blockCapacity, size - firstBlockSize );
+        }
+    }
+
+  /** Sets a label and data at given position in this block.
+   * @param idx   the position where to write.
+   * @param label the label.
+   * @param data  the data.
+   * @return a reference to the written data.
+   */
+  inline
+  Data& setBlockValueAt( std::size_t idx, Label const& label, Data const& data )
+    {
+      ASSERT( idx < blockMaxCapacity );
+      setBlockLabel(idx, label);
+      return ( myData[idx] = data ); // Works also if we use extra space.
+    }
+
+  /** Sets a (label,data) pair at given position in this block.
+   * @param idx   the position where to write.
+   * @param value the (label,data) pair.
+   * @return a reference to the written data.
+   */
+  inline
+  Data& setBlockValueAt( std::size_t idx, Value const& value )
+    {
+      return setBlockData( idx, value.first, value.second );
+    }
+
+  /** Gets a constant (label,data) pair from given position in this block.
+   * @param idx   the position where to read.
+   * @return the (label,data) pair.
+   */
+  inline
+  ConstReference getBlockValueAt( std::size_t idx ) const
+    {
+      ASSERT( idx < blockMaxCapacity );
+      return ConstReference( getBlockLabel(idx), myData[idx] );
+    }
+  
+  /** Gets a (label,data) pair, where the data is mutable, from given position in this block.
+   * @param idx   the position where to read.
+   * @return the (label,data) pair.
+   */
+  inline
+  Reference getBlockValueAt( std::size_t idx )
+    {
+      ASSERT( idx < blockMaxCapacity );
+      return Reference( getBlockLabel(idx), myData[idx] );
+    }
+
+  /** Get a data from given position in this block.
+   * @param idx   the position where to read.
+   * @return a mutable reference to the data.
+   */
+  inline
+  Data& getBlockDataAt( std::size_t idx )
+    {
+      ASSERT( idx < blockMaxCapacity );
+      return myData[idx];
+    }
+
+  /** Get a data from given position in this block.
+   * @param idx   the position where to read.
+   * @return a constant reference to the data.
+   */
+  inline
+  Data const& getBlockDataAt( std::size_t idx ) const
+    {
+      ASSERT( idx < blockMaxCapacity );
+      return myData[idx];
+    }
+
+  // Forward declaration.
+  //inline
+  //Data& pushBack( Value const& value, std::size_t size );
+
+  /** Adds a data with given label.
+   * @param label   the label.
+   * @param data    the data.
+   * @param size    the current number of stored values in this block and the following.
+   */
+  inline
+  Data& pushBack( Label const& label, Data const& data, std::size_t size )
+    {
+      if ( size < blockMaxCapacity ) // Works also if we use extra space
+        {
+          setBlockLabel(size, label);
+          return ( myData[size] = data );
+        }
+      else if ( size == blockMaxCapacity )
+        {
+          __NextBlock* next = new __NextBlock;
+
+          // Move the extra space content to the next block.
+          for ( std::size_t i = 0; i < extraSpace; ++i )
+            {
+              next->pushBack( getBlockValueAt(i + blockCapacity), i );
+            }
+
+          // Push the new value into the next block.
+          myTail.nextBlock = next;
+          return myTail.nextBlock->pushBack( label, data, extraSpace );
+        }
+      else // size > blockMaxCapacity
+        {
+          // Send the job to the next block.
+          return myTail.nextBlock->pushBack( label, data, size - blockCapacity );
+        }
+    }
+
+  /** Adds a (label,data) pair.
+   * @param value   the (label,data) pair.
+   * @param size    the current number of stored values in this block and the following.
+   */
+  inline
+  Data& pushBack( Value const& value, std::size_t size )
+    {
+      return pushBack( value.first, value.second, size );
+    }
+
+  /** Removes the last data and returns it.
+   * @param size  the current number of stored values in this blocks and the following.
+   */
+  inline
+  Value popBack( std::size_t size )
+    {
+      ASSERT( size > 0 );
+
+      if ( size <= blockMaxCapacity ) // Works also if we use extra space.
+        {
+          return getBlockValueAt(size-1);
+        }
+      else if ( size == blockMaxCapacity + 1)
+        {
+          __NextBlock* nextBlock = myTail.nextBlock;
+
+          const Value value = nextBlock->popBack( extraSpace+1 );
+
+          // Move the next block content into the extra space.
+          for ( std::size_t i = blockCapacity; i < blockMaxCapacity; ++i )
+            {
+              setBlockValueAt( i, nextBlock->getBlockValueAt( i-blockCapacity ) );
+            }
+
+          delete nextBlock;
+          return value;
+        }
+      else // size > blockMaxCapacity + 1
+        {
+          return myTail.nextBlock->popBack( size - blockCapacity );
+        }
+    }
+
+  /** Removes the data at the given position.
+   * @param idx   the position of the data.
+   * @param size  the current number of stored values in this blocks and the following.
+   */
+  inline
+  void eraseAt( std::size_t idx, std::size_t size )
+    {
+      ASSERT( idx < size );
+
+      if ( idx == size-1 )
+        {
+          popBack( size );
+        }
+      else if ( size <= blockMaxCapacity ) // Works also if we use extra space.
+        {
+          setBlockValueAt( idx, getBlockValueAt(size-1) );
+        }
+      else if ( size == blockMaxCapacity + 1 )
+        {
+          __NextBlock* const nextBlock = myTail.nextBlock;
+
+          if ( idx < blockCapacity )
+            setBlockValueAt( idx, nextBlock->getBlockValueAt( size-blockCapacity-1 ) );
+          else
+            nextBlock->eraseAt( idx-blockCapacity, size-blockCapacity );
+
+          // Move the next block content into the extra space.
+          for ( std::size_t i = blockCapacity; i < blockMaxCapacity; ++i )
+            {
+              setBlockValueAt( i, nextBlock->getBlockValueAt( i-blockCapacity ) );
+            }
+
+          delete nextBlock;
+        }
+      else // size > blockMaxCapacity + 1
+        {
+          if ( idx < blockCapacity )
+            setBlockValueAt( idx, myTail.nextBlock->popBack( size - blockCapacity ) );
+          else
+            myTail.nextBlock->eraseAt( idx - blockCapacity, size - blockCapacity );
+        }
+    }
+
+  /** Gets reference to data from the corresponding label (mutable version).
+   * The label is created if it doesn't exist.
+   * @param label The label associated to the data.
+   * @param size  The current number of stored value in this block and the following.
+   * @param[out] found  If false, the label has not been found and a new element has been added. 
+   */
+  Data& getDataFromLabel ( Label const& label, std::size_t size, bool& found )
+    {
+      const std::size_t theBlockSize = blockSize(size);
+
+      // Firstly search in this block
+      for ( std::size_t i = 0; i < theBlockSize; ++i )
+        {
+          if ( getBlockLabel(i) == label )
+            {
+              found = true;
+              return getBlockDataAt(i);
+            }
+        }
+
+      // Then, search in the next block if there is one.
+      if ( size > theBlockSize )
+        {
+          return getDataFromLabel( label, size - blockCapacity, found );
+        }
+      else
+        {
+          found = false;
+          return pushBack( label, Data(), size );
+        }
+    }
+
+  /** Gets reference to data from the corresponding label (constant version)
+   * It the label does not exist, the referenced data is undefined.
+   * @param label The label associated to the data.
+   * @param size  The current number of stored value in this block and the following.
+   * @param[out] found  If false, the label has not been found. 
+   */
+  Data const& getDataFromLabel ( Label const& label, std::size_t size, bool& found ) const
+    {
+      const std::size_t theBlockSize = blockSize(size);
+
+      // Firstly search in this block
+      for ( std::size_t i = 0; i < theBlockSize; ++i )
+        {
+          if ( getBlockLabel(i) == label )
+            {
+              found = true;
+              return getBlockDataAt(i);
+            }
+        }
+
+      // Then, search in the next block if there is one.
+      if ( size > theBlockSize )
+        {
+          return getDataFromLabel( label, size - blockCapacity, found );
+        }
+      else
+        {
+          found = false;
+          return Data();
+        }
+    }
+ 
+  
+  /** Clear this block and the following blocks.
+   * @param size  The current number of stored value in this block and the following.
+   */
+  void clear( std::size_t size )
+    {
+      if ( size > blockMaxCapacity )
+        {
+          myTail.nextBlock->clear( size - blockCapacity );
+          delete myTail.nextBlock;
+        }
+    }
+
+  Labels myLabels; ///< Label storage.
+  Data myData[ blockCapacity ]; ///< Data storage.
+  DataOrBlockPointer myTail; ///< Extra space or pointer to the next block.
+}; // end of class BigLabelledMap::__Block
+
+///////////////////////////////////////////////////////////////////////////////
+// class BigLabelledMap::IteratorBase
+//-----------------------------------------------------------------------------
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
+template < typename TFirstBlock, typename TNextBlock >
+class DGtal::BigLabelledMap<TData, L, N, M>::IteratorBase
+{
+
+public:
+
+  /** Returns the label where this iterator points to.
+   *
+   * Useful if the pointed data is not needed.
+   */
+  inline
+  Key getLabel () const
+    {
+      if ( myNextBlockStack.size() == 0 )
+        {
+          return myFirstBlock->getBlockLabel( this->myIndex );
+        }
+      else
+        {
+          return myNextBlockStack.top()->getBlockLabel( this->myIndex );
+        }
+    }
+
+  /// Returns the index of the pointed element.
+  inline
+  SizeType getIndex () const
+    {
+      if ( myNextBlockStack.size() == 0 )
+        {
+          return myIndex;
+        }
+      else
+        {
+          return 
+              TFirstBlock::blockSize 
+            + ( myNextBlockStack.size() - 1 ) * TNextBlock::blockSize
+            + myIndex;
+        }
+    }
+
+protected:
+
+  // Boost iterator_facade core operations.
+  friend class boost::iterator_core_access;
+
+  /** Constructor.
+   * @param aFirstBlock The first block of data.
+   * @param aSize       The number of data stored in the container.
+   * @param anIndex     The index where this iterator point to.
+   */
+  IteratorBase ( TFirstBlock& aFirstBlock, std::size_t aSize, std::size_t anIndex = 0 )
+    : myFirstBlock( &aFirstBlock)
+    , myIndex( anIndex )
+    , mySize( aSize )
+    , myNextBlockStack(0)
+  {
+    advance( myIndex );
+  }
+
+  /// Destructor
+  virtual ~IteratorBase()
+    {
+    }
+
+  /// Increments of one position.
+  inline void increment()
+    {
+      advance(1);
+    }
+
+  /// Decrements of one position.
+  inline void decrement()
+    {
+      advance(-1);
+    }
+
+  /// Tests equality with other iterator.
+  template < typename TOtherFirstBlock, typename TOtherNextBlock >
+  inline bool equal( IteratorBase<TOtherFirstBlock, TOtherNextBlock> const& other ) const
+    {
+      return 
+            myIndex == other.myIndex
+        &&  mySize  == other.mySize
+        &&  myNextBlockStack.size() == other.myNextBlockStack.size();
+    }
+
+  /// Distance to.
+  template < typename TOtherFirstBlock, typename TOtherNextBlock >
+  inline std::ptrdiff_t distance_to( IteratorBase<TOtherFirstBlock, TOtherNextBlock> const& other ) const
+    {
+      return other.myIndex - myIndex;
+    }
+
+  /// Advance by \p n positions.
+  inline void advance ( DifferenceType n )
+    {
+      if ( n > 0 )
+        {
+          myIndex += n;
+
+          if ( myNextBlockStack.size() > 0 || ! myFirstBlock->isInThisBlock( myIndex, mySize ) )
+            {
+              if ( myNextBlockStack.size() == 0 )
+                {
+                  myNextBlockStack.push( &( myFirstBlock->myTail.nextBlock ) );
+                  myIndex -= TFirstBlock::blockSize;
+                  mySize  -= TFirstBlock::blockSize;
+                }
+
+              while ( ! TNextBlock::isInThisBlock( myIndex, mySize ) )
+                {
+                  myNextBlockStack.push( &( myNextBlockStack.top()->myTail.nextBlock ) );
+                  myIndex -= TNextBlock::blockSize;
+                  mySize  -= TNextBlock::blockSize;
+                }
+            }
+        }
+      else 
+        {
+          n = -n; // For clarity of the following algo.
+
+          while ( n > 0 )
+            {
+              if ( n <= myIndex )
+                {
+                  myIndex -= n;
+                  n = 0;
+                }
+              else
+                {
+                  n -= myIndex + 1;
+                  myNextBlockStack.pop();
+                  if ( myNextBlockStack.size() > 0 )
+                    myIndex = mySize = TNextBlock::blockSize;
+                  else
+                    myIndex = mySize = TFirstBlock::blockSize;
+                }
+            }
+        }
+    }
+
+protected:
+  TFirstBlock* myFirstBlock;  ///< Pointer to the first block of data.
+  std::size_t myIndex;        ///< Current index where this pointer points to.
+  std::size_t mySize;         ///< Number of data stored after this pointer.
+  std::stack< TNextBlock* > myNextBlockStack; ///< Stack of the next blocks of data before this pointer.
+}; // End of class IteratorBase
+
+///////////////////////////////////////////////////////////////////////////////
+// class BigLabelledMap::Iterator
+//-----------------------------------------------------------------------------
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
+class DGtal::BigLabelledMap<TData, L, N, M>::Iterator
+  : public  IteratorBase< __FirstBlock, __NextBlock >
+  , public  boost::iterator_facade <
+      Iterator,
+      Value,
+      boost::random_access_traversal_tag,
+      Reference
+    >
+{
+
+public:
+  /** Constructor.
+   * @param aFirstBlock The first block of data.
+   * @param aSize       The number of data stored in the container.
+   * @param anIndex     The index where this iterator points to.
+   */
+  Iterator ( __FirstBlock& aFirstBlock, std::size_t aSize, std::size_t anIndex = 0 )
+    : IteratorBase< __FirstBlock, __NextBlock >( aFirstBlock, aSize, anIndex )
+  {
+  }
+
+  /** Returns a mutable reference to the data where this iterator points to.
+   *
+   * Only useful when the label is not needed.
+   */
+  Data& getData() const
+    {
+      if ( this->myAnyBlockStack.size() == 0 )
+        {
+          return this->myFirstBlock->getBlockDataAt( this->myIndex );
+        }
+      else
+        {
+          return this->myNextBlockStack.top()->getBlockDataAt( this->myIndex );
+        }
+    }
+
+private:
+  
+  // Boost iterator_facade core operations.
+  friend class boost::iterator_core_access;
+
+  /// Dereference.
+  inline Reference dereference() const
+    {
+      if ( this->myAnyBlockStack.size() == 0 )
+        {
+          return this->myFirstBlock->getBlockValueAt( this->myIndex );
+        }
+      else
+        {
+          return this->myNextBlockStack.top()->getBlockValueAt( this->myIndex );
+        }
+    }
+
+}; // End of class Iterator.
+
+///////////////////////////////////////////////////////////////////////////////
+// class BigLabelledMap::ConstIterator
+//-----------------------------------------------------------------------------
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
+class DGtal::BigLabelledMap<TData, L, N, M>::ConstIterator
+  : public IteratorBase< const __FirstBlock, const __NextBlock >
+  , public boost::iterator_facade <
+      Iterator,
+      const Value,
+      boost::random_access_traversal_tag,
+      ConstReference
+    >
+{
+public:
+
+  /** Constructor.
+   * @param aFirstBlock The first block of data.
+   * @param aSize       The number of data stored in the container.
+   * @param anIndex     The index where this iterator points to.
+   */
+  ConstIterator ( __FirstBlock const& aFirstBlock, std::size_t aSize, std::size_t anIndex = 0 )
+    : IteratorBase< const __FirstBlock, const __NextBlock >( &aFirstBlock, aSize, anIndex )
+    {
+    }
+
+  /** Returns a constant reference to the data where this iterator points to.
+   *
+   * Only useful when the label is not needed.
+   */
+  Data const& getData() const
+    {
+      if ( this->myAnyBlockStack.size() == 0 )
+        {
+          return this->myFirstBlock->getBlockDataAt( this->myIndex );
+        }
+      else
+        {
+          return this->myNextBlockStack.top()->getBlockDataAt( this->myIndex );
+        }
+    }
+
+private:
+  
+  // Boost iterator_facade core operations.
+  friend class boost::iterator_core_access;
+
+  /// Dereference.
+  inline ConstReference dereference() const
+    {
+      if ( this->myAnyBlockStack.size() == 0 )
+        {
+          return this->myFirstBlock->getBlockValueAt( this->myIndex );
+        }
+      else
+        {
+          return this->myAnyBlockStack.top()->getBlockValueAt( this->myIndex );
+        }
+    }
+
+}; // End of class ConstIterator
 
 ///////////////////////////////////////////////////////////////////////////////
 // class BigLabelledMap
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
 inline
 DGtal::BigLabelledMap<TData, L, N, M>::
 BigLabelledMap()
-{ // default constructor of myLabels and myFirstBlock is automatically called.
-  myFirstBlock.myLabels.setValue(0, 0);
+{
+  set_size(0);
 }
+
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
 inline
 DGtal::BigLabelledMap<TData, L, N, M>::
 ~BigLabelledMap()
 {
-  myFirstBlock.clear( size() );
+  clear();
 }
 
-#if 0
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
 inline
 DGtal::BigLabelledMap<TData, L, N, M>::
 BigLabelledMap( const BigLabelledMap & other )
-  : myLabels( other.myLabels ),
-    myFirstBlock( other.myFirstBlock )
 {
-  const unsigned int theSize = other.size();
-  if ( theSize > N + 1 )
-    {
-      unsigned int s = N;
-      const __AnyBlock* nextBlock = other.myFirstBlock.data.nextBlock;
-      __AnyBlock** currentPointer = & myFirstBlock.data.nextBlock;
-      while ( s < theSize )
-        {
-          *currentPointer = new __AnyBlock( *nextBlock );
-          s += M;
-          currentPointer = & ( (*currentPointer)->next );
-          nextBlock = nextBlock->next;
-        }
-    }
+  set_size(0);
+  *this = other;
 }
-#endif
 
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
 template <typename InputIterator>
 inline
 DGtal::BigLabelledMap<TData, L, N, M>::
-BigLabelledMap( InputIterator first, InputIterator last )
-{ // default constructor of myLabels and myFirstBlock is automatically called.
+BigLabelledMap( InputIterator it_begin, InputIterator it_end )
+{
   BOOST_CONCEPT_ASSERT(( boost::InputIterator< InputIterator > ));
-  myFirstBlock.myLabels.setValue( 0, 0);
-  for ( ; first != last; ++first )
+
+  set_size(0);
+  for ( ; it_begin != it_end; ++it_begin )
     {
-      myFirstBlock.pushBack( *first, size() );
-      setSize( size() + 1 );
+      (*this)[it_begin->first] = it_begin->second;
     }
 }
 
-#if 0
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
 inline
 DGtal::BigLabelledMap<TData, L, N, M> &
 DGtal::BigLabelledMap<TData, L, N, M>::
@@ -107,61 +756,42 @@ operator=( const BigLabelledMap & other )
 {
   if ( this != &other )
     {
-      blockClear( size() );
-      myLabels = other.myLabels;
+      clear();
+ 
       myFirstBlock = other.myFirstBlock;
 
-      const unsigned int theSize = other.size();
-      if ( theSize > N + 1 )
+      std::size_t theSize = other.size();
+      this->setSize( theSize ); // not necessary
+
+      if ( ! myFirstBlock.isInThisBlock( theSize-1, theSize ) )
         {
-          unsigned int s = N; 
-          const __AnyBlock* nextBlock = other.myFirstBlock.data.nextBlock;
-          __AnyBlock** currentPointer = & myFirstBlock.data.nextBlock;
-          while ( s < theSize  )
+          myFirstBlock.myTail.nextBlock = new __NextBlock( *other.myFirstBlock.myTail.nextBlock );
+          __NextBlock* nextBlock = myFirstBlock.myTail.nextBlock;
+          theSize -= __FirstBlock::blockSize;
+
+          while ( ! nextBlock->isInThisBlock( theSize-1, theSize ) )
             {
-              *currentPointer = new __AnyBlock( *nextBlock );
-              s += M;
-              currentPointer = & ( (*currentPointer)->next );
-              nextBlock = nextBlock->next;
+              nextBlock->myTail.nextBlock = new __NextBlock( *(nextBlock->myTail.nextBlock) );
+              nextBlock = nextBlock->myTail.nextBlock;
+              theSize -= __NextBlock::blockSize;
             }
         }
     }
   return *this;
 }
+
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
 inline
 void
 DGtal::BigLabelledMap<TData, L, N, M>::
 clear()
 {
-  blockClear( size() );
-  myLabels.reset();
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
-inline
-void
-DGtal::BigLabelledMap<TData, L, N, M>::
-blockClear( unsigned int theSize )
-{
-  if ( theSize != N+1 )
-    {
-      __AnyBlock* nextBlock = myFirstBlock.data.nextBlock;
-      while ( nextBlock != 0 )
-        {
-          __AnyBlock* ptr = nextBlock;
-          nextBlock = nextBlock->next;
-          delete ptr;
-        }
-    }
-  myFirstBlock.data.nextBlock = 0;
+  myFirstBlock.clear( size() );
 }
 
-#endif
-
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
 inline
 typename DGtal::BigLabelledMap<TData, L, N, M>::SizeType
 DGtal::BigLabelledMap<TData, L, N, M>::
@@ -171,7 +801,17 @@ size() const
 }
 
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
+inline
+void 
+DGtal::BigLabelledMap<TData, L, N, M>::
+set_size( SizeType aSize )
+  {
+    myFirstBlock.myLabels.setValue( 0, aSize );
+  }
+
+//-----------------------------------------------------------------------------
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
 inline
 bool
 DGtal::BigLabelledMap<TData, L, N, M>::
@@ -180,223 +820,160 @@ empty() const
   return size() == 0;
 }
 
-#if 0
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
 inline
 typename DGtal::BigLabelledMap<TData, L, N, M>::SizeType
 DGtal::BigLabelledMap<TData, L, N, M>::
 max_size() const
 {
-  return MaxLabel;
+  return maxLabel;
 }
 
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
 inline
 typename DGtal::BigLabelledMap<TData, L, N, M>::SizeType
 DGtal::BigLabelledMap<TData, L, N, M>::
 capacity() const
 {
-  return ( size() <= (N+1) )
-    ? N+1
-    : ( 1 + ( size() - 1 - N ) / M ) * M + N;
+  const SizeType theSize = size();
+  if ( theSize <= __FirstBlock::blockMaxCapacity )
+    {
+      return __FirstBlock::blockMaxCapacity;
+    }
+  else
+    {
+      const SizeType theCapacity =
+           __FirstBlock::blockSize
+        + ( (theSize - __FirstBlock::blockCapacity) / __NextBlock::blockCapacity ) * __NextBlock::blockCapacity;
+      
+      if ( theSize - theCapacity <= __NextBlock::extraSpace )
+        return theCapacity + __NextBlock::extraSpace;
+      else
+        return theCapacity + __NextBlock::blockMaxCapacity;
+    }
 }
 
+
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
-inline
-typename DGtal::BigLabelledMap<TData, L, N, M>::KeyCompare
-DGtal::BigLabelledMap<TData, L, N, M>::
-key_comp() const
-{
-  return KeyCompare();
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
-inline
-typename DGtal::BigLabelledMap<TData, L, N, M>::ValueCompare
-DGtal::BigLabelledMap<TData, L, N, M>::
-value_comp() const
-{
-  return ValueCompare();
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
 inline
 void
 DGtal::BigLabelledMap<TData, L, N, M>::
 swap( Self & other )
 {
-  std::swap( myLabels, other.myLabels );
   std::swap( myFirstBlock, other.myFirstBlock );
 }
 
-#endif
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
 inline
 typename DGtal::BigLabelledMap<TData, L, N, M>::SizeType
 DGtal::BigLabelledMap<TData, L, N, M>::
 count( const Key & key ) const
 {
   const ConstIterator it_end = end();
-  
-  return ( std::find( begin(), it_end, key ) == end() ) ? 0 : 1;
-}
-
-#if 0
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
-inline
-const typename DGtal::BigLabelledMap<TData, L, N, M>::Data &
-DGtal::BigLabelledMap<TData, L, N, M>::
-blockAt( unsigned int idx ) const
-{
-  ASSERT( idx < size() );
-  if ( idx < N )
-    return myFirstBlock.datas[ idx ];
-  else if ( ( idx == N ) && ( size() == N+1 ) )
-    return myFirstBlock.data.lastData;
-  const __AnyBlock* ptr = myFirstBlock.data.nextBlock;
-  idx -= N;
-  while ( idx >= M )
+ 
+  for ( ConstIterator it = begin(), it_end = end(); it != it_end; ++it )
     {
-      idx -= M;
-      ptr = ptr->next;
+      if ( it.getLabel() == key )
+        return 1;
     }
-  ASSERT( ptr != 0 );
-  return ptr->datas[ idx ];
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
-inline
-typename DGtal::BigLabelledMap<TData, L, N, M>::Data &
-DGtal::BigLabelledMap<TData, L, N, M>::
-blockAt( unsigned int idx )
-{
-  ASSERT( idx < size() );
-  if ( idx < N )
-    return myFirstBlock.datas[ idx ];
-  else if ( ( idx == N ) && ( size() == N+1 ) )
-    return myFirstBlock.data.lastData;
-  __AnyBlock* ptr = myFirstBlock.data.nextBlock;
-  idx -= N;
-  while ( idx >= M )
-    {
-      idx -= M;
-      ptr = ptr->next;
-    }
-  ASSERT( ptr != 0 );
-  return ptr->datas[ idx ];
+  return 0;
 }
 
-#endif
-
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
+/*
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
 inline
-const typename DGtal::BigLabelledMap<TData, L, N, M>::Data &
+typename DGtal::BigLabelledMap<TData, L, N, M>::Data const&
 DGtal::BigLabelledMap<TData, L, N, M>::
 operator[]( const Key & key ) const
 {
-  ASSERT( key < L ); 
-  bool exists = myLabels.test( key );
-  if ( ! exists ) 
-    {
-      unsigned int block_size = size();
-      myLabels.set( key ); // must be done before so that 'index' works.
-      return blockInsert( myLabels.index( key ), block_size, Data() );
-    }
-  else
-    {
-      return blockAt( myLabels.index( key ) );
-    }
+  ASSERT( key < maxLabel ); 
+
+  bool found = false;
+  Data const& data = myFirstBlock.getDataFromLabel( key, size(), found );
+
+  if ( ! found )
+    throw std::out_of_range( "Key not found in constant container." );
+
+  return data;
 }
+*/
+
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
 inline
 typename DGtal::BigLabelledMap<TData, L, N, M>::Data &
 DGtal::BigLabelledMap<TData, L, N, M>::
 operator[]( const Key & key )
 {
   ASSERT( key < L ); 
-  bool exists = myLabels.test( key );
-  if ( ! exists ) 
+  
+  bool found = false;
+  Data& data = myFirstBlock.getDataFromLabel( key, size(), found );
+
+  if ( ! found )
+    set_size( size() + 1 );
+
+  return data;
+}
+
+//-----------------------------------------------------------------------------
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
+inline
+void
+DGtal::BigLabelledMap<TData, L, N, M>::
+erase( ConstIterator position )
+{
+  ASSERT( count( position->first ) == 1 );
+
+  if ( position.myNextBlockStack.size() == 0 )
     {
-      unsigned int block_size = size();
-      myLabels.set( key ); // must be done before so that 'index' works.
-      return blockInsert( myLabels.index( key ), block_size, Data() );
+      const_cast<__FirstBlock*>(position.myFirstBlock)->eraseAt( position.myIndex, position.mySize );
     }
   else
     {
-      return blockAt( myLabels.index( key ) );
+      const_cast<__NextBlock*>(position.myNextBlockStack.top())->eraseAt( position.myIndex, position.mySize );
     }
 }
 
-#if 0
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
-inline
-const typename DGtal::BigLabelledMap<TData, L, N, M>::Data &
-DGtal::BigLabelledMap<TData, L, N, M>::
-fastAt( const Key & key ) const
-{
-  ASSERT( key < L ); 
-  ASSERT( myLabels.test( key ) );
-  return blockAt( myLabels.index( key ) );
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
-inline
-typename DGtal::BigLabelledMap<TData, L, N, M>::Data &
-DGtal::BigLabelledMap<TData, L, N, M>::
-fastAt( const Key & key )
-{
-  ASSERT( key < L ); 
-  ASSERT( myLabels.test( key ) );
-  return blockAt( myLabels.index( key ) );
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
-inline
-void
-DGtal::BigLabelledMap<TData, L, N, M>::
-erase( Iterator position )
-{
-  Key key = (*position).first;
-  ASSERT( myLabels.test( key ) );
-  blockErase( myLabels.index( key ) );
-  myLabels.reset( key );
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
 inline
 typename DGtal::BigLabelledMap<TData, L, N, M>::SizeType
 DGtal::BigLabelledMap<TData, L, N, M>::
-erase( Key key )
+erase( Key const& key )
 {
-  if ( myLabels.test( key ) )
+  ConstIterator it = begin();
+  ConstIterator it_end = end();
+  for ( ConstIterator it = begin(), it_end = end(); ++it; it != it_end )
     {
-      blockErase( myLabels.index( key ) );
-      myLabels.reset( key );
-      return 1;
+      if ( it.getLabel() == key )
+        {
+          erase(it);
+          return 1;
+        }
     }
+
   return 0;
 }
+
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
 inline
 void
 DGtal::BigLabelledMap<TData, L, N, M>::
-erase( Iterator first, Iterator last )
+erase( ConstIterator first, ConstIterator last )
 {
   for ( ; first != last; ++first )
     erase( first );
 }
 
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
 inline
 std::pair<typename DGtal::BigLabelledMap<TData, L, N, M>::Iterator, bool>
 DGtal::BigLabelledMap<TData, L, N, M>::
@@ -413,35 +990,31 @@ insert( const Value & val )
   Iterator position = begin();
   while ( (*position).first != val.first ) 
     {
-      // std::cerr << "[" << (*position).first << "]" << std::endl;
       ++position;
     }
   return std::make_pair( position, exists );
+
+  Iterator position = find( val );
+  if ( position == end() )
+    {
+      
+    }
+  else
+    {
+    }
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
 inline
 typename DGtal::BigLabelledMap<TData, L, N, M>::Iterator
 DGtal::BigLabelledMap<TData, L, N, M>::
-insert ( Iterator position, const Value & val )
+insert ( Iterator /* position */ , const Value & val )
 {
-  ASSERT( val.first < L ); 
-  if ( ! myLabels.test( val.first ) )
-    {
-      unsigned int block_size = size();
-      myLabels.set( val.first ); // must be done before so that 'index' works.
-      blockInsert( myLabels.index( val.first ), block_size, val.second );
-    }
-  position = begin(); 
-  while ( (*position).first != val.first ) 
-    {
-      //std::cerr << "[" << (*position).first << "]" << std::endl;
-      ++position;
-    }
-  return position;
+  return insert( val ).first;
 }
+
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
 template <typename InputIterator>
 inline
 void
@@ -449,19 +1022,15 @@ DGtal::BigLabelledMap<TData, L, N, M>::
 insert( InputIterator first, InputIterator last )
 { 
   BOOST_CONCEPT_ASSERT(( boost::InputIterator< InputIterator > ));
+  
   for ( ; first != last; ++first )
     {
-      Key k = first->first;
-      if ( ! myLabels.test( k ) )
-        {
-          unsigned int block_size = size();
-          myLabels.set( k ); // must be done before so that 'index' works.
-          blockInsert( myLabels.index( k ), block_size, first->second );
-        }
+      insert( *first );
     }
 }
+
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
 inline
 std::pair< typename DGtal::BigLabelledMap<TData, L, N, M>::Iterator,
            typename DGtal::BigLabelledMap<TData, L, N, M>::Iterator >
@@ -472,18 +1041,14 @@ equal_range( const Key & x )
   for ( ; it != it_end; ++it )
     {
       if ( (*it).first == x )
-        { 
-          // JOL: g++ does not compile correctly:
-          // return std::make_pair( it, ++it );
-          it_end = it; ++it_end;
-          return std::make_pair( it, it_end );
-        }
-      else if ( (*it).first > x ) return std::make_pair( it, it );
+        return std::make_pair( it, ++it );
     }
+  
   return std::make_pair( it_end, it_end );
 }
+
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
 inline
 std::pair< typename DGtal::BigLabelledMap<TData, L, N, M>::ConstIterator,
            typename DGtal::BigLabelledMap<TData, L, N, M>::ConstIterator >
@@ -493,13 +1058,15 @@ equal_range( const Key & x ) const
   ConstIterator it = begin(), it_end = end();
   for ( ; it != it_end; ++it )
     {
-      if ( (*it).first == x ) return std::make_pair( it, ++it );
-      else if ( (*it).first > x ) return std::make_pair( it, it );
+      if ( (*it).first == x ) 
+        return std::make_pair( it, ++it );
     }
+
   return std::make_pair( it_end, it_end );
 }
+
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
 inline
 typename DGtal::BigLabelledMap<TData, L, N, M>::Iterator
 DGtal::BigLabelledMap<TData, L, N, M>::
@@ -508,13 +1075,14 @@ find( const Key & x )
   Iterator it = begin(), it_end = end();
   for ( ; it != it_end; ++it )
     {
-      if ( (*it).first == x ) return it;
-      else if ( (*it).first > x ) return it_end;
+      if ( it.getLabel() == x ) return it;
     }
+  
   return it_end;
 }
+
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
 inline
 typename DGtal::BigLabelledMap<TData, L, N, M>::ConstIterator
 DGtal::BigLabelledMap<TData, L, N, M>::
@@ -523,92 +1091,14 @@ find( const Key & x ) const
   ConstIterator it = begin(), it_end = end();
   for ( ; it != it_end; ++it )
     {
-      if ( (*it).first == x ) return it;
-      else if ( (*it).first > x ) return it_end;
+      if ( it.getLabel() == x ) return it;
     }
-  return it_end;
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
-inline
-typename DGtal::BigLabelledMap<TData, L, N, M>::Iterator
-DGtal::BigLabelledMap<TData, L, N, M>::
-lower_bound( const Key & x )
-{
-  Iterator it = begin(), it_end = end();
-  for ( ; it != it_end; ++it )
-    {
-      if ( (*it).first >= x ) return it;
-    }
-  return it_end;
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
-inline
-typename DGtal::BigLabelledMap<TData, L, N, M>::ConstIterator
-DGtal::BigLabelledMap<TData, L, N, M>::
-lower_bound( const Key & x ) const
-{
-  ConstIterator it = begin(), it_end = end();
-  for ( ; it != it_end; ++it )
-    {
-      if ( (*it).first >= x ) return it;
-    }
-  return it_end;
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
-inline
-typename DGtal::BigLabelledMap<TData, L, N, M>::Iterator
-DGtal::BigLabelledMap<TData, L, N, M>::
-upper_bound( const Key & x )
-{
-  Iterator it = begin(), it_end = end();
-  for ( ; it != it_end; ++it )
-    {
-      if ( (*it).first > x ) return it;
-    }
-  return it_end;
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
-inline
-typename DGtal::BigLabelledMap<TData, L, N, M>::ConstIterator
-DGtal::BigLabelledMap<TData, L, N, M>::
-upper_bound( const Key & x ) const
-{
-  ConstIterator it = begin(), it_end = end();
-  for ( ; it != it_end; ++it )
-    {
-      if ( (*it).first > x ) return it;
-    }
+
   return it_end;
 }
 
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
-inline
-typename DGtal::BigLabelledMap<TData, L, N, M>::Data &
-DGtal::BigLabelledMap<TData, L, N, M>::
-blockInsert( unsigned int idx, unsigned int block_size, const Data & data )
-{
-  ASSERT( idx <= block_size ); // end is ok.
-  return myFirstBlock.insert( idx, block_size, data );
-}
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
-inline
-void
-DGtal::BigLabelledMap<TData, L, N, M>::
-blockErase( unsigned int idx )
-{
-  ASSERT( idx < size() ); // end is not ok.
-  myFirstBlock.erase( idx, size() );
-}
-
-#endif
-//-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
 inline
 typename DGtal::BigLabelledMap<TData, L, N, M>::Iterator
 DGtal::BigLabelledMap<TData, L, N, M>::
@@ -617,7 +1107,7 @@ begin()
   return Iterator( myFirstBlock, size(), 0 );
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
 inline
 typename DGtal::BigLabelledMap<TData, L, N, M>::Iterator
 DGtal::BigLabelledMap<TData, L, N, M>::
@@ -626,7 +1116,7 @@ end()
   return Iterator( myFirstBlock, size(), size() );
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
 inline
 typename DGtal::BigLabelledMap<TData, L, N, M>::ConstIterator
 DGtal::BigLabelledMap<TData, L, N, M>::
@@ -635,7 +1125,7 @@ begin() const
   return ConstIterator( myFirstBlock, size(), 0 );
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
 inline
 typename DGtal::BigLabelledMap<TData, L, N, M>::ConstIterator
 DGtal::BigLabelledMap<TData, L, N, M>::
@@ -646,7 +1136,7 @@ end() const
 
 #if 0
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
 inline
 typename DGtal::BigLabelledMap<TData, L, N, M>::BlockIterator
 DGtal::BigLabelledMap<TData, L, N, M>::
@@ -655,7 +1145,7 @@ blockBegin()
   return BlockIterator( myFirstBlock, 0, size() );
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
 inline
 typename DGtal::BigLabelledMap<TData, L, N, M>::BlockIterator
 DGtal::BigLabelledMap<TData, L, N, M>::
@@ -665,7 +1155,7 @@ blockEnd()
   return BlockIterator( myFirstBlock, s, s );
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
 inline
 typename DGtal::BigLabelledMap<TData, L, N, M>::BlockConstIterator
 DGtal::BigLabelledMap<TData, L, N, M>::
@@ -674,7 +1164,7 @@ blockBegin() const
   return BlockConstIterator( myFirstBlock, 0, size() );
 }
 //-----------------------------------------------------------------------------
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
 inline
 typename DGtal::BigLabelledMap<TData, L, N, M>::BlockConstIterator
 DGtal::BigLabelledMap<TData, L, N, M>::
@@ -691,7 +1181,7 @@ blockEnd() const
  * Writes/Displays the object on an output stream.
  * @param out the output stream where the object is written.
  */
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
 inline
 void
 DGtal::BigLabelledMap<TData, L, N, M>::
@@ -733,7 +1223,7 @@ selfDisplay( std::ostream & out ) const
  * Checks the validity/consistency of the object.
  * @return 'true' if the object is valid, 'false' otherwise.
  */
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
 inline
 bool
 DGtal::BigLabelledMap<TData, L, N, M>::isValid() const
@@ -745,7 +1235,7 @@ DGtal::BigLabelledMap<TData, L, N, M>::isValid() const
 ///////////////////////////////////////////////////////////////////////////////
 // Implementation of inline functions                                        //
 
-template <typename TData, unsigned int L, unsigned int N, unsigned int M>
+template <typename TData, std::size_t L, std::size_t N, std::size_t M>
 inline
 std::ostream&
 DGtal::operator<< ( std::ostream & out, 
@@ -766,10 +1256,10 @@ DGtal::detail::argminBigLabelledMapMemoryUsageForGeometricDistribution
   BigLabelledMapMemFunctor F( prob_one_data, prob_no_data, sL, sizeof( TData ),
                            sizeof( TData* ), 2 );
   double m = -1.0;
-  unsigned int Nopt = 0;
-  unsigned int Mopt = 0;
-  for ( unsigned int N = 1; N < L; ++N )
-    for ( unsigned int M = 2; M < (L-N); ++M )
+  std::size_t Nopt = 0;
+  std::size_t Mopt = 0;
+  for ( std::size_t N = 1; N < L; ++N )
+    for ( std::size_t M = 2; M < (L-N); ++M )
       {
         // std::cerr << "Fmem(" << N << "," << M << ")=" 
         //           << F.fctNM( N, M ) << std::endl;

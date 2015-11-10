@@ -18,10 +18,10 @@
 
 /**
  * @file BigLabelledMap.h
- * @author Jacques-Olivier Lachaud (\c jacques-olivier.lachaud@univ-savoie.fr )
- * Laboratory of Mathematics (CNRS, UMR 5127), University of Savoie, France
+ * @author Roland Denis (\c roland.denis@univ-smb.fr )
+ * LAboratory of MAthematics - LAMA (CNRS, UMR 5127), University of Savoie, France
  *
- * @date 2012/07/05
+ * @date 2015/11/10
  *
  * Header file for module BigLabelledMap.cpp
  *
@@ -44,14 +44,21 @@
 #include <cstddef>
 #include <cmath>
 #include <iostream>
+
 #include <DGtal/base/Common.h>
 #include <DGtal/base/BitFieldArray.h>
+#include <DGtal/base/ExpressionTemplates.h>
+
 //////////////////////////////////////////////////////////////////////////////
 
+
+/////////////////////////////////////////////////////////////////////////////
+// Tools
+/*
 namespace
 {
 
-  /// Calculates the log2 of an integer.
+  /// Calculates the log2 of \p N.
   template < std::size_t N >
   struct Log2
     {
@@ -65,708 +72,188 @@ namespace
     };
 
 }
+*/
 
 namespace DGtal
 {
 
-  /////////////////////////////////////////////////////////////////////////////
-  // template class BigLabelledMap
-  /**
-     Description of template class 'BigLabelledMap' <p> \brief Aim:
-     Represents a map label -> data, where the label is an integer
-     between 0 and a constant L-1. It is based on a binary coding of
-     labels and a mixed list/array structure. The assumption is that
-     the number of used labels is much less than L. The objective is
-     to minimize the memory usage.
+/////////////////////////////////////////////////////////////////////////////
+// template class BigLabelledMap
 
-     Model of boost::AssociativeContainer,
-     boost::PairAssociativeContainer,
-     boost::UniqueAssociativeContainer. As such, it is refinement of
-     boost::ForwardContainer and boost::Container.  It is also a model
-     of boost::Assignable, boost::CopyConstructible.
+/**
+ * Description of template class 'BigLabelledMap' <p> \brief Aim:
+ * Represents a map label -> data, where the label is an integer
+ * between 0 and a constant L-1. It is based on a binary coding of
+ * labels and a mixed list/array structure. The assumption is that
+ * the number of used labels is much less than L. The objective is
+ * to minimize the memory usage.
 
-     @verbatim
-     V[ 0 ] is the data of the first set label.
-     V[ 1 ] is the data of the second set label.
-     ...
+ * Model of boost::AssociativeContainer,
+ * boost::PairAssociativeContainer,
+ * boost::UniqueAssociativeContainer. As such, it is refinement of
+ * boost::ForwardContainer and boost::Container.  It is also a model
+ * of boost::Assignable, boost::CopyConstructible.
 
-     if less than 4 datas and N = 3
-     +------+------+------+------+------+
-     |labels| V[0] | V[1] | ...  |  0   |
-     +------+------+------+------+------+
+ * @verbatim
+ * V[ 0 ] is the data of the first set label.
+ * V[ 1 ] is the data of the second set label.
+ * ...
 
-     if only 4 datas and N = 3
-     +------+------+------+------+------+
-     |labels| V[0] | V[1] | V[2] | V[3] |
-     +------+------+------+------+------+
+ * if less than 4 datas and N = 3
+ * +------+------+------+------+------+
+ * |labels| V[0] | V[1] | ...  |  0   |
+ * +------+------+------+------+------+
 
-     if more than 4 datas and N = 3, M = 4
-     +------+------+------+------+------+        +------+------+------+------+------+
-     |labels| V[0] | V[1] | V[2] | ptr --------> | V[3] | V[4] | V[5] | V[6] | ptr --------> ...
-     +------+------+------+------+------+        +------+------+------+------+------+
+ * if only 4 datas and N = 3
+ * +------+------+------+------+------+
+ * |labels| V[0] | V[1] | V[2] | V[3] |
+ * +------+------+------+------+------+
 
-     @endverbatim
+ * if more than 4 datas and N = 3, M = 4
+ * +------+------+------+------+------+        +------+------+------+------+------+
+ * |labels| V[0] | V[1] | V[2] | ptr --------> | V[3] | V[4] | V[5] | V[6] | ptr --------> ...
+ * +------+------+------+------+------+        +------+------+------+------+------+
 
-     This structure is related to the IndexedListWithBlocks, except
-     that it stores the mapping label -> index. The (maximum) number
-     of possible labels is fixed at instantiation for optimisation
-     purposes.
+ * @endverbatim
 
-     Such a structure is useful when:
-     - the expected size of this container is small, but may sometimes increase.
-     - the user wishes sometimes to insert a new data or erase another data.
-     - the user wishes to have an access to the datas that is as fast as possible given a valid label.
-     - one wishes to limit as possible the memory usage.
-     - generally this structure is embedded as the data of a big array.
+ * This structure is related to the IndexedListWithBlocks, except
+ * that it stores the mapping label -> index. The (maximum) number
+ * of possible labels is fixed at instantiation for optimisation
+ * purposes.
 
-     Model of boost::PairAssociativeContainer and
-     boost::SimpleAssociativeContainer.
+ * Such a structure is useful when:
+ * - the expected size of this container is small, but may sometimes increase.
+ * - the user wishes sometimes to insert a new data or erase another data.
+ * - the user wishes to have an access to the datas that is as fast as possible given a valid label.
+ * - one wishes to limit as possible the memory usage.
+ * - generally this structure is embedded as the data of a big array.
 
-     @tparam TData the type for the datas stored in the list.
-     @tparam L the maximum number of labels.
-     @tparam N the number of data stored in the first block.
-     @tparam M the number of data stored in the further blocks.
+ * Model of boost::PairAssociativeContainer and
+ * boost::SimpleAssociativeContainer.
 
-     NB: In the following, we use the notations
-     - n is the size of the container
-     - b is the number of blocks ( b = 1 + (size()-N) / M ).
-  */
-  template <typename TData, unsigned int L,
-            unsigned int N, unsigned int M>
-  class BigLabelledMap
+ * @tparam TData the type for the datas stored in the list.
+ * @tparam L the maximum number of labels.
+ * @tparam N the number of data stored in the first block.
+ * @tparam M the number of data stored in the further blocks.
+
+ * NB: In the following, we use the notations
+ * - n is the size of the container
+ * - b is the number of blocks ( b = 1 + (size()-N) / M ).
+ */
+template <
+  typename TData, 
+  std::size_t L,
+  std::size_t N, 
+  std::size_t M
+>
+class BigLabelledMap
   {
+    // ------------------------- Validity checks ------------------------------
     BOOST_STATIC_ASSERT( L >= 1 );
     BOOST_STATIC_ASSERT( N >= 0 );
     BOOST_STATIC_ASSERT( M >= 2 );
 
+    // ------------------------- Constants ------------------------------------
 public:
-    // Maximum number of labels
-    BOOST_STATIC_CONSTANT( std::size_t, labelSize = Log2<L>::value ); ///< Bit size of a label
-    BOOST_STATIC_CONSTANT( std::size_t, maxLabel  = L ); ///< Real maximum number of labels.
+    BOOST_STATIC_CONSTANT( std::size_t, labelSize = LOG2<L+1>::VALUE ); ///< Bit size of a label
+    BOOST_STATIC_CONSTANT( std::size_t, maxLabel  = (POW<2, labelSize>::VALUE) - 1 ); ///< Real maximum number of labels.
 
     BOOST_STATIC_CONSTANT( std::size_t, firstBlockSize = N ); ///< Minimal capacity of the first block.
     BOOST_STATIC_CONSTANT( std::size_t, nextBlockSize = M ); ///< Minimal capacity of the next blocks.
 
-    // ----------------------- Public types ------------------------------
+    // ------------------------- Base types -----------------------------------
+public:
     typedef BigLabelledMap<TData, L, N, M> Self; ///< Self type.
-    typedef TData Data; ///< Data type.
+    typedef TData       Data;   ///< Data type.
+    typedef std::size_t Label;  ///< Label type.
+    typedef Label       Key;    ///< Key type (i.e. label type).
+    typedef std::pair<const Key, Data> Value; ///< Type of a (label,data) pair.
+    typedef std::size_t           SizeType;   ///< Index in the container
 
-    typedef std::size_t Label; ///< Label type.
-
-    typedef Label Key; ///< Key type (i.e. label type).
-    typedef std::pair<Key, Data> Value; ///< Type of a (label,data) pair.
-
+    // --------------------------- Iterators ----------------------------------
+public:
     // Iterator related typedefs
-    typedef std::ptrdiff_t DifferenceType;
-    typedef std::size_t SizeType;
+    typedef std::ptrdiff_t  DifferenceType; ///< Difference between pointers
+    typedef std::pair<const Key, Data&> Reference; ///< Reference to a (label,data) pair.
+    typedef Reference*    Pointer;  ///< Pointer to a (label,data) pair.
+    typedef const Value   ConstReference; ///< Constant reference.
+    typedef const Value*  ConstPointer;   ///< Constant pointer.
 
-    typedef std::pair<const Key, Data&> Reference;
-    typedef Reference*    Pointer;
-    typedef const Value   ConstReference;
-    typedef const Value*  ConstPointer;
+private:
+    /** Base features for random-access iterators.
+     * @tparam TFirstBlock Type of the first block of data.
+     * @tparam TNextBlock  Type of the next block of data.
+     */
+    template < typename TFirstBlock, typename TNextBlock >
+    class IteratorBase;
 
-    class Iterator;      ///< Forward declaration
-    class ConstIterator; ///< Forward declaration
-    class KeyCompare;    ///< Forward declaration
-    class ValueCompare;  ///< Forward declaration
+public:
+    class Iterator;      ///< Random-access mutable iterator.
+    class ConstIterator; ///< Random-access constant iterator.
 
     // ----------------------- Standard types ------------------------------
-    typedef Key key_type;
+public:
+    typedef Key   key_type;
     typedef Value value_type;
-    typedef Data data_type;
-    typedef Data mapped_type;
-    typedef DifferenceType difference_type;
-    typedef Reference reference;
-    typedef Pointer pointer;
-    typedef ConstReference const_reference;
-    typedef ConstPointer const_pointer;
-    typedef SizeType size_type;
-    typedef ConstIterator iterator;
-    typedef ConstIterator const_iterator;
-    typedef KeyCompare key_compare;
-    typedef ValueCompare value_compare;
+    typedef Data  mapped_type;
+    typedef DifferenceType  difference_type;
+    typedef Reference       reference;
+    typedef Pointer         pointer;
+    typedef ConstReference  const_reference;
+    typedef ConstPointer    const_pointer;
+    typedef SizeType        size_type;
+    typedef Iterator        iterator;
+    typedef ConstIterator   const_iterator;
 
-    // Data blocks
-    template < std::size_t blockSize, std::size_t labelArrayShift > struct __Block; ///< Forward declaration.
-    typedef __Block<firstBlockSize, 1>  __FirstBlock; ///< First block with label count.
-    typedef __Block<nextBlockSize, 0>   __NextBlock;  ///< Next blocks.
-
-    union BlockPointer {
-      __FirstBlock* first;
-      __NextBlock* any;
-    };
-
-
+    // ---------------------------- Data blocks ----------------------------
+private:
     /** Represents any block of data in the container.
-     * @tparam blockSize  The capacity of this block (without extra space).
+     * @tparam blockCapacity  The capacity of this block (without extra space).
      * @tparam labelArrayShift  Padding length at start of labels storage (=1 for the first block).
      */
     template <
-      std::size_t blockSize,
+      std::size_t blockCapacity,
       std::size_t labelArrayShift = 0
     >
-    struct __Block
-      {
-        BOOST_STATIC_CONSTANT( std::size_t, extraSpace = sizeof(TData)/sizeof(TData*) ); ///< Extra space for storing values when the pointer is not used.
-        BOOST_STATIC_CONSTANT( std::size_t, blockMaxSize = blockSize + extraSpace ); ///< Capacity of this block with extra space.
-
-        typedef BitFieldArray< Label, labelSize, blockMaxSize + labelArrayShift >  Labels; ///< Label array.
-
-        /// Used in any block to finish it or to point to the next block.
-        union DataOrBlockPointer
-          {
-            Data lastData[extraSpace]; // used when at the end of the list
-            __NextBlock* nextBlock;  // used otherwise
-          };
-
-        /// Constructor.
-        inline
-        __Block()
-          {
-            myTail.nextBlock = 0;
-          }
-
-        /** Returns true if the there is a next block
-         * @param size  the current number of stored values in this block and the following.
-         */
-        static inline
-        bool hasNextBlock( std::size_t size )
-          {
-            return size > blockMaxSize;
-          }
-
-        /** Returns true if the data at given index is stored in this block.
-         * @param idx   the position of the data.
-         * @param size  the current number of stored values in this block and the following.
-         */
-        static inline
-        bool isInThisBlock( std::size_t idx, std::size_t size )
-          {
-            return size <= blockMaxSize || idx < blockSize;
-          }
-
-        /** Returns the label at position idx in the current block.
-         * @param idx   the position where to read the label.
-         */
-        inline
-        Label getBlockLabel( std::size_t idx ) const
-          {
-            ASSERT( idx < blockMaxSize );
-            return myLabels.getValue( idx + labelArrayShift );
-          }
-
-        /** Returns the label at position idx, whatever the block where it is.
-         * @param idx   the position where to read the label.
-         * @param size  the current number of stored values in this block and the following.
-         */
-        inline
-        Label getLabel( std::size_t idx, std::size_t size ) const
-          {
-            ASSERT( idx < size );
-            if ( isInThisBlock( idx, size ) )
-              {
-                return getBlockLabel( idx );
-              }
-            else
-              {
-                return myTail.nextBlock->getLabel( idx - blockSize, size - blockSize );
-              }
-          }
-
-        /** Sets the label at position idx in the current block.
-         * @param idx   the position where to store the label.
-         * @param label the label.
-         */
-        inline
-        void setBlockLabel( std::size_t idx, Label label )
-          {
-            ASSERT( idx < blockMaxSize );
-            myLabels.setValue( idx + labelArrayShift, label );
-          }
-
-        /** Sets the label at position idx, whatever the block where it is (the block must exists).
-         * @param idx     the position where to store the label.
-         * @param label   the label.
-         * @param size    the current number of stored values in this block and the following.
-         */
-        inline
-        void setLabel( std::size_t idx, Label label, std::size_t size )
-          {
-            ASSERT( idx < size );
-            if ( isInThisBlock( idx, size ) )
-              {
-                setBlockLabel( idx );
-              }
-            else
-              {
-                myTail.nextBlock->setLabel( idx - blockSize, size - firstBlockSize );
-              }
-          }
-
-        /** Sets a label and data at given position in this block.
-         * @param idx   the position where to write.
-         * @param label the label.
-         * @param data  the data.
-         * @return a reference to the written data.
-         */
-        inline
-        Data& setBlockValueAt( std::size_t idx, Label const& label, Data const& data )
-          {
-            ASSERT( idx < blockMaxSize );
-            setBlockLabel(idx, label);
-            return ( myData[idx] = data ); // Works also if we use extra space.
-          }
-
-        /** Sets a (label,data) pair at given position in this block.
-         * @param idx   the position where to write.
-         * @param value the (label,data) pair.
-         * @return a reference to the written data.
-         */
-        inline
-        Data& setBlockValueAt( std::size_t idx, Value const& value )
-          {
-            return setBlockData( idx, value.first, value.second );
-          }
-
-        /** Gets a constant (label,data) pair from given position in this block.
-         * @param idx   the position where to read.
-         * @return the (label,data) pair.
-         */
-        inline
-        ConstReference getBlockValueAt( std::size_t idx ) const
-          {
-            ASSERT( idx < blockMaxSize );
-            return ConstReference( getBlockLabel(idx), myData[idx] );
-          }
-        
-        /** Gets a (label,data) pair, where the data is mutable, from given position in this block.
-         * @param idx   the position where to read.
-         * @return the (label,data) pair.
-         */
-        inline
-        Reference getBlockValueAt( std::size_t idx )
-          {
-            ASSERT( idx < blockMaxSize );
-            return Reference( getBlockLabel(idx), myData[idx] );
-          }
-
-        /** Get a data from given position in this block.
-         * @param idx   the position where to read.
-         * @return a mutable reference to the data.
-         */
-        inline
-        Data& getBlockDataAt( std::size_t idx )
-          {
-            ASSERT( idx < blockMaxSize );
-            return myData[idx];
-          }
-
-        /** Get a data from given position in this block.
-         * @param idx   the position where to read.
-         * @return a constant reference to the data.
-         */
-        inline
-        Data const& getBlockDataAt( std::size_t idx ) const
-          {
-            ASSERT( idx < blockMaxSize );
-            return myData[idx];
-          }
-
-        // Forward declaration.
-        //inline
-        //Data& pushBack( Value const& value, std::size_t size );
-
-        /** Adds a data with given label.
-         * @param label   the label.
-         * @param data    the data.
-         * @param size    the current number of stored values in this block and the following.
-         */
-        inline
-        Data& pushBack( Label const& label, Data const& data, std::size_t size )
-          {
-            if ( size < blockMaxSize ) // Works also if we use extra space
-              {
-                setBlockLabel(size, label);
-                return ( myData[size] = data );
-              }
-            else if ( size == blockMaxSize )
-              {
-                __NextBlock* next = new __NextBlock;
-
-                // Move the extra space content to the next block.
-                for ( std::size_t i = 0; i < extraSpace; ++i )
-                  {
-                    next->pushBack( getBlockValueAt(i + blockSize), i );
-                  }
-
-                // Push the new value into the next block.
-                myTail.nextBlock = next;
-                return myTail.nextBlock->pushBack( label, data, extraSpace );
-              }
-            else // size > blockMaxSize
-              {
-                // Send the job to the next block.
-                return myTail.nextBlock->pushBack( label, data, size - blockSize );
-              }
-          }
-
-        /** Adds a (label,data) pair.
-         * @param value   the (label,data) pair.
-         * @param size    the current number of stored values in this block and the following.
-         */
-        inline
-        Data& pushBack( Value const& value, std::size_t size )
-          {
-            return pushBack( value.first, value.second, size );
-          }
-
-        /** Removes the last data and returns it.
-         * @param size  the current number of stored values in this blocks and the following.
-         */
-        inline
-        Value popBack( std::size_t size )
-          {
-            ASSERT( size > 0 );
-
-            if ( size <= blockMaxSize ) // Works also if we use extra space.
-              {
-                return getBlockValueAt(size-1);
-              }
-            else if ( size == blockMaxSize + 1)
-              {
-                __NextBlock* nextBlock = myTail.nextBlock;
-
-                const Value value = nextBlock->popBack( extraSpace+1 );
-
-                // Move the next block content into the extra space.
-                for ( std::size_t i = blockSize; i < blockMaxSize; ++i )
-                  {
-                    setBlockValueAt( i, nextBlock->getBlockValueAt( i-blockSize ) );
-                  }
-
-                delete nextBlock;
-                return value;
-              }
-            else // size > blockMaxSize + 1
-              {
-                return myTail.nextBlock->popBack( size - blockSize );
-              }
-          }
-
-        /** Removes the data at the given position.
-         * @param idx   the position of the data.
-         * @param size  the current number of stored values in this blocks and the following.
-         */
-        inline
-        void eraseAt( std::size_t idx, std::size_t size )
-          {
-            ASSERT( idx < size );
-
-            if ( idx == size-1 )
-              {
-                popBack( size );
-              }
-            else if ( size <= blockMaxSize ) // Works also if we use extra space.
-              {
-                setBlockValueAt( idx, getBlockValueAt(size-1) );
-              }
-            else if ( size == blockMaxSize + 1 )
-              {
-                __NextBlock* const nextBlock = myTail.nextBlock;
-
-                if ( idx < blockSize )
-                  setBlockValueAt( idx, nextBlock->getBlockValueAt( size-blockSize-1 ) );
-                else
-                  nextBlock->eraseAt( idx-blockSize, size-blockSize );
-
-                // Move the next block content into the extra space.
-                for ( std::size_t i = blockSize; i < blockMaxSize; ++i )
-                  {
-                    setBlockValueAt( i, nextBlock->getBlockValueAt( i-blockSize ) );
-                  }
-
-                delete nextBlock;
-              }
-            else // size > blockMaxSize + 1
-              {
-                if ( idx < blockSize )
-                  setBlockValueAt( idx, myTail.nextBlock->popBack( size - blockSize ) );
-                else
-                  myTail.nextBlock->eraseAt( idx - blockSize, size - blockSize );
-              }
-          }
-
-        /** Clear this block and the following blocks.
-         * @param size  The current number of stored value in this block and the following.
-         */
-        void clear( std::size_t size )
-          {
-            if ( size > blockMaxSize )
-              {
-                myTail.nextBlock->clear( size - blockSize );
-                delete myTail.nextBlock;
-              }
-          }
-
-        /** Finds a label in the current block and returns its index.
-         *
-         * Returns blockMaxSize if not found.
-         * @param label The label to found.
-         * @param size  The current number of stored value in this block and the following.
-         * @param idx   Where to start the search.
-         */
-        SizeType findBlockLabel( Label const& label, std::size_t size, std::size_t idx = 0 )
-          {
-            const std::size_t maxIndex = ( size <= blockSize ) ? blockSize : blockMaxSize;
-
-            for ( std::size_t i = 0; i < maxIndex; ++i )
-              {
-                if ( getBlockLabel(i) == label )
-                  return i;
-              }
-            return blockMaxSize;
-          }
-
-        Labels myLabels;
-        Data myData[ blockSize ];
-        DataOrBlockPointer myTail;
-      }; // end of class __Block
-
-    template < typename TFirstBlock, typename TAnyBlock >
-    class IteratorBase
-      {
-      protected:
-      
-        // Boost iterator_facade core operations.
-        friend class boost::iterator_core_access;
-
-        IteratorBase ( TFirstBlock& aFirstBlock, std::size_t aSize, std::size_t anIndex = 0 )
-          : myFirstBlock( &aFirstBlock)
-          , myIndex( anIndex )
-          , mySize( aSize )
-          , myAnyBlockStack(0)
-        {
-          advance( myIndex );
-        }
-
-        virtual ~IteratorBase()
-          {
-          }
-
-        /// Increment of one position.
-        inline void increment()
-          {
-            advance(1);
-          }
-
-        /// Decrement of one position.
-        inline void decrement()
-          {
-            advance(-1);
-          }
-
-        /// Test equality with other constant iterator.
-        template < typename TOtherFirstBlock, typename TOtherAnyBlock >
-        inline bool equal( IteratorBase<TOtherFirstBlock, TOtherAnyBlock> const& other ) const
-          {
-            return 
-                  myIndex == other.myIndex
-              &&  mySize  == other.mySize
-              &&  myAnyBlockStack.size() == other.myAnyBlockStack.size();
-          }
-
-        /// Distance to.
-        template < typename TOtherFirstBlock, typename TOtherAnyBlock >
-        inline std::ptrdiff_t distance_to( IteratorBase<TOtherFirstBlock, TOtherAnyBlock> const& other ) const
-          {
-            return other.myIndex - myIndex;
-          }
-
-        /// Advance by \p n positions.
-        inline void advance ( DifferenceType n )
-          {
-            if ( n > 0 )
-              {
-                myIndex += n;
-
-                if ( myAnyBlockStack.size() > 0 || ! myFirstBlock->isInThisBlock( myIndex, mySize ) )
-                  {
-                    if ( myAnyBlockStack.size() == 0 )
-                      {
-                        myAnyBlockStack.push( &( myFirstBlock->myTail.nextBlock ) );
-                        myIndex -= __FirstBlock::blockSize;
-                        mySize  -= __FirstBlock::blockSize;
-                      }
-
-                    while ( ! __NextBlock::isInThisBlock( myIndex, mySize ) )
-                      {
-                        myAnyBlockStack.push( &( myAnyBlockStack.top()->myTail.nextBlock ) );
-                        myIndex -= __NextBlock::blockSize;
-                        mySize  -= __NextBlock::blockSize;
-                      }
-                  }
-              }
-            else 
-              {
-                n = -n; // For clarity of the following algo.
-
-                while ( n > 0 )
-                  {
-                    if ( n <= myIndex )
-                      {
-                        myIndex -= n;
-                        n = 0;
-                      }
-                    else
-                      {
-                        n -= myIndex + 1;
-                        myAnyBlockStack.pop();
-                        if ( myAnyBlockStack.size() > 0 )
-                          myIndex = mySize = __NextBlock::blockSize;
-                        else
-                          myIndex = mySize = __FirstBlock::blockSize;
-                      }
-                  }
-              }
-          }
-
-      protected:
-        TFirstBlock* myFirstBlock;
-        std::size_t myIndex;
-        std::size_t mySize;
-        std::stack< TAnyBlock* > myAnyBlockStack;
-         
-      };
-
-    class Iterator
-      : private IteratorBase< __FirstBlock, __NextBlock >
-      , public  boost::iterator_facade <
-          Iterator,
-          Value,
-          boost::random_access_traversal_tag,
-          Reference
-        >
-    {
-
-    public:
-      Iterator ( __FirstBlock& aFirstBlock, std::size_t aSize, std::size_t anIndex = 0 )
-        : IteratorBase< __FirstBlock, __NextBlock >( aFirstBlock, aSize, anIndex )
-      {
-      }
+    struct __Block;
     
-    private:
-      
-      // Boost iterator_facade core operations.
-      friend class boost::iterator_core_access;
-
-      /// Dereference.
-      inline Reference dereference() const
-        {
-          if ( this->myAnyBlockStack.size() == 0 )
-            {
-              return this->myFirstBlock->getBlockDataAt( this->myIndex );
-            }
-          else
-            {
-              return this->myAnyBlockStack.top()->getBlockDataAt( this->myIndex );
-            }
-        }
-
-    };
-          
-    class ConstIterator
-      : private IteratorBase< const __FirstBlock, const __NextBlock >
-      , public boost::iterator_facade <
-          Iterator,
-          const Value,
-          boost::random_access_traversal_tag,
-          ConstReference
-        >
-    {
-    public:
-      ConstIterator ( __FirstBlock const& aFirstBlock, std::size_t aSize, std::size_t anIndex = 0 )
-        : IteratorBase< const __FirstBlock, const __NextBlock >( &aFirstBlock, aSize, anIndex )
-        {
-        }
-    
-    private:
-      
-      // Boost iterator_facade core operations.
-      friend class boost::iterator_core_access;
-
-      /// Dereference.
-      inline ConstReference dereference() const
-        {
-          if ( this->myAnyBlockStack.size() == 0 )
-            {
-              return this->myFirstBlock->getBlockDataAt( this->myIndex );
-            }
-          else
-            {
-              return this->myAnyBlockStack.top()->getBlockDataAt( this->myIndex );
-            }
-        }
-
-    };
+    typedef __Block<firstBlockSize, 1>  __FirstBlock; ///< First block with label count.
+    typedef __Block<nextBlockSize, 0>   __NextBlock;  ///< Next blocks.
 
           
     // ----------------------- Internal services ------------------------------
-
+private:
     /** Sets the number of data stored.
-     * @param size  The number of data stored.
+     * @param aSize  The number of data stored.
      */
     inline
-    void setSize( SizeType aSize )
+    void set_size( SizeType aSize );
+
+    /** Adds an element to the end without verifying if the key already exists.
+     * @param aValue  The (key,data) to be added.
+     * TODO: used ?!!!
+     */
+    inline
+    void push_back( Value const& aValue )
       {
-        myFirstBlock.myLabels.setValue( 0, aSize );
+        myFirstBlock.pushBack( aValue, size() );
+        set_size( size()+1 );
       }
 
-
-
-    // ----------------------- Iterator services ------------------------------
-  public:
-
-#if 0
-
-    /// Key comparator class. Always natural ordering.
-    class KeyCompare
-      {
-    public:
-      inline KeyCompare() {}
-      inline bool operator()( Key k1, Key k2 ) const
-        {
-          return k1 < k2;
-        }
-      };
-
-    /// Value comparator class. Always natural ordering between keys.
-    class ValueCompare {
-    public:
-      inline ValueCompare() {}
-      inline bool operator()( const Value & v1, const Value & v2 ) const
-      {
-        return v1.first < v2.first;
-      }
-    };
-#endif
 
     // ----------------------- Standard services ------------------------------
-  public:
+public:
 
     /**
      * Constructor.
      */
     BigLabelledMap();
 
-#if 0
-
     /**
      * Copy constructor.
      * @param other the object to clone.
      */
     BigLabelledMap ( const BigLabelledMap & other );
-#endif
-
 
     /**
      *  Constructor from range.
@@ -780,25 +267,26 @@ public:
     template <typename InputIterator>
     BigLabelledMap( InputIterator first, InputIterator last );
 
-#if 0
     /**
      * Assignment.
      * @param other the object to copy.
      * @return a reference on 'this'.
      */
     BigLabelledMap & operator= ( const BigLabelledMap & other );
-#endif
 
     /**
      * Destructor.
      */
     ~BigLabelledMap();
 
-    // ----------------------- Container services -----------------------------
   public:
 
+    // --------------------------- Capacity group -----------------------------
+    /// @name Capacity
+    ///@{
+
     /**
-     * The number of datas stored in the structure. O(1) complexity.
+     * @return the number of datas stored in the structure. O(1) complexity.
      */
     SizeType size() const;
 
@@ -807,26 +295,22 @@ public:
      */
     bool empty() const;
 
-#if 0
+
     /**
-     * The maximum number of datas storable in the structure.
+     * @return the maximum number of datas storable in the structure.
      */
     SizeType max_size() const;
 
     /**
-     * The number of datas currently allocated in the structure.
+     * @return the number of data currently allocated in the structure.
      */
     SizeType capacity() const;
 
-    /**
-     * @return a comparator object for two keys. Corresponds to k1 < k2.
-     */
-    KeyCompare key_comp() const;
+    ///@} Capacity
 
-    /**
-     * @return a comparator object for two values. Corresponds to v1.first < v2.first.
-     */
-    ValueCompare value_comp() const;
+    // --------------------------- Modifiers group ----------------------------
+    /// @name Modifiers
+    ///@{
 
     /**
      * Swap content. Exchanges the content of the container with the
@@ -843,13 +327,70 @@ public:
      */
     void swap( Self & other );
 
-#endif
     /**
      * Removes all the datas stored in the structure.
      */
     void clear();
 
+    /** Inserts a data at given key if the key is not already present in the container.
+     *
+     * @param val a pair <key,data>.
+     *
+     * @return a pair <iterator,bool> where iterator points on the
+     * pair (key,data) while the boolean is true if a new element was
+     * indeed created.
+     */
+    std::pair<Iterator, bool> insert( const Value & val );
 
+    /** Inserts the pair \a val (key,data) in the container, where position is a hint.
+     *
+     * @param position an iterator used as a hint to find the good
+     *        place. Unused here.
+     * @param val a pair (key,data)
+     * @return an iterator on the inserted element.
+     */
+    Iterator insert( Iterator position, const Value & val );
+
+    /** Insertion from range. Insert all values in the range. Be
+     * careful that if a value in the container has the same key as a
+     * value in the range, then the mapped data is not changed.
+     *
+     * @tparam InputIterator model of boost::InputIterator whose
+     *    value type is convertible to Value.
+     *
+     * @param first an iterator on the first value of the range.
+     * @param last an iterator after the last value of the range.
+     */
+    template <typename InputIterator>
+    void insert( InputIterator first, InputIterator last );
+
+    /** Erases the pair (key,data) pointed by an iterator.
+     * @param position any valid iterator in the container.
+     */
+    void erase( ConstIterator position );
+
+    /** Erases the element of key \a key.
+     * @param key any key (in 0..L-1)
+     * @return the number of elements deleted (0 or 1).
+     */
+    SizeType erase( Key const& key );
+
+    /** Erases the elements in the range [first,last).
+     *
+     * @param first a valid iterator.
+     * @param last a valid iterator.
+     *
+     * @note to clear the container, prefer clear() instead of erase( begin(), end() ).
+     * @see clear
+     */
+    void erase( ConstIterator first, ConstIterator last );
+
+    ///@} Modifiers
+
+    // --------------------------- Lookup group -------------------------------
+    /// @name Lookup
+    ///@{
+    
     /** Follows std::count.
      * @param key any label
      * @return 0 if the key is not present in container, 1 otherwise.
@@ -858,116 +399,108 @@ public:
      */
     SizeType count( const Key & key ) const;
 
-    /**
-       Follows std::operator[]. Given a key \a key, returns a
-       reference to the associated data.
-
-       @param key any label
-       @return a reference to the associated data.
-    */
+    /** Given a key \a key, returns a reference to the associated data.
+     *
+     * If the key does not exist, a new element is inserted.
+     * @param key   any label.
+     * @return a reference to the associated data.
+     */
     Data & operator[]( const Key & key );
 
-    /**
-       Read-only version. Follows std::operator[]. Given a key \a key,
-       returns a reference to the associated data.
-
-       @param key any label
-       @return a const reference to the associated data.
+    /** Returns a mutable reference to the data associated to an \b existing key.
+     *
+     * If no such element exists, an exception of type std::out_of_range is thrown.
+     * @param key any label
+     * @return a reference to the associated data.
     */
-    const Data & operator[]( const Key & key ) const;
+    Data & at( const Key & key );
 
-#if 0
-    /**
-       A read-write accessor to the data associated to an \b existing key.
-
-       @param key any label (such that count(key)==1)
-       @return a reference to the associated data.
+    /** Returns a constant reference to the data associated to an \b existing key.
+     *
+     * If no such element exists, an exception of type std::out_of_range is thrown.
+     * @param key any label
+     * @return a reference to the associated data.
     */
-    Data & fastAt( const Key & key );
+    Data const& at( const Key & key ) const;
+    
+    /** Get range of equal elements.
+     *
+     * Returns the bounds of a range that includes all the elements in
+     * the container with a key that compares equal to x. Here, the range will
+     * include one element at most.
+     *
+     * If x does not match any key in the container, the range
+     * returned has a length of zero, with both iterators pointing to
+     * the element with nearest key greater than x, if any, or to
+     * map::end if x is greater than all the elements in the
+     * container.
+     *
+     * @param x any key in 0..L-1
+     *
+     * @return a pair, where its member pair::first is an iterator to
+     * the lower bound of the range with the same value as the one
+     * that would be returned by lower_bound(x), and pair::second is
+     * an iterator to the upper bound of the range with the same value
+     * as the one that would be returned by upper_bound(x).
+     */
+    std::pair<Iterator, Iterator> equal_range( const Key & x );
 
-    /**
-       A read-only accessor to the data associated to an \b existing key.
+    /** Get range of equal elements.
+     *
+     * Returns the bounds of a range that includes all the elements in
+     * the container with a key that compares equal to x. Here, the range will
+     * include one element at most.
+     *
+     * If x does not match any key in the container, the range
+     * returned has a length of zero, with both iterators pointing to
+     * the element with nearest key greater than x, if any, or to
+     * map::end if x is greater than all the elements in the
+     * container.
+     *
+     * @param x any key in 0..L-1
+     *
+     * @return a pair, where its member pair::first is an iterator to
+     * the lower bound of the range with the same value as the one
+     * that would be returned by lower_bound(x), and pair::second is
+     * an iterator to the upper bound of the range with the same value
+     * as the one that would be returned by upper_bound(x).
+     */
+    std::pair<ConstIterator, ConstIterator> equal_range( const Key & x ) const;
 
-       @param key any label (such that count(key)==1)
-       @return a const reference to the associated data.
-    */
-    const Data & fastAt( const Key & key ) const;
+    /** Get iterator to element.
+     *
+     * Searches the container for an element with \a x as key and
+     * returns an iterator to it if found, otherwise it returns an
+     * iterator to end() (the element past the end of the container).
+     *
+     * @param x Key to be searched for (in 0..L-1)
+     *
+     * @return An iterator to the element, if the specified key value
+     * is found, end() if the specified key is not found in the
+     * container.
+     */
+    Iterator find ( const Key & x );
 
-    /**
-       Insertion of a new data at given label. Follows std::insert
-       return a pair<iterator,bool>).  Note that the data is
-       associated to key only if key was not present in the container.
+    /** Get iterator to element.
+     *
+     * Searches the container for an element with \a x as key and
+     * returns an iterator to it if found, otherwise it returns an
+     * iterator to end() (the element past the end of the container).
+     *
+     * @param x Key to be searched for (in 0..L-1)
+     *
+     * @return An iterator to the element, if the specified key value
+     * is found, end() if the specified key is not found in the
+     * container.
+     */
+    ConstIterator find ( const Key & x ) const;
 
-       @param val a pair<key,data>.
-
-       @return a pair <iterator,bool> where iterator points on the
-       pair (key,data) while the boolean is true if a new element was
-       indeed created.
-
-       NB: This method is provided to follow the
-       std::AssociativeContainer concept. You are discourage to use
-       this functions since the correct iterator must be recomputed at
-       each insert. Prefer operator[] or fastAt.
-    */
-    std::pair<Iterator, bool> insert( const Value & val );
-
-    /**
-       Inserts the pair \a val (key,data) in the container, where position is a hint
-
-       @param position an iterator used as a hint to find the good
-       place. Unused here.
-       @param val a pair (key,data)
-       @return an iterator on the inserted element.
-
-       NB: This method is provided to follow the
-       std::AssociativeContainer concept. You are discourage to use
-       this functions since the correct iterator must be recomputed at
-       each insert. Prefer operator[] or fastAt.
-    */
-    Iterator insert( Iterator position, const Value & val );
-
-    /**
-       Insertion from range. Insert all values in the range. Be
-       careful that if a value in the container has the same key as a
-       value in the range, then the mapped data is not changed.
-
-       @tparam InputIterator model of boost::InputIterator whose
-       value type is convertible to Value.
-
-       @param first an iterator on the first value of the range.
-       @param last an iterator after the last value of the range.
-    */
-    template <typename InputIterator>
-    void insert( InputIterator first, InputIterator last );
-
-    /**
-       Erases the pair (key,data) pointed by \a iterator.
-
-       @param position any valid iterator in the container.
-    */
-    void erase( Iterator position );
-
-    /**
-       Erases the element of key \a key.
-
-       @param key any key (in 0..L-1)
-       @return the number of elements deleted (0 or 1).
-    */
-    SizeType erase( Key key );
-
-    /**
-       Erases the elements in the range [first,last).
-
-       @param first a valid iterator.
-       @param last a valid iterator.
-
-       NB: to clear the container, prefer clear() instead of erase( begin(), end() ).
-       @see clear
-    */
-    void erase( Iterator first, Iterator last );
-
-#endif
-
+    ///@} Lookup
+    
+    // --------------------------- Iterators group ----------------------------
+    /// @name Iterators
+    ///@{
+    
     /// @return an iterator pointing on the first element in the container.
     ConstIterator begin() const;
 
@@ -980,241 +513,9 @@ public:
     /// @return an iterator pointing after the last element in the container.
     Iterator end();
 
-#if 0
-    /**
-       Get range of equal elements.
+    ///@} Iterators
 
-       Returns the bounds of a range that includes all the elements in
-       the container with a key that compares equal to x. Here, the range will
-       include one element at most.
-
-       If x does not match any key in the container, the range
-       returned has a length of zero, with both iterators pointing to
-       the element with nearest key greater than x, if any, or to
-       map::end if x is greater than all the elements in the
-       container.
-
-       @param x any key in 0..L-1
-
-       @return a pair, where its member pair::first is an iterator to
-       the lower bound of the range with the same value as the one
-       that would be returned by lower_bound(x), and pair::second is
-       an iterator to the upper bound of the range with the same value
-       as the one that would be returned by upper_bound(x).
-     */
-    std::pair<Iterator, Iterator> equal_range( const Key & x );
-
-    /**
-       Get range of equal elements.
-
-       Returns the bounds of a range that includes all the elements in
-       the container with a key that compares equal to x. Here, the range will
-       include one element at most.
-
-       If x does not match any key in the container, the range
-       returned has a length of zero, with both iterators pointing to
-       the element with nearest key greater than x, if any, or to
-       map::end if x is greater than all the elements in the
-       container.
-
-       @param x any key in 0..L-1
-
-       @return a pair, where its member pair::first is an iterator to
-       the lower bound of the range with the same value as the one
-       that would be returned by lower_bound(x), and pair::second is
-       an iterator to the upper bound of the range with the same value
-       as the one that would be returned by upper_bound(x).
-     */
-    std::pair<ConstIterator, ConstIterator> equal_range( const Key & x ) const;
-
-    /**
-       Get iterator to element.
-
-       Searches the container for an element with \a x as key and
-       returns an iterator to it if found, otherwise it returns an
-       iterator to end() (the element past the end of the container).
-
-       NB: Another member function, count(), can be used to just check
-       whether a particular key exists. 'count( x ) == 1' is faster
-       than 'find( x ) != end()'.
-
-       @param x Key to be searched for (in 0..L-1)
-
-       @return An iterator to the element, if the specified key value
-       is found, end() if the specified key is not found in the
-       container.
-    */
-    Iterator find ( const Key & x );
-
-    /**
-       Get iterator to element.
-
-       Searches the container for an element with \a x as key and
-       returns an iterator to it if found, otherwise it returns an
-       iterator to end() (the element past the end of the container).
-
-       NB: Another member function, count(), can be used to just check
-       whether a particular key exists. 'count( x ) == 1' is faster
-       than 'find( x ) != end()'.
-
-       @param x Key to be searched for (in 0..L-1)
-
-       @return An iterator to the element, if the specified key value
-       is found, end() if the specified key is not found in the
-       container.
-    */
-    ConstIterator find ( const Key & x ) const;
-
-    /**
-       Return iterator to lower bound.
-
-       Returns an iterator pointing to the first element in the
-       container whose key does not compare less than \a x (using the
-       container's comparison object), i.e. it is either equal or
-       greater.
-
-       Unlike upper_bound(), this member function returns an iterator
-       to the element also if it compares equal to \a x and not only
-       if it compares greater.
-
-       Notice that, internally, all the elements in this container are
-       always ordered by their keys, therefore all the elements that
-       follow the one returned by this function will have a key that
-       compares greater than x.
-
-       @param x Key to be searched for (in 0..L-1)
-
-       @return an iterator to the the first element in the container
-       whose key does not compare less than \a x.
-    */
-    Iterator lower_bound( const Key & x );
-
-    /**
-       Return iterator to lower bound.
-
-       Returns an iterator pointing to the first element in the
-       container whose key does not compare less than \a x, i.e. it is
-       either equal or greater.
-
-       Unlike upper_bound(), this member function returns an iterator
-       to the element also if it compares equal to \a x and not only
-       if it compares greater.
-
-       Notice that, internally, all the elements in this container are
-       always ordered by their keys, therefore all the elements that
-       follow the one returned by this function will have a key that
-       compares greater than x.
-
-       @param x Key to be searched for (in 0..L-1)
-
-       @return an iterator to the the first element in the container
-       whose key does not compare less than \a x.
-    */
-    ConstIterator lower_bound ( const Key & x ) const;
-
-    /**
-       Return iterator to upper bound.
-
-       Returns an iterator pointing to the first element in the
-       container whose key compares greater than \a x. (>x)
-
-       Unlike lower_bound(), this member function does not return an
-       iterator to the element if its key compares equal to \a x, but
-       only if it compares strictly greater.
-
-       Notice that, internally, all the elements in this container are
-       always ordered by their keys, therefore all the elements that
-       follow the one returned by this function will have a key that
-       compares greater than x.
-
-       @param x Key to be searched for (in 0..L-1)
-
-       @return an iterator to the the first element in the container
-       whose key compares greater than \a x.
-    */
-    Iterator upper_bound ( const Key & x );
-
-    /**
-       Return iterator to upper bound.
-
-       Returns an iterator pointing to the first element in the
-       container whose key compares greater than \a x. (>x)
-
-       Unlike lower_bound(), this member function does not return an
-       iterator to the element if its key compares equal to \a x, but
-       only if it compares strictly greater.
-
-       Notice that, internally, all the elements in this container are
-       always ordered by their keys, therefore all the elements that
-       follow the one returned by this function will have a key that
-       compares greater than x.
-
-       @param x Key to be searched for (in 0..L-1)
-
-       @return an iterator to the the first element in the container
-       whose key compares greater than \a x.
-    */
-    ConstIterator upper_bound ( const Key & x ) const;
-
-
-    /**
-       Removes all the datas stored in the block structure.
-       @param size must be the current size of the block structure.
-     */
-    void blockClear( unsigned int size );
-
-    /**
-       Random unprotected read-write access to data at position \a idx
-       @param idx the index of the data in the container.
-       @return a reference on the data.
-       @pre idx < size()
-       NB: O( b ), E = O( 1 + ceil( ( idx - N ) / M ) )
-    */
-    Data & blockAt( unsigned int idx );
-
-    /**
-       Random unprotected read access to data at position \a idx
-       @param idx the index of the data in the container.
-       @return a const reference on the data.
-       @pre idx < size()
-       NB: O( b ), E = O( 1 + ceil( ( idx - N ) / M ) )
-    */
-    const Data & blockAt( unsigned int idx ) const;
-
-    /**
-       Insertion of a new data at given position. The former data at
-       this position and the next ones are shifted.
-
-       @param idx the index of the data in the container.
-       @pre idx <= size() (if size(), inserts at the end.
-       @param data the data to insert.
-       NB: O( n ), E = O( n - idx )
-    */
-    Data & blockInsert( unsigned int idx, unsigned int block_size, const Data & data );
-
-    /**
-       Removal of a data at a given position. Following datas are shifted.
-
-       @param idx the index of the data in the container.
-       @pre idx < size()
-       NB: O( n ), E = O( n - idx )
-    */
-    void blockErase( unsigned int idx );
-
-
-    /// @return an iterator pointing on the first element in the container.
-    BlockIterator blockBegin();
-
-    /// @return an iterator pointing after the last element in the container.
-    BlockIterator blockEnd();
-
-    /// @return an iterator pointing on the first element in the container.
-    BlockConstIterator blockBegin() const;
-
-    /// @return an iterator pointing after the last element in the container.
-    BlockConstIterator blockEnd() const;
-
-    // ----------------------- Interface --------------------------------------
+    // ----------------------- DGTal Interface --------------------------------
   public:
 
     /**
@@ -1229,15 +530,11 @@ public:
      */
     bool isValid() const;
 
-#endif
 
-    // ------------------------- Private Datas --------------------------------
+    // ------------------------- Private Data --------------------------------
   private:
 
-    /**
-       Stores the first block of datas.
-    */
-    __FirstBlock myFirstBlock;
+    __FirstBlock myFirstBlock; ///< Stores the first block of data.
 
 
   }; // end of class BigLabelledMap
