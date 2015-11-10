@@ -92,9 +92,8 @@ BigLabelledMap( InputIterator first, InputIterator last )
   myFirstBlock.myLabels.setValue( 0, 0);
   for ( ; first != last; ++first )
     {
-      // this->operator[]( first->first ) = first->second;
       myFirstBlock.pushBack( *first, size() );
-      myFirstBlock.myLabels.setValue( 0, size() + 1);
+      setSize( size() + 1 );
     }
 }
 
@@ -232,6 +231,8 @@ swap( Self & other )
   std::swap( myLabels, other.myLabels );
   std::swap( myFirstBlock, other.myFirstBlock );
 }
+
+#endif
 //-----------------------------------------------------------------------------
 template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
@@ -239,8 +240,12 @@ typename DGtal::BigLabelledMap<TData, L, N, M>::SizeType
 DGtal::BigLabelledMap<TData, L, N, M>::
 count( const Key & key ) const
 {
-  return myLabels.test( key ) ? 1 : 0;
+  const ConstIterator it_end = end();
+  
+  return ( std::find( begin(), it_end, key ) == end() ) ? 0 : 1;
 }
+
+#if 0
 //-----------------------------------------------------------------------------
 template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
@@ -285,6 +290,9 @@ blockAt( unsigned int idx )
   ASSERT( ptr != 0 );
   return ptr->datas[ idx ];
 }
+
+#endif
+
 //-----------------------------------------------------------------------------
 template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
@@ -325,6 +333,8 @@ operator[]( const Key & key )
       return blockAt( myLabels.index( key ) );
     }
 }
+
+#if 0
 //-----------------------------------------------------------------------------
 template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
@@ -595,6 +605,8 @@ blockErase( unsigned int idx )
   ASSERT( idx < size() ); // end is not ok.
   myFirstBlock.erase( idx, size() );
 }
+
+#endif
 //-----------------------------------------------------------------------------
 template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline
@@ -602,8 +614,7 @@ typename DGtal::BigLabelledMap<TData, L, N, M>::Iterator
 DGtal::BigLabelledMap<TData, L, N, M>::
 begin()
 {
-  const Self* ptr = (const Self *) this;
-  return Iterator( myLabels.begin(), ptr->blockBegin() );
+  return Iterator( myFirstBlock, size(), 0 );
 }
 //-----------------------------------------------------------------------------
 template <typename TData, unsigned int L, unsigned int N, unsigned int M>
@@ -612,8 +623,7 @@ typename DGtal::BigLabelledMap<TData, L, N, M>::Iterator
 DGtal::BigLabelledMap<TData, L, N, M>::
 end()
 {
-  const Self* ptr = (const Self *) this;
-  return Iterator( myLabels.end(), ptr->blockEnd() );
+  return Iterator( myFirstBlock, size(), size() );
 }
 //-----------------------------------------------------------------------------
 template <typename TData, unsigned int L, unsigned int N, unsigned int M>
@@ -622,7 +632,7 @@ typename DGtal::BigLabelledMap<TData, L, N, M>::ConstIterator
 DGtal::BigLabelledMap<TData, L, N, M>::
 begin() const
 {
-  return ConstIterator( myLabels.begin(), blockBegin() );
+  return ConstIterator( myFirstBlock, size(), 0 );
 }
 //-----------------------------------------------------------------------------
 template <typename TData, unsigned int L, unsigned int N, unsigned int M>
@@ -631,8 +641,10 @@ typename DGtal::BigLabelledMap<TData, L, N, M>::ConstIterator
 DGtal::BigLabelledMap<TData, L, N, M>::
 end() const
 {
-  return ConstIterator( myLabels.end(), blockEnd() );
+  return ConstIterator( myFirstBlock, size(), size() );
 }
+
+#if 0
 //-----------------------------------------------------------------------------
 template <typename TData, unsigned int L, unsigned int N, unsigned int M>
 inline

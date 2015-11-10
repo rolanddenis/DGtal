@@ -540,7 +540,7 @@ public:
         // Boost iterator_facade core operations.
         friend class boost::iterator_core_access;
 
-        IteratorBase ( TFirstBlock& aFirstBlock, std::size_t anIndex, std::size_t aSize )
+        IteratorBase ( TFirstBlock& aFirstBlock, std::size_t aSize, std::size_t anIndex = 0 )
           : myFirstBlock( &aFirstBlock)
           , myIndex( anIndex )
           , mySize( aSize )
@@ -598,7 +598,7 @@ public:
                         mySize  -= __FirstBlock::blockSize;
                       }
 
-                    while ( myAnyBlockStack.top()->isInThisBlock( myIndex, mySize ) )
+                    while ( ! __NextBlock::isInThisBlock( myIndex, mySize ) )
                       {
                         myAnyBlockStack.push( &( myAnyBlockStack.top()->myTail.nextBlock ) );
                         myIndex -= __NextBlock::blockSize;
@@ -649,8 +649,8 @@ public:
     {
 
     public:
-      Iterator ( __FirstBlock& aFirstBlock, std::size_t anIndex, std::size_t aSize )
-        : IteratorBase< __FirstBlock, __NextBlock >( aFirstBlock, anIndex, aSize )
+      Iterator ( __FirstBlock& aFirstBlock, std::size_t aSize, std::size_t anIndex = 0 )
+        : IteratorBase< __FirstBlock, __NextBlock >( aFirstBlock, aSize, anIndex )
       {
       }
     
@@ -684,8 +684,8 @@ public:
         >
     {
     public:
-      ConstIterator ( __FirstBlock const& aFirstBlock, std::size_t anIndex, std::size_t aSize )
-        : IteratorBase< const __FirstBlock, const __NextBlock >( &aFirstBlock, anIndex, aSize )
+      ConstIterator ( __FirstBlock const& aFirstBlock, std::size_t aSize, std::size_t anIndex = 0 )
+        : IteratorBase< const __FirstBlock, const __NextBlock >( &aFirstBlock, aSize, anIndex )
         {
         }
     
@@ -710,7 +710,16 @@ public:
     };
 
           
-          
+    // ----------------------- Internal services ------------------------------
+
+    /** Sets the number of data stored.
+     * @param size  The number of data stored.
+     */
+    inline
+    void setSize( SizeType aSize )
+      {
+        myFirstBlock.myLabels.setValue( 0, aSize );
+      }
 
 
 
@@ -836,17 +845,17 @@ public:
 
 #endif
     /**
-       Removes all the datas stored in the structure.
+     * Removes all the datas stored in the structure.
      */
     void clear();
 
 
-    /**
-       Follows std::count.
-
-       @param key any label
-       @return 0 if the key is not present in container, 1 otherwise.
-    */
+    /** Follows std::count.
+     * @param key any label
+     * @return 0 if the key is not present in container, 1 otherwise.
+     *
+     * O(n) complexity.
+     */
     SizeType count( const Key & key ) const;
 
     /**
@@ -867,6 +876,7 @@ public:
     */
     const Data & operator[]( const Key & key ) const;
 
+#if 0
     /**
        A read-write accessor to the data associated to an \b existing key.
 
@@ -956,6 +966,8 @@ public:
     */
     void erase( Iterator first, Iterator last );
 
+#endif
+
     /// @return an iterator pointing on the first element in the container.
     ConstIterator begin() const;
 
@@ -968,6 +980,7 @@ public:
     /// @return an iterator pointing after the last element in the container.
     Iterator end();
 
+#if 0
     /**
        Get range of equal elements.
 
