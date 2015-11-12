@@ -52,28 +52,6 @@
 //////////////////////////////////////////////////////////////////////////////
 
 
-/////////////////////////////////////////////////////////////////////////////
-// Tools
-/*
-namespace
-{
-
-  /// Calculates the log2 of \p N.
-  template < std::size_t N >
-  struct Log2
-    {
-      enum { value = 1 + Log2<N/2>::value };
-    };
-
-  template <>
-  struct Log2<0>
-    {
-      enum { value = 0 };
-    };
-
-}
-*/
-
 namespace DGtal
 {
 
@@ -155,7 +133,7 @@ class BigLabelledMap
 
     // ------------------------- Constants ------------------------------------
 public:
-    BOOST_STATIC_CONSTANT( std::size_t, labelSize = LOG2<L+1>::VALUE ); ///< Bit size of a label
+    BOOST_STATIC_CONSTANT( std::size_t, labelSize = LOG2<L+1-1>::VALUE + 1 ); ///< Bit size of a label
     BOOST_STATIC_CONSTANT( std::size_t, maxLabel  = (POW<2, labelSize>::VALUE) - 1 ); ///< Real maximum number of labels.
 
     BOOST_STATIC_CONSTANT( std::size_t, firstBlockSize = N ); ///< Minimal capacity of the first block.
@@ -208,12 +186,12 @@ public:
     // ---------------------------- Data blocks ----------------------------
 private:
     /** Represents any block of data in the container.
-     * @tparam blockCapacity  The capacity of this block (without extra space).
-     * @tparam labelArrayShift  Padding length at start of labels storage (=1 for the first block).
+     * @tparam BlockCapacity  The capacity of this block (without extra space).
+     * @tparam LabelArrayShift  Padding length at start of labels storage (=1 for the first block).
      */
     template <
-      std::size_t blockCapacity,
-      std::size_t labelArrayShift = 0
+      std::size_t BlockCapacity,
+      std::size_t LabelArrayShift = 0
     >
     struct __Block;
     
@@ -231,15 +209,16 @@ private:
 
     /** Adds an element to the end without verifying if the key already exists.
      * @param aValue  The (key,data) to be added.
-     * TODO: used ?!!!
+     * @param hint    An iterator that is the nearest possible of the end of the container.
      */
     inline
-    void push_back( Value const& aValue )
-      {
-        myFirstBlock.pushBack( aValue, size() );
-        set_size( size()+1 );
-      }
-
+    Iterator push_back( Value const& aValue, Iterator hint );
+    
+    /** Adds an element to the end without verifying if the key already exists.
+     * @param aValue  The (key,data) to be added.
+     */
+    inline
+    Iterator push_back( Value const& aValue );
 
     // ----------------------- Standard services ------------------------------
 public:
@@ -550,8 +529,8 @@ public:
    @tparam M the number of data stored in the further blocks.
 
    */
-  template  <typename TData, unsigned int L, typename TWord,
-             unsigned int N, unsigned int M>
+  template  <typename TData, std::size_t L,
+             std::size_t N, std::size_t M>
   std::ostream&
   operator<< ( std::ostream & out,
                const BigLabelledMap<TData, L, N, M> & object );
