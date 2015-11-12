@@ -198,6 +198,10 @@ private:
     typedef __Block<firstBlockSize, 1>  __FirstBlock; ///< First block with label count.
     typedef __Block<nextBlockSize, 0>   __NextBlock;  ///< Next blocks.
 
+    union BlockPointer {
+      __FirstBlock* first;
+      __NextBlock*  next;
+    };
           
     // ----------------------- Internal services ------------------------------
 private:

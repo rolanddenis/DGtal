@@ -471,13 +471,13 @@ public:
   inline
   Key getLabel () const
     {
-      if ( myNextBlockStack.size() == 0 )
+      if ( myBlockIndex == 0 )
         {
           return myFirstBlock->getBlockLabel( this->myIndex );
         }
       else
         {
-          return myNextBlockStack.back()->getBlockLabel( this->myIndex );
+          return myNextBlock->getBlockLabel( this->myIndex );
         }
     }
 
@@ -485,7 +485,7 @@ public:
   inline
   SizeType getIndex () const
     {
-      if ( myNextBlockStack.size() == 0 )
+      if ( myBlockIndex == 0 )
         {
           return myIndex;
         }
@@ -493,7 +493,7 @@ public:
         {
           return 
               TFirstBlock::blockCapacity
-            + ( myNextBlockStack.size() - 1 ) * TNextBlock::blockCapacity
+            + ( myBlockIndex - 1 ) * TNextBlock::blockCapacity
             + myIndex;
         }
     }
@@ -512,6 +512,8 @@ protected:
    */
   IteratorBase ( TFirstBlock& aFirstBlock, std::size_t aSize, std::size_t anIndex = 0 )
     : myFirstBlock( &aFirstBlock)
+    , myNextBlock( 0 )
+    , myBlockIndex( 0 )
     , myIndex( 0 )
     , mySize( aSize )
   {
@@ -528,10 +530,11 @@ protected:
   >
   IteratorBase ( IteratorBase< TOtherFirstBlock, TOtherNextBlock > const& other )
     : myFirstBlock( other.myFirstBlock )
+    , myNextBlock( other.myNextBlock )
+    , myBlockIndex( other.myBlockIndex )
     , myIndex( other.myIndex )
     , mySize( other.mySize )
   {
-    std::copy( other.myNextBlockStack.begin(), other.myNextBlockStack.end(), std::back_inserter(myNextBlockStack) );
   }
 
   /// Destructor
@@ -558,7 +561,7 @@ protected:
       return 
             myIndex == other.myIndex
         &&  mySize  == other.mySize
-        &&  myNextBlockStack.size() == other.myNextBlockStack.size();
+        &&  myBlockIndex == other.myBlockIndex;
     }
 
   /// Distance to.
@@ -575,20 +578,22 @@ protected:
         {
           myIndex += n;
 
-          if ( myNextBlockStack.size() > 0 || ! myFirstBlock->isInThisBlock( myIndex, mySize ) )
+          if ( myBlockIndex > 0 || ! myFirstBlock->isInThisBlock( myIndex, mySize ) )
             {
-              if ( myNextBlockStack.size() == 0 )
+              if ( myBlockIndex == 0 )
                 {
-                  myNextBlockStack.push_back( myFirstBlock->myTail.nextBlock );
+                  myNextBlock = myFirstBlock->myTail.nextBlock;
                   myIndex -= TFirstBlock::blockCapacity;
                   mySize  -= TFirstBlock::blockCapacity;
+                  ++myBlockIndex;
                 }
 
               while ( ! TNextBlock::isInThisBlock( myIndex, mySize ) )
                 {
-                  myNextBlockStack.push_back( myNextBlockStack.back()->myTail.nextBlock );
+                  myNextBlock = myNextBlock->myTail.nextBlock;
                   myIndex -= TNextBlock::blockCapacity;
                   mySize  -= TNextBlock::blockCapacity;
+                  ++myBlockIndex;
                 }
             }
         }
@@ -596,32 +601,34 @@ protected:
         {
           n = -n; // For clarity of the following algo.
 
-          while ( n > 0 )
+          if ( n <= myIndex )
             {
-              if ( n <= myIndex )
-                {
-                  myIndex -= n;
-                  n = 0;
-                }
+              myIndex -= n;
+              n = 0;
+            }
+          else
+            {
+              n = getIndex() - n;
+
+              if ( myBlockIndex > 0 )
+                mySize += TFirstBlock::blockCapacity + (myBlockIndex-1)*TNextBlock::blockCapacity;
               else
-                {
-                  ASSERT( myNextBlockStack.size() > 0 );
-                  n -= myIndex + 1;
-                  myNextBlockStack.pop_back();
-                  if ( myNextBlockStack.size() > 0 )
-                    myIndex = mySize = TNextBlock::blockCapacity;
-                  else
-                    myIndex = mySize = TFirstBlock::blockCapacity;
-                }
+                mySize += TFirstBlock::blockCapacity;
+
+              myBlockIndex = 0;
+              myIndex = 0;
+
+              advance(n);
             }
         }
     }
 
 protected:
   TFirstBlock* myFirstBlock;  ///< Pointer to the first block of data.
+  TNextBlock* myNextBlock;    ///< Pointer to the next block of data.
+  std::size_t myBlockIndex;   ///< Block index.
   std::size_t myIndex;        ///< Current index where this pointer points to.
   std::size_t mySize;         ///< Number of data stored after this pointer.
-  std::deque< TNextBlock* > myNextBlockStack; ///< Stack of the next blocks of data before this pointer.
 }; // End of class IteratorBase
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -655,13 +662,13 @@ public:
    */
   Data& getData() const
     {
-      if ( this->myNextBlockStack.size() == 0 )
+      if ( this->myBlockIndex == 0 )
         {
           return this->myFirstBlock->getBlockDataAt( this->myIndex );
         }
       else
         {
-          return this->myNextBlockStack.back()->getBlockDataAt( this->myIndex );
+          return this->myNextBlock->getBlockDataAt( this->myIndex );
         }
     }
 
@@ -673,13 +680,13 @@ private:
   /// Dereference.
   inline Reference dereference() const
     {
-      if ( this->myNextBlockStack.size() == 0 )
+      if ( this->myBlockIndex == 0 )
         {
           return this->myFirstBlock->getBlockValueAt( this->myIndex );
         }
       else
         {
-          return this->myNextBlockStack.back()->getBlockValueAt( this->myIndex );
+          return this->myNextBlock->getBlockValueAt( this->myIndex );
         }
     }
 
@@ -722,13 +729,13 @@ public:
    */
   Data const& getData() const
     {
-      if ( this->myNextBlockStack.size() == 0 )
+      if ( this->myBlockIndex == 0 )
         {
           return this->myFirstBlock->getBlockDataAt( this->myIndex );
         }
       else
         {
-          return this->myNextBlockStack.back()->getBlockDataAt( this->myIndex );
+          return this->myNextBlock->getBlockDataAt( this->myIndex );
         }
     }
 
@@ -740,13 +747,13 @@ private:
   /// Dereference.
   inline ConstReference dereference() const
     {
-      if ( this->myNextBlockStack.size() == 0 )
+      if ( this->myBlockIndex == 0 )
         {
           return this->myFirstBlock->getBlockValueAt( this->myIndex );
         }
       else
         {
-          return this->myNextBlockStack.back()->getBlockValueAt( this->myIndex );
+          return this->myNextBlock->getBlockValueAt( this->myIndex );
         }
     }
 
@@ -870,10 +877,10 @@ push_back( Value const& aValue, Iterator hint )
   {
     hint.myIndex = 0;
 
-    if ( hint.myNextBlockStack.size() == 0 )
+    if ( hint.myBlockIndex == 0 )
       myFirstBlock.pushBack( aValue, hint.mySize );
     else
-      hint.myNextBlockStack.back()->pushBack( aValue, hint.mySize );
+      hint.myNextBlock->pushBack( aValue, hint.mySize );
 
     // Update size
     set_size( size() + 1 );
@@ -1028,13 +1035,13 @@ erase( ConstIterator position )
 {
   ASSERT( count( position->first ) == 1 );
 
-  if ( position.myNextBlockStack.size() == 0 )
+  if ( position.myBlockIndex == 0 )
     {
       const_cast<__FirstBlock*>(position.myFirstBlock)->eraseAt( position.myIndex, position.mySize );
     }
   else
     {
-      const_cast<__NextBlock*>(position.myNextBlockStack.back())->eraseAt( position.myIndex, position.mySize );
+      const_cast<__NextBlock*>(position.myNextBlock)->eraseAt( position.myIndex, position.mySize );
     }
 
   set_size( size() - 1 );
@@ -1180,7 +1187,7 @@ find( const Key & key )
       const Iterator it_end = end();
       while ( it != it_end )
         {
-          idx = it.myNextBlockStack.back()->findBlockLabel( key, it.mySize, found ); 
+          idx = it.myNextBlock->findBlockLabel( key, it.mySize, found ); 
           it += idx;
           if ( found )  return it;
         }
@@ -1211,7 +1218,7 @@ find( const Key & key ) const
       const ConstIterator it_end = end();
       while ( it != it_end )
         {
-          idx = it.myNextBlockStack.back()->findBlockLabel( key, it.mySize, found ); 
+          idx = it.myNextBlock->findBlockLabel( key, it.mySize, found ); 
           it += idx;
           if ( found )  return it;
         }

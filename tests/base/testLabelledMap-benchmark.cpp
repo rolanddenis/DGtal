@@ -625,8 +625,8 @@ eraseOneData( MapLXY & m, unsigned int l )
 int main()
 {
   typedef double Value;
-  static const unsigned int X = 100;
-  static const unsigned int Y = 100;
+  static const unsigned int X = 1000;
+  static const unsigned int Y = 1000;
   static const unsigned int L = 16;
   typedef DGtal::uint8_t Word;
   static const unsigned int N = 1;
