@@ -133,11 +133,11 @@ class BigLabelledMap
 
     // ------------------------- Constants ------------------------------------
 public:
-    BOOST_STATIC_CONSTANT( std::size_t, labelSize = LOG2<L+1-1>::VALUE + 1 ); ///< Bit size of a label
+    BOOST_STATIC_CONSTANT( std::size_t, labelSize = LOG2<L+1-1>::VALUE + 1 );         ///< Bit size of a label
     BOOST_STATIC_CONSTANT( std::size_t, maxLabel  = (POW<2, labelSize>::VALUE) - 1 ); ///< Real maximum number of labels.
 
     BOOST_STATIC_CONSTANT( std::size_t, firstBlockSize = N ); ///< Minimal capacity of the first block.
-    BOOST_STATIC_CONSTANT( std::size_t, nextBlockSize = M ); ///< Minimal capacity of the next blocks.
+    BOOST_STATIC_CONSTANT( std::size_t, nextBlockSize = M );  ///< Minimal capacity of the next blocks.
 
     // ------------------------- Base types -----------------------------------
 public:
@@ -198,11 +198,6 @@ private:
     typedef __Block<firstBlockSize, 1>  __FirstBlock; ///< First block with label count.
     typedef __Block<nextBlockSize, 0>   __NextBlock;  ///< Next blocks.
 
-    union BlockPointer {
-      __FirstBlock* first;
-      __NextBlock*  next;
-    };
-          
     // ----------------------- Internal services ------------------------------
 private:
     /** Sets the number of data stored.

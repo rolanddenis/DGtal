@@ -373,7 +373,7 @@ struct DGtal::BigLabelledMap<TData, L, N, M>::__Block
       // Then, search in the next block if there is one.
       if ( size > theBlockSize )
         {
-          return getDataFromLabel( label, size - blockCapacity, found );
+          return myTail.nextBlock->getDataFromLabel( label, size - blockCapacity, found );
         }
       else
         {
@@ -388,6 +388,7 @@ struct DGtal::BigLabelledMap<TData, L, N, M>::__Block
    * @param size  The current number of stored value in this block and the following.
    * @param[out] found  If false, the label has not been found. 
    */
+  /*
   Data const& getDataFromLabel ( Label const& label, std::size_t size, bool& found ) const
     {
       const std::size_t theBlockSize = blockSize(size);
@@ -413,6 +414,7 @@ struct DGtal::BigLabelledMap<TData, L, N, M>::__Block
           return Data();
         }
     }
+    */
 
   /** Search for a label in this block.
    * @param label The label to find.
@@ -462,6 +464,71 @@ template < typename TFirstBlock, typename TNextBlock >
 class DGtal::BigLabelledMap<TData, L, N, M>::IteratorBase
 {
 
+protected:
+
+  // To make optimization easier.
+  friend class BigLabelledMap<TData, L, N, M>;
+
+  // Boost iterator_facade core operations.
+  friend class boost::iterator_core_access;
+    
+  // ----------------------- Construction & destruction -----------------------
+
+  /** Constructor.
+   * @param aFirstBlock The first block of data.
+   * @param aSize       The number of data stored in the container.
+   * @param isEnd       True if this iterator must point to the end.
+   */
+  IteratorBase ( TFirstBlock& aFirstBlock, std::size_t aSize, bool isEnd = false )
+    : myBlockPointer( &aFirstBlock )
+    , myBlockIndex( 0 )
+    , myIndex( 0 )
+    , mySize( aSize )
+  {
+    if ( isEnd )
+      {
+        if ( aSize <= TFirstBlock::blockMaxCapacity )
+          {
+            myIndex = aSize;
+          }
+        else
+          {
+            myBlockIndex = 1 + ( mySize - TFirstBlock::blockCapacity - 1 ) / TNextBlock::blockCapacity;
+            myIndex = 1 + ( mySize - TFirstBlock::blockCapacity - 1 ) % TNextBlock::blockCapacity;
+
+            if ( myBlockIndex > 1 && myIndex <= TNextBlock::extraSpace )
+              {
+                myIndex += TNextBlock::blockCapacity;
+                --myBlockIndex;
+              }
+            
+            mySize = myIndex;
+          }
+      }
+  }
+
+  /** Interoperability constructor.
+   * @tparam TOtherFirstBlock First block type of the other iterator.
+   * @tparam TOtherNextBlock  Next block type of the other iterator.
+   */
+  template < 
+    typename TOtherFirstBlock,
+    typename TOtherNextBlock
+  >
+  IteratorBase ( IteratorBase< TOtherFirstBlock, TOtherNextBlock > const& other )
+    : myBlockPointer( other.myBlockPointer.first )
+    , myBlockIndex( other.myBlockIndex )
+    , myIndex( other.myIndex )
+    , mySize( other.mySize )
+  {
+  }
+
+  /// Destructor
+  ~IteratorBase()
+    {
+    }
+
+  // --------------------------- Public services ------------------------------
 public:
 
   /** Returns the label where this iterator points to.
@@ -471,13 +538,15 @@ public:
   inline
   Key getLabel () const
     {
+      ASSERT( myIndex < mySize );
+
       if ( myBlockIndex == 0 )
         {
-          return myFirstBlock->getBlockLabel( this->myIndex );
+          return myBlockPointer.first->getBlockLabel( this->myIndex );
         }
       else
         {
-          return myNextBlock->getBlockLabel( this->myIndex );
+          return myBlockPointer.next->getBlockLabel( this->myIndex );
         }
     }
 
@@ -498,60 +567,61 @@ public:
         }
     }
 
-protected:
-
-  friend class BigLabelledMap<TData, L, N, M>;
-
-  // Boost iterator_facade core operations.
-  friend class boost::iterator_core_access;
-
-  /** Constructor.
-   * @param aFirstBlock The first block of data.
-   * @param aSize       The number of data stored in the container.
-   * @param anIndex     The index where this iterator point to.
+  /** Allow fast forward movement.
+   *
+   * @param n Increment.
+   *
+   * Complexity is linear with the number of blocks.
    */
-  IteratorBase ( TFirstBlock& aFirstBlock, std::size_t aSize, std::size_t anIndex = 0 )
-    : myFirstBlock( &aFirstBlock)
-    , myNextBlock( 0 )
-    , myBlockIndex( 0 )
-    , myIndex( 0 )
-    , mySize( aSize )
-  {
-    advance( anIndex );
-  }
-
-  /** Interoperability constructor.
-   * @tparam TOtherFirstBlock First block type of the other iterator.
-   * @tparam TOtherNextBlock  Next block type of the other iterator.
-   */
-  template < 
-    typename TOtherFirstBlock,
-    typename TOtherNextBlock
-  >
-  IteratorBase ( IteratorBase< TOtherFirstBlock, TOtherNextBlock > const& other )
-    : myFirstBlock( other.myFirstBlock )
-    , myNextBlock( other.myNextBlock )
-    , myBlockIndex( other.myBlockIndex )
-    , myIndex( other.myIndex )
-    , mySize( other.mySize )
-  {
-  }
-
-  /// Destructor
-  virtual ~IteratorBase()
+  IteratorBase<TFirstBlock, TNextBlock>&
+  operator += ( std::size_t n )
     {
+      myIndex += n;
+
+      if ( myBlockIndex > 0 || ! TFirstBlock::isInThisBlock( myIndex, mySize ) )
+        {
+          if ( myBlockIndex == 0 )
+            {
+              myBlockPointer.next = myBlockPointer.first->myTail.nextBlock;
+              myIndex -= TFirstBlock::blockCapacity;
+              mySize  -= TFirstBlock::blockCapacity;
+              ++myBlockIndex;
+            }
+
+          while ( ! TNextBlock::isInThisBlock( myIndex, mySize ) )
+            {
+              myBlockPointer.next = myBlockPointer.next->myTail.nextBlock;
+              myIndex -= TNextBlock::blockCapacity;
+              mySize  -= TNextBlock::blockCapacity;
+              ++myBlockIndex;
+            }
+        }
+
+      return *this;
     }
+
+  // ------------------------ Iterator_facade interface -----------------------
+protected:
 
   /// Increments of one position.
   inline void increment()
     {
-      advance(1);
-    }
-
-  /// Decrements of one position.
-  inline void decrement()
-    {
-      advance(-1);
+      ++myIndex;
+      
+      if ( myBlockIndex == 0 && ! TFirstBlock::isInThisBlock( myIndex, mySize ) )
+        {
+          myBlockPointer.next = myBlockPointer.first->myTail.nextBlock;
+          myIndex -= TFirstBlock::blockCapacity;
+          mySize  -= TFirstBlock::blockCapacity;
+          ++myBlockIndex;
+        }
+      else if ( myBlockIndex > 0 && ! TNextBlock::isInThisBlock( myIndex, mySize ) )
+        {
+          myBlockPointer.next = myBlockPointer.next->myTail.nextBlock;
+          myIndex -= TNextBlock::blockCapacity;
+          mySize  -= TNextBlock::blockCapacity;
+          ++myBlockIndex;
+        }
     }
 
   /// Tests equality with other iterator.
@@ -564,71 +634,22 @@ protected:
         &&  myBlockIndex == other.myBlockIndex;
     }
 
-  /// Distance to.
-  template < typename TOtherFirstBlock, typename TOtherNextBlock >
-  inline std::ptrdiff_t distance_to( IteratorBase<TOtherFirstBlock, TOtherNextBlock> const& other ) const
-    {
-      return other.myIndex - myIndex;
-    }
-
-  /// Advance by \p n positions.
-  inline void advance ( DifferenceType n )
-    {
-      if ( n > 0 )
-        {
-          myIndex += n;
-
-          if ( myBlockIndex > 0 || ! myFirstBlock->isInThisBlock( myIndex, mySize ) )
-            {
-              if ( myBlockIndex == 0 )
-                {
-                  myNextBlock = myFirstBlock->myTail.nextBlock;
-                  myIndex -= TFirstBlock::blockCapacity;
-                  mySize  -= TFirstBlock::blockCapacity;
-                  ++myBlockIndex;
-                }
-
-              while ( ! TNextBlock::isInThisBlock( myIndex, mySize ) )
-                {
-                  myNextBlock = myNextBlock->myTail.nextBlock;
-                  myIndex -= TNextBlock::blockCapacity;
-                  mySize  -= TNextBlock::blockCapacity;
-                  ++myBlockIndex;
-                }
-            }
-        }
-      else 
-        {
-          n = -n; // For clarity of the following algo.
-
-          if ( n <= myIndex )
-            {
-              myIndex -= n;
-              n = 0;
-            }
-          else
-            {
-              n = getIndex() - n;
-
-              if ( myBlockIndex > 0 )
-                mySize += TFirstBlock::blockCapacity + (myBlockIndex-1)*TNextBlock::blockCapacity;
-              else
-                mySize += TFirstBlock::blockCapacity;
-
-              myBlockIndex = 0;
-              myIndex = 0;
-
-              advance(n);
-            }
-        }
-    }
-
+  // ------------------------------- Members ----------------------------------
 protected:
-  TFirstBlock* myFirstBlock;  ///< Pointer to the first block of data.
-  TNextBlock* myNextBlock;    ///< Pointer to the next block of data.
+
+  /// Pointer to a data block;
+  union BlockPointer
+    {
+      BlockPointer ( TFirstBlock* aFirstBlockPointer ) : first( aFirstBlockPointer ) {}
+      TFirstBlock*  first;  ///< Pointer to the first block of data.
+      TNextBlock*   next;   ///< Pointer to the next block of data.
+    };
+
+  BlockPointer myBlockPointer;  ///< Pointer to the block of data.
   std::size_t myBlockIndex;   ///< Block index.
   std::size_t myIndex;        ///< Current index where this pointer points to.
   std::size_t mySize;         ///< Number of data stored after this pointer.
+
 }; // End of class IteratorBase
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -640,7 +661,7 @@ class DGtal::BigLabelledMap<TData, L, N, M>::Iterator
   , public  boost::iterator_facade <
       Iterator,
       Value,
-      boost::random_access_traversal_tag,
+      boost::forward_traversal_tag,
       Reference
     >
 {
@@ -649,10 +670,10 @@ public:
   /** Constructor.
    * @param aFirstBlock The first block of data.
    * @param aSize       The number of data stored in the container.
-   * @param anIndex     The index where this iterator points to.
+   * @param isEnd       True if this iterator must point to the end.
    */
-  Iterator ( __FirstBlock& aFirstBlock, std::size_t aSize, std::size_t anIndex = 0 )
-    : IteratorBase< __FirstBlock, __NextBlock >( aFirstBlock, aSize, anIndex )
+  Iterator ( __FirstBlock& aFirstBlock, std::size_t aSize, bool isEnd = false )
+    : IteratorBase< __FirstBlock, __NextBlock >( aFirstBlock, aSize, isEnd )
   {
   }
 
@@ -662,13 +683,15 @@ public:
    */
   Data& getData() const
     {
+      ASSERT( this->myIndex < this->mySize );
+
       if ( this->myBlockIndex == 0 )
         {
-          return this->myFirstBlock->getBlockDataAt( this->myIndex );
+          return this->myBlockPointer.first->getBlockDataAt( this->myIndex );
         }
       else
         {
-          return this->myNextBlock->getBlockDataAt( this->myIndex );
+          return this->myBlockPointer.next->getBlockDataAt( this->myIndex );
         }
     }
 
@@ -682,11 +705,11 @@ private:
     {
       if ( this->myBlockIndex == 0 )
         {
-          return this->myFirstBlock->getBlockValueAt( this->myIndex );
+          return this->myBlockPointer.first->getBlockValueAt( this->myIndex );
         }
       else
         {
-          return this->myNextBlock->getBlockValueAt( this->myIndex );
+          return this->myBlockPointer.next->getBlockValueAt( this->myIndex );
         }
     }
 
@@ -701,7 +724,7 @@ class DGtal::BigLabelledMap<TData, L, N, M>::ConstIterator
   , public boost::iterator_facade <
       ConstIterator,
       const Value,
-      boost::random_access_traversal_tag,
+      boost::forward_traversal_tag,
       ConstReference
     >
 {
@@ -710,10 +733,10 @@ public:
   /** Constructor.
    * @param aFirstBlock The first block of data.
    * @param aSize       The number of data stored in the container.
-   * @param anIndex     The index where this iterator points to.
+   * @param isEnd       True if this iterator must point to the end.
    */
-  ConstIterator ( __FirstBlock const& aFirstBlock, std::size_t aSize, std::size_t anIndex = 0 )
-    : IteratorBase< const __FirstBlock, const __NextBlock >( aFirstBlock, aSize, anIndex )
+  ConstIterator ( __FirstBlock const& aFirstBlock, std::size_t aSize, bool isEnd = false )
+    : IteratorBase< const __FirstBlock, const __NextBlock >( aFirstBlock, aSize, isEnd )
     {
     }
 
@@ -729,13 +752,15 @@ public:
    */
   Data const& getData() const
     {
+      ASSERT( this->myIndex < this->mySize );
+
       if ( this->myBlockIndex == 0 )
         {
-          return this->myFirstBlock->getBlockDataAt( this->myIndex );
+          return this->myBlockPointer.first->getBlockDataAt( this->myIndex );
         }
       else
         {
-          return this->myNextBlock->getBlockDataAt( this->myIndex );
+          return this->myBlockPointer.next->getBlockDataAt( this->myIndex );
         }
     }
 
@@ -749,11 +774,11 @@ private:
     {
       if ( this->myBlockIndex == 0 )
         {
-          return this->myFirstBlock->getBlockValueAt( this->myIndex );
+          return this->myBlockPointer.first->getBlockValueAt( this->myIndex );
         }
       else
         {
-          return this->myNextBlock->getBlockValueAt( this->myIndex );
+          return this->myBlockPointer.next->getBlockValueAt( this->myIndex );
         }
     }
 
@@ -880,7 +905,7 @@ push_back( Value const& aValue, Iterator hint )
     if ( hint.myBlockIndex == 0 )
       myFirstBlock.pushBack( aValue, hint.mySize );
     else
-      hint.myNextBlock->pushBack( aValue, hint.mySize );
+      hint.myBlockPointer.next->pushBack( aValue, hint.mySize );
 
     // Update size
     set_size( size() + 1 );
@@ -1017,13 +1042,12 @@ operator[]( const Key & key )
 {
   ASSERT( key < L ); 
 
-  Iterator it = find( key );
+  bool found = false;
+  Data& value = myFirstBlock.getDataFromLabel( key, size(), found );
+  
+  if ( ! found ) set_size( size() + 1 );
 
-  if ( it != end() )
-    return it.getData();
-  else
-    return push_back( Value( key, Data() ) ).getData();
-
+  return value;
 }
 
 //-----------------------------------------------------------------------------
@@ -1037,11 +1061,11 @@ erase( ConstIterator position )
 
   if ( position.myBlockIndex == 0 )
     {
-      const_cast<__FirstBlock*>(position.myFirstBlock)->eraseAt( position.myIndex, position.mySize );
+      const_cast<__FirstBlock*>(position.myBlockPointer.first)->eraseAt( position.myIndex, position.mySize );
     }
   else
     {
-      const_cast<__NextBlock*>(position.myNextBlock)->eraseAt( position.myIndex, position.mySize );
+      const_cast<__NextBlock*>(position.myBlockPointer.next)->eraseAt( position.myIndex, position.mySize );
     }
 
   set_size( size() - 1 );
@@ -1175,7 +1199,7 @@ find( const Key & key )
   Iterator it = begin();
   bool found = false;
 
-  SizeType idx = it.myFirstBlock->findBlockLabel( key, it.mySize, found );
+  SizeType idx = it.myBlockPointer.first->findBlockLabel( key, it.mySize, found );
   it += idx;
 
   if ( found )
@@ -1187,13 +1211,24 @@ find( const Key & key )
       const Iterator it_end = end();
       while ( it != it_end )
         {
-          idx = it.myNextBlock->findBlockLabel( key, it.mySize, found ); 
+          idx = it.myBlockPointer.next->findBlockLabel( key, it.mySize, found ); 
           it += idx;
           if ( found )  return it;
         }
 
       return it;
     }
+
+  /*
+  Iterator it = begin();
+  for ( const Iterator it_end = end(); it != it_end; ++it )
+    {
+      if ( it.getLabel() == key )
+        return it;
+    }
+
+  return it;
+  */
 }
 
 //-----------------------------------------------------------------------------
@@ -1206,7 +1241,7 @@ find( const Key & key ) const
   ConstIterator it = begin();
   bool found = false;
 
-  SizeType idx = it.myFirstBlock->findBlockLabel( key, it.mySize, found );
+  SizeType idx = it.myBlockPointer.first->findBlockLabel( key, it.mySize, found );
   it += idx;
 
   if ( found )
@@ -1218,13 +1253,24 @@ find( const Key & key ) const
       const ConstIterator it_end = end();
       while ( it != it_end )
         {
-          idx = it.myNextBlock->findBlockLabel( key, it.mySize, found ); 
+          idx = it.myBlockPointer.next->findBlockLabel( key, it.mySize, found ); 
           it += idx;
           if ( found )  return it;
         }
 
       return it;
     }
+
+  /*
+  ConstIterator it = begin();
+  for ( const ConstIterator it_end = end(); it != it_end; ++it )
+    {
+      if ( it.getLabel() == key )
+        return it;
+    }
+
+  return it;
+  */
 }
 
 //-----------------------------------------------------------------------------
@@ -1234,7 +1280,7 @@ typename DGtal::BigLabelledMap<TData, L, N, M>::Iterator
 DGtal::BigLabelledMap<TData, L, N, M>::
 begin()
 {
-  return Iterator( myFirstBlock, size(), 0 );
+  return Iterator( myFirstBlock, size() );
 }
 //-----------------------------------------------------------------------------
 template <typename TData, std::size_t L, std::size_t N, std::size_t M>
@@ -1243,7 +1289,7 @@ typename DGtal::BigLabelledMap<TData, L, N, M>::Iterator
 DGtal::BigLabelledMap<TData, L, N, M>::
 end()
 {
-  return Iterator( myFirstBlock, size(), size() );
+  return Iterator( myFirstBlock, size(), true );
 }
 //-----------------------------------------------------------------------------
 template <typename TData, std::size_t L, std::size_t N, std::size_t M>
@@ -1252,7 +1298,7 @@ typename DGtal::BigLabelledMap<TData, L, N, M>::ConstIterator
 DGtal::BigLabelledMap<TData, L, N, M>::
 begin() const
 {
-  return ConstIterator( myFirstBlock, size(), 0 );
+  return ConstIterator( myFirstBlock, size() );
 }
 //-----------------------------------------------------------------------------
 template <typename TData, std::size_t L, std::size_t N, std::size_t M>
@@ -1261,7 +1307,7 @@ typename DGtal::BigLabelledMap<TData, L, N, M>::ConstIterator
 DGtal::BigLabelledMap<TData, L, N, M>::
 end() const
 {
-  return ConstIterator( myFirstBlock, size(), size() );
+  return ConstIterator( myFirstBlock, size(), true );
 }
 
 
