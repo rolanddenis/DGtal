@@ -30,9 +30,7 @@
 //////////////////////////////////////////////////////////////////////////////
 #include <cstdlib>
 #include <stdexcept>
-#include <deque>
-#include <iterator> // back_inserter
-#include <algorithm> 
+#include <boost/version.hpp>
 //////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -567,11 +565,15 @@ public:
         }
     }
 
+#if BOOST_VERSION >= 105700
   /** Allow fast forward movement.
    *
    * @param n Increment.
    *
    * Complexity is linear with the number of blocks.
+   * For boost < 1.57, iterator_facade still provides += from \p advance, even if 
+   * the iterator is only forward traversal.
+   * See http://www.boost.org/users/history/version_1_57_0.html
    */
   IteratorBase<TFirstBlock, TNextBlock>&
   operator += ( std::size_t n )
@@ -599,6 +601,7 @@ public:
 
       return *this;
     }
+#endif
 
   // ------------------------ Iterator_facade interface -----------------------
 protected:
@@ -632,6 +635,31 @@ protected:
             myIndex == other.myIndex
         &&  mySize  == other.mySize
         &&  myBlockIndex == other.myBlockIndex;
+    }
+
+  /// Increments of n positions
+  void advance ( std::ptrdiff_t n )
+    {
+      myIndex += n;
+
+      if ( myBlockIndex > 0 || ! TFirstBlock::isInThisBlock( myIndex, mySize ) )
+        {
+          if ( myBlockIndex == 0 )
+            {
+              myBlockPointer.next = myBlockPointer.first->myTail.nextBlock;
+              myIndex -= TFirstBlock::blockCapacity;
+              mySize  -= TFirstBlock::blockCapacity;
+              ++myBlockIndex;
+            }
+
+          while ( ! TNextBlock::isInThisBlock( myIndex, mySize ) )
+            {
+              myBlockPointer.next = myBlockPointer.next->myTail.nextBlock;
+              myIndex -= TNextBlock::blockCapacity;
+              mySize  -= TNextBlock::blockCapacity;
+              ++myBlockIndex;
+            }
+        }
     }
 
   // ------------------------------- Members ----------------------------------
