@@ -412,9 +412,10 @@ public:
    Note that 4000*4000*16 is fine on my 8Gb laptop (529Mb).
    Note that 2000*2000*64 takes 133Mb.
 */
-template < typename Value, unsigned int L, unsigned int X, unsigned int Y,
+template < typename Value, unsigned long int L, unsigned int X, unsigned int Y,
            typename TWord, unsigned int N, unsigned int M >
 class ArrayXYOfLabelledMap {
+public:
   typedef BigLabelledMap< Value, L, N, M> MyLabelledMap;
   MyLabelledMap _data[ X ][ Y ];
 
@@ -631,8 +632,8 @@ eraseOneData( MapLXY & m, unsigned int l )
 int main()
 {
   typedef double Value;
-  static const unsigned int X = 100;
-  static const unsigned int Y = 100;
+  static const unsigned int X = 1000;
+  static const unsigned int Y = 1000;
   static const unsigned int L = 16;
   typedef DGtal::uint8_t Word;
   static const unsigned int N = 1;
@@ -767,6 +768,10 @@ int main()
   trace.beginBlock ( "Generating ArrayXYOfLabelledMap" );
   MyArrayXYOfLabelledMap* arrayXYOfLabelledMap = new MyArrayXYOfLabelledMap;
   generateData< MyArrayXYOfLabelledMap, L, X, Y > ( *arrayXYOfLabelledMap, PROBA_NO_LABEL, PROBA_LABEL );
+  std::cout << "sizeof = " << sizeof( MyArrayXYOfLabelledMap::MyLabelledMap ) << std::endl;
+  std::cout << "maxLabel = " << MyArrayXYOfLabelledMap::MyLabelledMap::maxLabel << std::endl;
+  std::cout << "labelSize = " << MyArrayXYOfLabelledMap::MyLabelledMap::labelSize << std::endl;
+  std::cout << "address = " << &(arrayXYOfLabelledMap->_data[0][0][0]) << std::endl;
   trace.endBlock();
 
   trace.beginBlock ( "Memory usage in ArrayXYOfLabelledMap" );

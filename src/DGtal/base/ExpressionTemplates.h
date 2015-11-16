@@ -50,11 +50,11 @@ namespace DGtal
    /**
    * Template metaprogramming to compute at compilation time a power.
    */
-  template <int X, unsigned exponent> class POW
+  template <long int X, unsigned long int exponent> class POW
   {
   public:  enum{ VALUE = X* POW<X, exponent-1>::VALUE};
   };
-  template <int X > class POW<X, 1>
+  template <long int X > class POW<X, 1>
   {
   public:  enum{ VALUE = X };
   };
@@ -62,18 +62,18 @@ namespace DGtal
   /**
    * Template metaprogramming to compute at compilation time a log2.
    */
-  template <int X>
+  template <long int X>
   class LOG2
   {
-  public:  enum{ VALUE = 1 +  LOG2<X / 2>::VALUE};
+  public:  enum{ VALUE = 1ul +  LOG2<X / 2>::VALUE};
   };
   template <> class LOG2<2>
   {
-  public:  enum{ VALUE = 1 };
+  public:  enum{ VALUE = 1ul };
   };
   template <> class LOG2<1>
   {
-  public:  enum{ VALUE = 0 };
+  public:  enum{ VALUE = 0ul };
   };} // namespace DGtal
 
 
