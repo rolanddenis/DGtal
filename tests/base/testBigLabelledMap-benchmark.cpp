@@ -45,7 +45,7 @@
 #include <boost/random/variate_generator.hpp>
 
 #include "DGtal/base/Common.h"
-#include "DGtal/base/LabelledMap.h"
+#include "DGtal/base/BigLabelledMap.h"
 
 // Before 1.47, random number generation in boost.
 // Since 1.47, random number generation in boost::random. 
@@ -412,10 +412,11 @@ public:
    Note that 4000*4000*16 is fine on my 8Gb laptop (529Mb).
    Note that 2000*2000*64 takes 133Mb.
 */
-template < typename Value, unsigned int L, unsigned int X, unsigned int Y,
+template < typename Value, unsigned long int L, unsigned int X, unsigned int Y,
            typename TWord, unsigned int N, unsigned int M >
 class ArrayXYOfLabelledMap {
-  typedef LabelledMap< Value, L, TWord, N, M> MyLabelledMap;
+public:
+  typedef BigLabelledMap< Value, L, N, M> MyLabelledMap;
   MyLabelledMap _data[ X ][ Y ];
 
 public:
@@ -425,7 +426,8 @@ public:
   inline 
   const Value & value( unsigned int l, unsigned int x, unsigned int y ) const
   {
-    return _data[ x ][ y ].fastAt( l );
+    //return _data[ x ][ y ].fastAt( l );
+    return _data[ x ][ y ].at(l);
   }
 
   inline 
@@ -443,7 +445,7 @@ public:
   inline 
   void setValueNoNewLabel( const Value & val, unsigned int l, unsigned int x, unsigned int y )
   {
-    _data[ x ][ y ].fastAt( l ) = val;
+    _data[ x ][ y ].at( l ) = val;
   }
 
   inline
@@ -456,7 +458,12 @@ public:
   void getLabels( std::vector<unsigned int> & labels, 
                   unsigned int x, unsigned int y ) const
   {
-    _data[ x ][ y ].labels().getLabels( labels );
+    //_data[ x ][ y ].labels().getLabels( labels );
+    labels.clear();
+    for ( typename MyLabelledMap::ConstIterator it = _data[x][y].begin(), it_end = _data[x][y].end(); it != it_end; ++it )
+      {
+        labels.push_back( it.getLabel() );
+      }
   }
 
   inline
@@ -761,6 +768,10 @@ int main()
   trace.beginBlock ( "Generating ArrayXYOfLabelledMap" );
   MyArrayXYOfLabelledMap* arrayXYOfLabelledMap = new MyArrayXYOfLabelledMap;
   generateData< MyArrayXYOfLabelledMap, L, X, Y > ( *arrayXYOfLabelledMap, PROBA_NO_LABEL, PROBA_LABEL );
+  std::cout << "sizeof = " << sizeof( MyArrayXYOfLabelledMap::MyLabelledMap ) << std::endl;
+  std::cout << "maxLabel = " << MyArrayXYOfLabelledMap::MyLabelledMap::maxLabel << std::endl;
+  std::cout << "labelSize = " << MyArrayXYOfLabelledMap::MyLabelledMap::labelSize << std::endl;
+  std::cout << "address = " << &(arrayXYOfLabelledMap->_data[0][0][0]) << std::endl;
   trace.endBlock();
 
   trace.beginBlock ( "Memory usage in ArrayXYOfLabelledMap" );
