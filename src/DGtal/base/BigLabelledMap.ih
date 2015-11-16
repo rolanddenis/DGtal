@@ -380,40 +380,6 @@ struct DGtal::BigLabelledMap<TData, L, N, M>::__Block
         }
     }
 
-  /** Gets reference to data from the corresponding label (constant version)
-   * It the label does not exist, the referenced data is undefined.
-   * @param label The label associated to the data.
-   * @param size  The current number of stored value in this block and the following.
-   * @param[out] found  If false, the label has not been found. 
-   */
-  /*
-  Data const& getDataFromLabel ( Label const& label, std::size_t size, bool& found ) const
-    {
-      const std::size_t theBlockSize = blockSize(size);
-
-      // Firstly search in this block
-      for ( std::size_t i = 0; i < theBlockSize; ++i )
-        {
-          if ( getBlockLabel(i) == label )
-            {
-              found = true;
-              return getBlockDataAt(i);
-            }
-        }
-
-      // Then, search in the next block if there is one.
-      if ( size > theBlockSize )
-        {
-          return getDataFromLabel( label, size - blockCapacity, found );
-        }
-      else
-        {
-          found = false;
-          return Data();
-        }
-    }
-    */
-
   /** Search for a label in this block.
    * @param label The label to find.
    * @param size  The current number of stored value in this block and the following.
@@ -565,18 +531,15 @@ public:
         }
     }
 
-#if BOOST_VERSION >= 105700
   /** Allow fast forward movement.
    *
-   * @param n Increment.
+   * @param n Positive increment.
    *
    * Complexity is linear with the number of blocks.
-   * For boost < 1.57, iterator_facade still provides += from \p advance, even if 
-   * the iterator is only forward traversal.
-   * See http://www.boost.org/users/history/version_1_57_0.html
+   * This operation is not named += to avoid confusion with random-access iterators.
    */
   IteratorBase<TFirstBlock, TNextBlock>&
-  operator += ( std::size_t n )
+  fastForward ( std::size_t n )
     {
       myIndex += n;
 
@@ -601,7 +564,6 @@ public:
 
       return *this;
     }
-#endif
 
   // ------------------------ Iterator_facade interface -----------------------
 protected:
@@ -635,31 +597,6 @@ protected:
             myIndex == other.myIndex
         &&  mySize  == other.mySize
         &&  myBlockIndex == other.myBlockIndex;
-    }
-
-  /// Increments of n positions
-  void advance ( std::ptrdiff_t n )
-    {
-      myIndex += n;
-
-      if ( myBlockIndex > 0 || ! TFirstBlock::isInThisBlock( myIndex, mySize ) )
-        {
-          if ( myBlockIndex == 0 )
-            {
-              myBlockPointer.next = myBlockPointer.first->myTail.nextBlock;
-              myIndex -= TFirstBlock::blockCapacity;
-              mySize  -= TFirstBlock::blockCapacity;
-              ++myBlockIndex;
-            }
-
-          while ( ! TNextBlock::isInThisBlock( myIndex, mySize ) )
-            {
-              myBlockPointer.next = myBlockPointer.next->myTail.nextBlock;
-              myIndex -= TNextBlock::blockCapacity;
-              mySize  -= TNextBlock::blockCapacity;
-              ++myBlockIndex;
-            }
-        }
     }
 
   // ------------------------------- Members ----------------------------------
@@ -941,7 +878,7 @@ push_back( Value const& aValue, Iterator hint )
     // Update iterator to make it valid
     hint.mySize++;
 
-    return hint += hint.mySize-1;
+    return hint.fastForward( hint.mySize-1 );
   }
 
 //-----------------------------------------------------------------------------
@@ -1228,7 +1165,7 @@ find( const Key & key )
   bool found = false;
 
   SizeType idx = it.myBlockPointer.first->findBlockLabel( key, it.mySize, found );
-  it += idx;
+  it.fastForward( idx );
 
   if ( found )
     {
@@ -1240,7 +1177,7 @@ find( const Key & key )
       while ( it != it_end )
         {
           idx = it.myBlockPointer.next->findBlockLabel( key, it.mySize, found ); 
-          it += idx;
+          it.fastForward( idx );
           if ( found )  return it;
         }
 
@@ -1270,7 +1207,7 @@ find( const Key & key ) const
   bool found = false;
 
   SizeType idx = it.myBlockPointer.first->findBlockLabel( key, it.mySize, found );
-  it += idx;
+  it.fastForward( idx );
 
   if ( found )
     {
@@ -1282,7 +1219,7 @@ find( const Key & key ) const
       while ( it != it_end )
         {
           idx = it.myBlockPointer.next->findBlockLabel( key, it.mySize, found ); 
-          it += idx;
+          it.fastForward( idx );
           if ( found )  return it;
         }
 
