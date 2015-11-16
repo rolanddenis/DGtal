@@ -415,21 +415,37 @@ namespace DGtal
 // Reads a value
 template < typename T, std::size_t S, std::size_t N >
 inline
-T BitFieldArray<T,S,N>::getValue( SizeType i ) const
+T BitFieldArray<T,S,N>::getValue( SizeType i, Value aRefValue ) const
 {
   ASSERT_MSG( i < N, "Trying to read out of bounds.");
 
   typedef typename BitFieldArrayIntegerDispatch<S>::type Integer;
 
-  Value result;
   BitFieldArrayImplDispatch< S, N, Integer >
     ::getValue(
                i,
                reinterpret_cast<Integer const*>(&(myStorage[0])),
-               reinterpret_cast<Integer*>(&result)
+               reinterpret_cast<Integer*>(&aRefValue)
   );
 
-  return result;
+  return aRefValue;
+}
+
+// Reads a value
+template < typename T, std::size_t S, std::size_t N >
+inline
+void BitFieldArray<T,S,N>::getValueInto( SizeType i, Value* aValuePtr ) const
+{
+  ASSERT_MSG( i < N, "Trying to read out of bounds.");
+
+  typedef typename BitFieldArrayIntegerDispatch<S>::type Integer;
+
+  BitFieldArrayImplDispatch< S, N, Integer >
+    ::getValue(
+               i,
+               reinterpret_cast<Integer const*>(&(myStorage[0])),
+               reinterpret_cast<Integer*>(aValuePtr)
+  );
 }
 
 // Writes a value

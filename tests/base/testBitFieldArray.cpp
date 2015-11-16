@@ -658,6 +658,43 @@ TEST_BITFIELDARRAY( 91 )
 TEST_BITFIELDARRAY( 128 )
 TEST_BITFIELDARRAY( 301 )
 
+struct DummyStruct
+{
+  double value;
+};
+
+TEST_CASE( "Checking member access through iterator.", "[member]" )
+{
+  DummyStruct dummy;
+  dummy.value = 123456.789;
+
+  typedef DGtal::BitFieldArray< DummyStruct, 8*sizeof(DummyStruct), 1 > DummyArray;
+  DummyArray array;
+  array.setValue(0, dummy);
+
+  DummyArray const& carray = array;
+
+  REQUIRE( array.begin()->value  == dummy.value );
+  REQUIRE( carray.begin()->value == dummy.value );
+}
+
+TEST_CASE( "Checking incomplete read.", "[incomplete]" )
+{
+  DGtal::BitFieldArray< std::size_t, 8, 1 > array;
+  array.setValue(0, 131u);
+
+  REQUIRE( array.getValue(0, 0) == 131u );
+
+  const std::size_t mask = (1u << 8) - 1;
+  const std::size_t ref = 123456789;
+
+  REQUIRE( array.getValue(0, ref) == ( ref & ~mask ) + 131 );
+
+  std::size_t tmp = ref;
+  array.getValueInto(0, &tmp);
+  REQUIRE( tmp == ( ref & ~mask ) + 131 );
+}
+
 //////////////////////////////////////////////////////////////////////////////
 //                               Benchmark helper
 //////////////////////////////////////////////////////////////////////////////
