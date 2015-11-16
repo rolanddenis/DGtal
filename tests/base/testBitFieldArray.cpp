@@ -73,9 +73,9 @@ struct StructLongArray
    * @param other   The other instance.
    */
   inline
-  bool operator== ( StructLongArray<Size> const& other ) const
+  bool isEqual ( StructLongArray<Size> const& other ) const
     {
-      return  ( *reinterpret_cast< StructLongArray<Size-1> const* >(this) == *reinterpret_cast< StructLongArray<Size-1> const* >(&other) )
+      return  reinterpret_cast< StructLongArray<Size-1> const* >(this)->isEqual( *reinterpret_cast< StructLongArray<Size-1> const* >(&other) )
               && ( longArray[Size-1] == other.longArray[Size-1] );
     }
 
@@ -105,7 +105,7 @@ struct StructLongArray<0>
    * @return always true.
    */
   inline
-  bool operator== ( StructLongArray<0> const& /* other */ ) const
+  bool isEqual ( StructLongArray<0> const& /* other */ ) const
     {
       return true;
     }
@@ -142,9 +142,9 @@ struct StructCharArray
    * @param other   The other instance.
    */
   inline
-  bool operator== ( StructCharArray<Size> const& other ) const
+  bool isEqual ( StructCharArray<Size> const& other ) const
     {
-      return  ( *reinterpret_cast< StructCharArray<Size-1> const* >(this) == *reinterpret_cast< StructCharArray<Size-1> const* >(&other) )
+      return  reinterpret_cast< StructCharArray<Size-1> const* >(this)->isEqual( *reinterpret_cast< StructCharArray<Size-1> const* >(&other) )
               && ( charArray[Size-1] == other.charArray[Size-1] );
     }
 };
@@ -173,7 +173,7 @@ struct StructCharArray<0>
    * @return always true.
    */
   inline
-  bool operator== ( StructCharArray<0> const& /* other */ ) const
+  bool isEqual ( StructCharArray<0> const& /* other */ ) const
     {
       return true;
     }
@@ -208,7 +208,7 @@ struct StructBitField
    * @param other   The other instance.
    */
   inline
-  bool operator== ( StructBitField<Size> const &other ) const
+  bool isEqual ( StructBitField<Size> const &other ) const
     {
       return bitField == other.bitField;
     }
@@ -238,7 +238,7 @@ struct StructBitField<0>
    * @return always true.
    */
   inline
-  bool operator== ( StructBitField<0> const& /* other */ ) const
+  bool isEqual ( StructBitField<0> const& /* other */ ) const
     {
       return true;
     }
@@ -276,9 +276,9 @@ struct StructOfBitSize
   friend bool operator== ( StructOfBitSize<Size> const& lhs, StructOfBitSize<Size> const& rhs )
     {
       return
-        *static_cast< LongArray const* >(&lhs) == *static_cast< LongArray const* >(&rhs)
-        &&  *static_cast< CharArray const* >(&lhs) == *static_cast< CharArray const* >(&rhs)
-        &&  *static_cast< BitField  const* >(&lhs) == *static_cast< BitField  const* >(&rhs);
+            static_cast< LongArray const* >(&lhs)->isEqual( *static_cast< LongArray const* >(&rhs) )
+        &&  static_cast< CharArray const* >(&lhs)->isEqual( *static_cast< CharArray const* >(&rhs) )
+        &&  static_cast< BitField  const* >(&lhs)->isEqual( *static_cast< BitField  const* >(&rhs) );
     }
 
   /** Returns the number of components in the structure.
@@ -289,7 +289,7 @@ struct StructOfBitSize
   std::size_t size()
     {
       return
-          Size / (8*sizeof(unsigned long))
+           Size / (8*sizeof(unsigned long))
         + (Size % (8*sizeof(unsigned long))) / 8
         + 1;
     }
@@ -368,8 +368,8 @@ struct StructOfBitSizeNoLong
       typedef typename StructOfBitSizeNoLong<Size>::CharArray  CharArray;
       typedef typename StructOfBitSizeNoLong<Size>::BitField   BitField;
       return
-        *static_cast< CharArray const* >(&lhs) == *static_cast< CharArray const* >(&rhs)
-        &&  *static_cast< BitField  const* >(&lhs) == *static_cast< BitField  const* >(&rhs);
+            static_cast< CharArray const* >(&lhs)->isEqual( *static_cast< CharArray const* >(&rhs) )
+        &&  static_cast< BitField  const* >(&lhs)->isEqual( *static_cast< BitField  const* >(&rhs) );
     }
 
   /** Returns the number of components in the structure.
