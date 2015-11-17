@@ -319,7 +319,7 @@ struct DGtal::BigLabelledMap<TData, L, N, M>::__Block
         {
           popBack( size );
         }
-      else if ( isInThisBlock( idx, size ) )
+      else if ( isInThisBlock( idx, size-1 ) )
         {
           setBlockValueAt( idx, popBack( size ) ); 
         }
@@ -651,6 +651,8 @@ private:
   /// Dereference.
   inline Reference dereference() const
     {
+      ASSERT( this->myIndex < this->mySize );
+
       if ( this->myBlockIndex == 0 )
         {
           return this->myBlockPointer.first->getBlockValueAt( this->myIndex );
@@ -720,6 +722,8 @@ private:
   /// Dereference.
   inline ConstReference dereference() const
     {
+      ASSERT( this->myIndex < this->mySize );
+      
       if ( this->myBlockIndex == 0 )
         {
           return this->myBlockPointer.first->getBlockValueAt( this->myIndex );

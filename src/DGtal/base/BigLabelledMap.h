@@ -129,7 +129,7 @@ class BigLabelledMap
     // ------------------------- Validity checks ------------------------------
     BOOST_STATIC_ASSERT( L >= 1 );
     BOOST_STATIC_ASSERT( N >= 0 );
-    BOOST_STATIC_ASSERT( M >= 2 );
+    BOOST_STATIC_ASSERT( M >= 1 );
 
     // ------------------------- Constants ------------------------------------
 public:
