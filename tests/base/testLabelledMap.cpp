@@ -60,13 +60,15 @@ bool
 checkInsert( VContainer1 & v, LContainer2 & l,
 	     unsigned int nb )
 {
+  bool is_equal = isEqual( v, l );
   for ( unsigned int i = 0; i < nb; ++i )
     {
       unsigned int idx = random() % ( l.max_size() );
       double val = ( (double)random() ) / RAND_MAX;
       insert( v, l, idx, val );
+      is_equal &= isEqual( v, l );
     }
-  return isEqual( v, l );
+  return is_equal;
 }
 
 template <typename VContainer1, typename LContainer2>
@@ -81,13 +83,15 @@ bool
 checkErase( VContainer1 & v, LContainer2 & l,
 	    unsigned int nb )
 {
+  bool is_equal = isEqual( v, l );
   for ( unsigned int i = 0; i < nb; ++i )
     {
       unsigned int idx = random() % ( l.max_size() );
       erase( v, l, idx );
       //std::cout << "  (" << i << "/" << nb << ") l=" << l << std::endl; 
+      is_equal &= isEqual( v, l );
     }
-  return isEqual( v, l );
+  return is_equal;
 }
 
 template <typename AContainer>
