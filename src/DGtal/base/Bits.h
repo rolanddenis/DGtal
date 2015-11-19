@@ -29,6 +29,8 @@
 #define BITS_HPP
 
 #include <string>
+#include <limits>
+
 #include "DGtal/base/Common.h"
 #include "DGtal/base/BasicFunctors.h"
 #include "DGtal/base/ExpressionTemplates.h"
@@ -85,11 +87,13 @@ struct Bits
      * @tparam    T   The type of the value.
      * @param[in] val The value to be shifted.
      * @param[in] n   Shift count.
+     * @warning \p n must be lower than the bit size of \p T.
      */
     template < typename T >
     static inline
     T leftShift( T val, unsigned n )
       {
+        ASSERT_MSG( n < CHAR_BIT*sizeof(T), "bit shift by type width or more" );
         return val << n;
       }
 
@@ -97,11 +101,13 @@ struct Bits
      * @tparam    T   The type of the value.
      * @param[in] val The value to be shifted.
      * @param[in] n   Shift count.
+     * @warning \p n must be lower than the bit size of \p T.
      */
     template < typename T >
     static inline
     T rightShift( T val, unsigned n )
       {
+        ASSERT_MSG( n < CHAR_BIT*sizeof(T), "bit shift by type width or more" );
         return val >> n;
       }
 
@@ -110,6 +116,7 @@ struct Bits
      * @tparam    T   The type of the value.
      * @param[in] val The value to be shifted.
      * @param[in] n   Shift count.
+     * @warning \p n must have an absolute value lower than the bit size of \p T.
      */
     template < typename T >
     static inline
@@ -123,11 +130,14 @@ struct Bits
      * @param[in] val     The value to be shifted.
      * @param[in] fromPos Position of the bit to be moved.
      * @param[in] toPos   Destination position of the same bit.
+     * @warning \p fromPos and \p toPos must be lower than the bit size of \p T.
      */
     template < typename T >
     static inline
     T diffShift( T val, unsigned fromPos, unsigned toPos )
       {
+        ASSERT_MSG( fromPos < CHAR_BIT*sizeof(T), "fromPos greater or equal to the type width" );
+        ASSERT_MSG( toPos   < CHAR_BIT*sizeof(T), "toPos greater or equal to the type width" );
         return ( fromPos < toPos ) ? leftShift(val, toPos - fromPos) : rightShift(val, fromPos - toPos);
       }
     
@@ -138,31 +148,32 @@ struct Bits
     /** Returns a value with only one bit set, preceded by \p nthBit zero bits.
      * @tparam    T       The type of the value.
      * @param[in] nthBit  Position of the set bit.
+     * @warning \p nthBit must be lower than the bit size of \p T.
      */
     template< typename T >
     static inline 
     T mask(unsigned nthBit)
       {
-        return T(1) << nthBit;
+        return leftShift( T(1), nthBit );
       }
 
     /** Returns a value with only \p width consecutive bits equal to 1, starting with the first bit.
      * @tparam    T     The type of the value.
      * @param[in] width Number of consecutive set bits.
-     * @warning \p width must be smaller than the bits size of \p T.
+     * @warning \p width must be smaller than the bit size of \p T.
      */
     template < typename T >
     static inline
     T wideMask( unsigned width )
       {
-        return ( T(1) << width ) - 1;
+        return mask<T>(width) - 1;
       }
 
     /** Returns a value with only \p width consecutive bits equal to 1, preceded by \p nthBit zero bits.
      * @tparam    T       The type of the value.
      * @param[in] nthBit  Position of the first set bit.
      * @param[in] width   Number of consecutive set bits.
-     * @warning \p width must be smaller than the bits size of \p T.
+     * @warning \p width and \p nthBit must be smaller than the bit size of \p T.
      */
     template<typename T>
     static inline
@@ -182,7 +193,8 @@ struct Bits
      * @param[in] toValue   The destination value.
      * @param[in] toPos     The position where to copy the first bit.
      * @param[in] width     Number of consecutive bits to be copied.
-     * @warning \p width must be smaller than the bits size of \p T.
+     * @return \p toValue with the copied bits from \p fromValue.
+     * @warning \p fromPos, \p toPos and \p width must be smaller than the bits size of \p T.
      */
     template < typename T >
     static inline
@@ -198,7 +210,8 @@ struct Bits
      * @param[in] toValue   The destination value.
      * @param[in] toPos     The position where to copy the first bit.
      * @param[in] width     Number of consecutive bits to be copied.
-     * @warning \p width must be smaller than the bits size of \p T.
+     * @return \p toValue with the copied bits from \p fromValue.
+     * @warning \p toPos and \p width must be smaller than the bits size of \p T.
      */
     template < typename T >
     static inline
@@ -214,7 +227,8 @@ struct Bits
      * @param[in] fromPos   The position of the first bit to be copied in the origin value.
      * @param[in] toValue   The destination value.
      * @param[in] width     Number of consecutive bits to be copied.
-     * @warning \p width must be smaller than the bits size of \p T.
+     * @return \p toValue with the copied bits from \p fromValue.
+     * @warning \p fromPos and \p width must be smaller than the bits size of \p T.
      */
     template < typename T >
     static inline
