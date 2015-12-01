@@ -27,10 +27,12 @@ SET(DGTAL_TESTS_SRC
    testOwningOrAliasingPtr
    testCatch
    testBitFieldArray
-   testSimpleRandomAccessRangeFromPoint
    testBigLabelledMap
    testBigLabelledMap-benchmark
-   )
+   testContainerTraits
+   testSetFunctions
+   testSimpleRandomAccessRangeFromPoint
+)
 
 FOREACH(FILE ${DGTAL_TESTS_SRC})
   add_executable(${FILE} ${FILE})
