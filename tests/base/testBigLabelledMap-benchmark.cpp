@@ -651,8 +651,10 @@ int main()
 #if CPP11_FORWARD_LIST
   typedef ArrayXYOfList<Value, L, X, Y> MyArrayXYOfList;
 #endif
-  typedef ArrayXYOfLabelledMap<Value, L, X, Y, Word, N, M > MyArrayXYOfLabelledMap;
+  //typedef ArrayXYOfLabelledMap<Value, L, X, Y, Word, N, M > MyArrayXYOfLabelledMap;
+  typedef ArrayXYOfLabelledMap<Value, (1ul<<8)-1, X, Y, Word, N, M > MyArrayXYOfLabelledMap;
 
+#if 1
   //----------------------------------------------------------------------
   trace.beginBlock ( "---------- ArrayLXY ---------------" );
   trace.beginBlock ( "Generating ArrayLXY" );
@@ -761,6 +763,8 @@ int main()
   delete arrayXYOfList;
   trace.endBlock();
   trace.endBlock();
+#endif
+
 #endif
 
   //----------------------------------------------------------------------

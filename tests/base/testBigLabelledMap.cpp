@@ -116,7 +116,7 @@ void display( ostream & out, const AContainer & C )
 }
 int main()
 {
-  typedef BigLabelledMap<double, 32, 2, 7> MyLabelledMap;
+  typedef BigLabelledMap<double, 255, 2, 7> MyLabelledMap;
   // BOOST_CONCEPT_ASSERT(( boost::AssociativeContainer< MyLabelledMap > ));
   // BOOST_CONCEPT_ASSERT(( boost::PairAssociativeContainer< MyLabelledMap > ));
   // BOOST_CONCEPT_ASSERT(( boost::UniqueAssociativeContainer< MyLabelledMap > ));
@@ -175,7 +175,7 @@ int main()
   trace.endBlock();
 
   // Test related to pull request #973 about copy constructor & operator when using at less 3 blocks.
-  typedef BigLabelledMap<double, 32, 2, 3> MyOtherLabelledMap;
+  typedef BigLabelledMap<double, 255, 2, 3> MyOtherLabelledMap;
   trace.beginBlock ( "Testing LabelledMap copy constructor and copy operator" );
   MyOtherLabelledMap ll;
 

@@ -34,6 +34,9 @@
 #include <algorithm>
 #include <new>
 #include <ostream>
+#include <limits>
+
+#include <iomanip> // DEBUG
 
 #include <boost/timer/timer.hpp>
 #include <boost/preprocessor/iteration.hpp>
@@ -270,7 +273,7 @@ struct StructOfBitSize
    *
    * It is declare as non-member to allow implicit conversion to work on both side.
    * In addition, as this struct is templated, implicit conversion needs the operator to be instanciated for each different template parameters (ie declared inside the class, as friend).
-   * @see http://stackoverflow.com/questions/9787593/c-implicit-type-conversion-with-template 
+   * @see http://stackoverflow.com/questions/9787593/c-implicit-type-conversion-with-template
    */
   inline
   friend bool operator== ( StructOfBitSize<Size> const& lhs, StructOfBitSize<Size> const& rhs )
@@ -360,13 +363,14 @@ struct StructOfBitSizeNoLong
    *
    * It is declare as non-member to allow implicit conversion to work on both side.
    * In addition, as this struct is templated, implicit conversion needs the operator to be instanciated for each different template parameters (ie declared inside the class, as friend).
-   * @see http://stackoverflow.com/questions/9787593/c-implicit-type-conversion-with-template 
+   * @see http://stackoverflow.com/questions/9787593/c-implicit-type-conversion-with-template
    */
   inline
   friend bool operator== ( StructOfBitSizeNoLong<Size> const& lhs, StructOfBitSizeNoLong<Size> const& rhs )
     {
       typedef typename StructOfBitSizeNoLong<Size>::CharArray  CharArray;
       typedef typename StructOfBitSizeNoLong<Size>::BitField   BitField;
+
       return
             static_cast< CharArray const* >(&lhs)->isEqual( *static_cast< CharArray const* >(&rhs) )
         &&  static_cast< BitField  const* >(&lhs)->isEqual( *static_cast< BitField  const* >(&rhs) );
@@ -572,7 +576,7 @@ struct TestHelper
 
       return true;
     }
-  
+
   /// Checks BitFieldArray read/write using operator[]
   static
   bool checkReadWriteUsingSquareBrackets()
@@ -602,7 +606,7 @@ struct TestHelper
 
       return true;
     }
-  
+
   /// Checks BitFieldArray read/write using iterators.
   static
   bool checkReadWriteUsingIterators()
@@ -621,7 +625,7 @@ struct TestHelper
       // Reads and compares values
       BitFieldArray const& myConstData = myData;
 
-      return 
+      return
             static_cast<std::size_t>(myData.end() - myData.begin()) == N
         &&  std::equal( myData.begin(), myData.end(), refData )
         &&  std::equal( myConstData.begin(), myConstData.end(), refData )
@@ -639,15 +643,17 @@ TEST_CASE( "Checking empty BitFieldArray.", "[empty]" )
   REQUIRE( ( DGtal::BitFieldArray< char, 8, 0 >::size() ) == 0 );
 }
 
-#define TEST_BITFIELDARRAY( N ) \
-TEST_CASE_METHOD( TestHelper<N>, "Checking BitFieldArray of size " #N " bits.", "[" #N "bits]" ) \
+#define TEST_BITFIELDARRAY( S ) \
+TEST_CASE_METHOD( TestHelper<S>, "Checking BitFieldArray of size " #S " bits.", "[" #S "bits]" ) \
 { \
   REQUIRE( checkSize() ); \
-  REQUIRE( checkReadWriteUsingAccessors() ); \
-  REQUIRE( checkReadWriteUsingSquareBrackets() ); \
-  REQUIRE( checkReadWriteUsingIterators() ); \
+  CHECK( checkReadWriteUsingAccessors() ); \
+  CHECK( checkReadWriteUsingSquareBrackets() ); \
+  CHECK( checkReadWriteUsingIterators() ); \
 }
 
+TEST_BITFIELDARRAY( 1 )
+TEST_BITFIELDARRAY( 2 )
 TEST_BITFIELDARRAY( 7 )
 TEST_BITFIELDARRAY( 8 )
 TEST_BITFIELDARRAY( 17 )
@@ -822,6 +828,39 @@ struct BenchHelper
         }
     }
 
+  /////////////////// Increment Functions ////////////////////
+
+  //// Increments values in the C-style array of BitField.
+  void incBitFieldCArray()
+    {
+      for ( std::size_t i = 0; i < ArraySize; ++i )
+        {
+          BitField& value = myBitFieldCArray[i];
+          value.setValue(0, value.getValue(0) + 1 );
+        }
+    }
+
+  //// Increments values in the C-style array of BitFieldNoLong.
+  void incBitFieldNoLongCArray()
+    {
+      for ( std::size_t i = 0; i < ArraySize; ++i )
+        {
+          BitFieldNoLong& value = myBitFieldNoLongCArray[i];
+          value.setValue(0, value.getValue(0) + 1 );
+        }
+    }
+
+  //// Increments values in the BitFieldArray.
+  void incBitFieldArray()
+    {
+      for ( std::size_t i = 0; i < ArraySize; ++i )
+        {
+          BitField value = myBitFieldArray->getValue(i);
+          value.setValue(0, value.getValue(0) + 1 );
+          myBitFieldArray->setValue( i, value );
+        }
+    }
+
   /////////////////// Bench Functions ////////////////////
 
   /** Benchmark the reading of the C-style array of BitField.
@@ -835,7 +874,7 @@ struct BenchHelper
       sum += readBitFieldCArray();
       timer.stop();
 
-      return ArraySize*BitSize*double(1e9) / double(timer.elapsed().wall) + 1e-99*sum;
+      return ArraySize*BitSize*double(1e9) / double(timer.elapsed().wall) + std::numeric_limits<double>::min()*sum;
     }
 
   /** Benchmark the writing of the C-style array of BitField.
@@ -846,6 +885,19 @@ struct BenchHelper
       writeBitFieldCArray();
       boost::timer::cpu_timer timer;
       writeBitFieldCArray();
+      timer.stop();
+
+      return ArraySize*BitSize*double(1e9) / double(timer.elapsed().wall);
+    }
+
+  /** Benchmark incrementing in the C-style array of BitField.
+   * @return the memory bandwidth (in bits/sec) from the meaningful part of the data (BitSize bits).
+   */
+  double benchIncBitFieldCArray()
+    {
+      incBitFieldCArray();
+      boost::timer::cpu_timer timer;
+      incBitFieldCArray();
       timer.stop();
 
       return ArraySize*BitSize*double(1e9) / double(timer.elapsed().wall);
@@ -862,7 +914,7 @@ struct BenchHelper
       sum += readBitFieldNoLongCArray();
       timer.stop();
 
-      return ArraySize*BitSize*double(1e9) / double(timer.elapsed().wall) + 1e-99*sum;
+      return ArraySize*BitSize*double(1e9) / double(timer.elapsed().wall) + std::numeric_limits<double>::min()*sum;
     }
 
   /** Benchmark the writing of the C-style array of BitFieldNoLong.
@@ -873,6 +925,19 @@ struct BenchHelper
       writeBitFieldNoLongCArray();
       boost::timer::cpu_timer timer;
       writeBitFieldNoLongCArray();
+      timer.stop();
+
+      return ArraySize*BitSize*double(1e9) / double(timer.elapsed().wall);
+    }
+
+  /** Benchmark incrementing in the C-style array of BitFieldNoLong.
+   * @return the memory bandwidth (in bits/sec) from the meaningful part of the data (BitSize bits).
+   */
+  double benchIncBitFieldNoLongCArray()
+    {
+      incBitFieldNoLongCArray();
+      boost::timer::cpu_timer timer;
+      incBitFieldNoLongCArray();
       timer.stop();
 
       return ArraySize*BitSize*double(1e9) / double(timer.elapsed().wall);
@@ -889,7 +954,7 @@ struct BenchHelper
       sum += readBitFieldArray();
       timer.stop();
 
-      return ArraySize*BitSize*double(1e9) / double(timer.elapsed().wall) + 1e-99*sum;
+      return ArraySize*BitSize*double(1e9) / double(timer.elapsed().wall) + std::numeric_limits<double>::min()*sum;
     }
 
   /** Benchmark the writing of the BitFieldArray.
@@ -900,6 +965,19 @@ struct BenchHelper
       writeBitFieldArray();
       boost::timer::cpu_timer timer;
       writeBitFieldArray();
+      timer.stop();
+
+      return ArraySize*BitSize*double(1e9) / double(timer.elapsed().wall);
+    }
+
+  /** Benchmark incrementing in the BitFieldArray.
+   * @return the memory bandwidth (in bits/sec) from the meaningful part of the data (BitSize bits).
+   */
+  double benchIncBitFieldArray()
+    {
+      incBitFieldArray();
+      boost::timer::cpu_timer timer;
+      incBitFieldArray();
       timer.stop();
 
       return ArraySize*BitSize*double(1e9) / double(timer.elapsed().wall);
@@ -918,13 +996,17 @@ struct BenchHelper
           << 1000 * sizeof(BitField) << " "
           << 1000 * sizeof(BitFieldNoLong) << " " << std::flush;
 
+      os << benchWriteBitFieldArray() << " " << std::flush;
+      os << benchWriteBitFieldCArray() << " " << std::flush;
+      os << benchWriteBitFieldNoLongCArray() << " " << std::flush;
+
       os << benchReadBitFieldArray() << " " << std::flush;
       os << benchReadBitFieldCArray() << " " << std::flush;
       os << benchReadBitFieldNoLongCArray() << " " << std::flush;
 
-      os << benchWriteBitFieldArray() << " " << std::flush;
-      os << benchWriteBitFieldCArray() << " " << std::flush;
-      os << benchWriteBitFieldNoLongCArray() << " " << std::endl;
+      os << benchIncBitFieldArray() << " " << std::flush;
+      os << benchIncBitFieldCArray() << " " << std::flush;
+      os << benchIncBitFieldNoLongCArray() << " " << std::endl;
 
     }
 };
@@ -932,11 +1014,12 @@ struct BenchHelper
 // Benchmark BitFieldArray with different sizes.
 TEST_CASE( "Bench test", "[.bench]" )
 {
-  std::cout << "# Gnuplot cmd: set logscale y; plot for [i=5:10] 'bench.dat' u 1:i w lp title columnheader(i)" << std::endl
+  std::cout << "# Gnuplot cmd: set logscale y; plot for [i=5:13] 'bench.dat' u 1:i w lp title columnheader(i)" << std::endl
     << "Value_size "
     << "BitFieldArray_1000size BitFieldCArray_1000size BitFieldCArrayNoLong_1000size "
+    << "BitFieldArray_write BitFieldCArray_write BitFieldCArrayNoLong_write "
     << "BitFieldArray_read BitFieldCArray_read BitFieldCArrayNoLong_read "
-    << "BitFieldArray_write BitFieldCArray_write BitFieldCArrayNoLong_write"
+    << "BitFieldArray_inc BitFieldCArray_inc BitFieldCArrayNoLong_inc"
     << std::endl;
 
 #define BOOST_PP_LOCAL_MACRO(S) \

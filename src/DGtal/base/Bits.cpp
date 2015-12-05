@@ -165,7 +165,7 @@ namespace DGtal
 
 
 /**
-   * Lookup table for finding the least significant bit.
+   * Lookup table for finding the most significant bit.
    * <p>
    * NB: Can also be obtained with: <pre>
    * </pre>

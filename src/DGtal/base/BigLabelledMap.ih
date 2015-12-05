@@ -371,6 +371,20 @@ struct DGtal::BigLabelledMap<TData, L, N, M>::__Block
     {
       const std::size_t theBlockSize = blockSize( size );
 
+      /*
+      if ( ! DGtal::Bits::hasBitsEqualTo( *reinterpret_cast<Label const*>(&myLabels) & DGtal::Bits::wideMask<Label>( theBlockSize*labelSize, labelArrayShift*labelSize), label, labelSize ) )
+        {
+          found = false;
+          return theBlockSize;
+        }
+      */
+
+      if ( ! DGtal::Bits::hasBitsEqualTo( *reinterpret_cast<Label const*>(&myLabels), label, labelSize ) )
+        {
+          found = false;
+          return theBlockSize;
+        }
+
       for ( std::size_t i = 0; i < theBlockSize; ++i )
         {
           if ( getBlockLabel(i) == label )

@@ -148,7 +148,7 @@ namespace
           );
         }
     };
-
+  
   /** BitFieldArray implementation tuned for element size that divides the working integer.
    * @tparam S  The element size in bits.
    * @tparam N  The array capacity.
@@ -168,6 +168,7 @@ namespace
         {
           const std::size_t word_index = (i*S) / (8*sizeof(Integer));
           const std::size_t word_pos   = (i*S) % (8*sizeof(Integer));
+
           *result = DGtal::Bits::wideCopyToStart( data[word_index], word_pos, *result, S );
         }
 
@@ -381,6 +382,7 @@ namespace
   struct BitFieldArrayInteger
     {
       typedef std::size_t type;
+      //typedef unsigned short type;
     };
 
   /** Working integer type depending on the properties of the element size.
@@ -392,7 +394,8 @@ namespace
   template < std::size_t S >
   struct BitFieldArrayInteger< S, true, false >
     {
-      typedef unsigned char type;
+      //typedef unsigned char type;
+      typedef std::size_t type;
     };
 
   /** Dispatcher to get the working integer type depending on the element size.
@@ -403,6 +406,14 @@ namespace
     : BitFieldArrayInteger< S, IsDivisibleBy< S, 8 >::value, IsDivisibleBy< S, 8*sizeof(std::size_t) >::value >
     {};
 
+  template < typename Value, typename Integer >
+  union Aligned
+    {
+      Aligned( Value const& aValue ) : value(aValue) {}
+      Value value;
+      Integer dummy;
+    };
+
 } // anonymous namespace
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -411,6 +422,7 @@ namespace
 
 namespace DGtal
 {
+
 
 // Reads a value
 template < typename T, std::size_t S, std::size_t N >
@@ -421,10 +433,22 @@ T BitFieldArray<T,S,N>::getValue( SizeType i, Value aRefValue ) const
 
   typedef typename BitFieldArrayIntegerDispatch<S>::type Integer;
 
+  /*
+  Aligned<Value, Integer> dummy = aRefValue;
+
   BitFieldArrayImplDispatch< S, N, Integer >
     ::getValue(
                i,
-               reinterpret_cast<Integer const*>(&(myStorage[0])),
+               reinterpret_cast<Integer const*>(&(myStorage.data[0])),
+               reinterpret_cast<Integer*>(&(dummy.value))
+  );
+  aRefValue = dummy.value; 
+  */
+
+  BitFieldArrayImplDispatch< S, N, Integer >
+    ::getValue(
+               i,
+               reinterpret_cast<Integer const*>(&(myStorage.data[0])),
                reinterpret_cast<Integer*>(&aRefValue)
   );
 
@@ -432,6 +456,15 @@ T BitFieldArray<T,S,N>::getValue( SizeType i, Value aRefValue ) const
 }
 
 // Reads a value
+template < typename T, std::size_t S, std::size_t N >
+inline
+T BitFieldArray<T,S,N>::getValue( SizeType i ) const
+{
+  Value aRefValue;
+  return getValue( i, aRefValue );
+}
+
+// Reads a value into a given value.
 template < typename T, std::size_t S, std::size_t N >
 inline
 void BitFieldArray<T,S,N>::getValueInto( SizeType i, Value* aValuePtr ) const
@@ -443,7 +476,7 @@ void BitFieldArray<T,S,N>::getValueInto( SizeType i, Value* aValuePtr ) const
   BitFieldArrayImplDispatch< S, N, Integer >
     ::getValue(
                i,
-               reinterpret_cast<Integer const*>(&(myStorage[0])),
+               reinterpret_cast<Integer const*>(&(myStorage.data[0])),
                reinterpret_cast<Integer*>(aValuePtr)
   );
 }
@@ -460,7 +493,7 @@ void BitFieldArray<T,S,N>::setValue( SizeType i, Value const& value )
   BitFieldArrayImplDispatch < S, N, Integer >
     ::setValue(
                i,
-               reinterpret_cast<Integer*>(&(myStorage[0])),
+               reinterpret_cast<Integer*>(&(myStorage.data[0])),
                reinterpret_cast<Integer const*>(&value)
   );
 

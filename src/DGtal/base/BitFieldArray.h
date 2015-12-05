@@ -159,7 +159,15 @@ public:
    *                  Only useful if the given bit size is lower than the real size of \p Value, 
    *                  in order to avoid random values on the others bits.
    */
-  Value getValue( SizeType i, Value aRefValue = Value() ) const;
+  Value getValue( SizeType i, Value aRefValue ) const;
+  
+  /** Reads an element.
+   * @param i The index of the element.
+   *
+   * @note Consider using getValue with the extra parameter \p aRefValue if
+   * the given bit size \p S is lwer than the real size of \p Value.
+   */
+  Value getValue( SizeType i ) const;
 
   /** Reads an element into a given address.
    * @param i The index of the element.
@@ -217,7 +225,14 @@ public:
 
 
 private:
-  boost::array<char, sizeInByte> myStorage; ///< Internal storage.
+  union AlignedStorage
+    {
+      boost::array<unsigned char, sizeInByte> data;
+      std::size_t dummy;
+    };
+
+  AlignedStorage myStorage;
+  //boost::array<unsigned char, sizeInByte> myStorage; ///< Internal storage.
 
 }; // end of class BitFieldArray
 

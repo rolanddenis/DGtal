@@ -29,7 +29,6 @@
 #define BITS_HPP
 
 #include <string>
-#include <limits>
 
 #include "DGtal/base/Common.h"
 #include "DGtal/base/BasicFunctors.h"
@@ -93,7 +92,7 @@ struct Bits
     static inline
     T leftShift( T val, unsigned n )
       {
-        ASSERT_MSG( n < CHAR_BIT*sizeof(T), "bit shift by type width or more" );
+        ASSERT_MSG( n < 8*sizeof(T), "bit shift by type width or more" );
         return val << n;
       }
 
@@ -107,7 +106,7 @@ struct Bits
     static inline
     T rightShift( T val, unsigned n )
       {
-        ASSERT_MSG( n < CHAR_BIT*sizeof(T), "bit shift by type width or more" );
+        ASSERT_MSG( n < 8*sizeof(T), "bit shift by type width or more" );
         return val >> n;
       }
 
@@ -136,8 +135,8 @@ struct Bits
     static inline
     T diffShift( T val, unsigned fromPos, unsigned toPos )
       {
-        ASSERT_MSG( fromPos < CHAR_BIT*sizeof(T), "fromPos greater or equal to the type width" );
-        ASSERT_MSG( toPos   < CHAR_BIT*sizeof(T), "toPos greater or equal to the type width" );
+        ASSERT_MSG( fromPos < 8*sizeof(T), "fromPos greater or equal to the type width" );
+        ASSERT_MSG( toPos   < 8*sizeof(T), "toPos greater or equal to the type width" );
         return ( fromPos < toPos ) ? leftShift(val, toPos - fromPos) : rightShift(val, fromPos - toPos);
       }
     
@@ -238,6 +237,24 @@ struct Bits
         return ( toValue & ~toMask ) | ( rightShift(fromValue, fromPos) & toMask );
       }
 
+    // ---------------------------------------------------------------------
+    //  Comparison functions
+    // ---------------------------------------------------------------------
+    
+    template < typename T >
+    static inline
+    bool hasBitsEqualTo ( T valueArray, T valueToFind, unsigned width )
+      {
+        ASSERT( width < 8*sizeof(T) );
+        ASSERT( valueToFind <= wideMask<T>(width) );
+
+        const T mask = wideMask<T>(width);
+        const T dupGen = ~T(0) / mask;
+        const T dupValue  = dupGen * valueToFind;
+        const T xorValues = dupValue ^ valueArray;
+        const T dupMask = dupGen * ( mask >> 1 );
+        return ~( ( ( ( xorValues & dupMask ) + dupMask ) | xorValues ) | dupMask );
+      }
 
     // ---------------------------------------------------------------------
     //  Bit query functions
@@ -547,7 +564,7 @@ struct Bits
     static const DGtal::uint8_t myLSB[ 256 ];
 
     /**
-    Lookup table for finding the least significant bit.
+    Lookup table for finding the most significant bit.
     */
     static const DGtal::uint8_t myMSB[ 256 ];
 
