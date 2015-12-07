@@ -310,6 +310,12 @@ namespace DGtal
     void find();
   };
 
+  /////////////////////////////////////////////////////////////////////////////
+  /** Internal class of KhalimskySpaceND that provides some optimizations
+   * depending on the space type.
+   */
+  template < class TKhalimskySpace >
+  class KhalimskySpaceNDHelper;
 
   /////////////////////////////////////////////////////////////////////////////
   // template class KhalimskySpaceND
@@ -333,7 +339,12 @@ namespace DGtal
   template < Dimension dim,
              typename TInteger = DGtal::int32_t >
   class KhalimskySpaceND
+    : private KhalimskySpaceNDHelper< KhalimskySpaceND< dim, TInteger > >
   {
+
+    typedef KhalimskySpaceNDHelper< KhalimskySpaceND< dim, TInteger > > Helper;
+    friend class KhalimskySpaceNDHelper< KhalimskySpaceND< dim, TInteger > >;
+    
     //Integer must be signed to characterize a ring.
     BOOST_CONCEPT_ASSERT(( concepts::CInteger<TInteger> ) );
 
@@ -406,6 +417,15 @@ namespace DGtal
     template <typename Value> struct SurfelMap {
       typedef std::map<SCell,Value> Type;
     };
+
+    /// Boundaries closure type
+    enum Closure
+      {
+        closed,    ///< The space is closed.
+        open,     ///< The space is open.
+        periodic  ///< The space is periodic.
+      };
+
     // ----------------------- Standard services ------------------------------
   public:
 
@@ -438,15 +458,47 @@ namespace DGtal
      *
      * @param lower the lowest point in this space (digital coords)
      * @param upper the upper point in this space (digital coords)
-     * @param closed 'true' if this space is closed, 'false' if open.
+     * @param isClosed 'true' if this space is closed and non-periodic in every dimension, 'false' if open.
      *
      * @return true if the initialization was valid (ie, such bounds
      * are representable with these integers).
      */
     bool init( const Point & lower,
                const Point & upper,
-               bool closed );
+               bool isClosed );
+    
+    /**
+     * Specifies the upper and lower bounds for the maximal cells in
+     * this space.
+     *
+     * @param lower the lowest point in this space (digital coords)
+     * @param upper the upper point in this space (digital coords)
+     * @param closure \a closed, \a open or \a periodic if this space is resp. closed (and non-periodic), 
+     *        open or periodic (thus closed) in every dimension.
+     *
+     * @return true if the initialization was valid (ie, such bounds
+     * are representable with these integers).
+     */
+    bool init( const Point & lower,
+               const Point & upper,
+               Closure closure );
 
+    /**
+     * Specifies the upper and lower bounds for the maximal cells in
+     * this space.
+     *
+     * @param lower the lowest point in this space (digital coords)
+     * @param upper the upper point in this space (digital coords)
+     * @param bndryClosure an array of \a closed, \a open or \a periodic if this space is resp. closed (and non-periodic), 
+     *        open or periodic (thus closed) in the corresponding dimension.
+     *
+     * @return true if the initialization was valid (ie, such bounds
+     * are representable with these integers).
+     */
+    bool init( const Point & lower,
+               const Point & upper,
+               Closure closure[dim] );
+    
     // ------------------------- Basic services ------------------------------
   public:
 
@@ -475,17 +527,39 @@ namespace DGtal
     const Point & upperBound() const;
     /**
        @return the lower bound for cells in this space.
+       @todo doc for periodic
     */
     const Cell & lowerCell() const;
     /**
        @return the upper bound for cells in this space.
+       @todo doc for periodic
     */
     const Cell & upperCell() const;
 
     /**
-       @return 'true' iff the space is closed.
+       @return 'true' iff the space is closed or periodic along every dimension.
     */
     bool isSpaceClosed() const;
+
+    /**
+     * @return 'true' iff the space is close or periodic along the specified dimension.
+     */
+    bool isSpaceClosed( Dimension d ) const;
+
+    /**
+     * @return 'true' iff the space is periodic along every dimension.
+     */
+    bool isSpacePeriodic() const;
+
+    /**
+     * @return 'true' iff the space is periodic along the specified dimension.
+     */
+    bool isSpacePeriodic( Dimension d ) const;
+
+    /**
+     * @return 'true' iff the space is periodic along at least one dimension.
+     */
+    bool isAnyDimensionPeriodic() const;
 
     // ----------------------- Cell creation services --------------------------
   public:
@@ -509,7 +583,7 @@ namespace DGtal
      * @return the cell having the topology of [c] and the given
      * digital coordinates [p].
      */
-    Cell uCell( const Point & p, const Cell & c ) const;
+    Cell uCell( Point p, const Cell & c ) const;
 
     /**
      * From the Khalimsky coordinates of a cell and a sign, builds the
@@ -531,7 +605,7 @@ namespace DGtal
      * @return the cell having the topology and sign of [c] and the given
      * digital coordinates [p].
      */
-    SCell sCell( const Point & p, const SCell & c ) const;
+    SCell sCell( Point p, const SCell & c ) const;
 
     /**
      * From the digital coordinates of a point in Zn, creates the spel
@@ -541,7 +615,7 @@ namespace DGtal
      *
      * @return the spel having the given digital coordinates [p].
      */
-    Cell uSpel( const Point & p ) const;
+    Cell uSpel( Point p ) const;
 
     /**
      * From the digital coordinates of a point in Zn, creates the spel
@@ -552,7 +626,7 @@ namespace DGtal
      *
      * @return the signed spel having the given digital coordinates [p].
      */
-    SCell sSpel( const Point & p, Sign sign = POS ) const;
+    SCell sSpel( Point p, Sign sign = POS ) const;
 
     /**
      * From the digital coordinates of a point in Zn, creates the pointel
@@ -562,7 +636,7 @@ namespace DGtal
      *
      * @return the pointel having the given digital coordinates [p].
      */
-    Cell uPointel( const Point & p ) const;
+    Cell uPointel( Point p ) const;
 
     /**
      * From the digital coordinates of a point in Zn, creates the pointel
@@ -573,7 +647,7 @@ namespace DGtal
      *
      * @return the signed pointel having the given digital coordinates [p].
      */
-    SCell sPointel( const Point & p, Sign sign = POS ) const;
+    SCell sPointel( Point p, Sign sign = POS ) const;
 
 
     // ----------------------- Read accessors to cells ------------------------
@@ -645,7 +719,7 @@ namespace DGtal
      * @param k any valid dimension.
      * @param i an integer coordinate within the space.
      */
-    void uSetKCoord( Cell & c, Dimension k, const Integer & i ) const;
+    void uSetKCoord( Cell & c, Dimension k, Integer i ) const;
 
     /**
      * Sets the [k]-th Khalimsky coordinate of [c] to [i].
@@ -653,7 +727,7 @@ namespace DGtal
      * @param k any valid dimension.
      * @param i an integer coordinate within the space.
      */
-    void sSetKCoord( SCell & c, Dimension k, const Integer & i ) const;
+    void sSetKCoord( SCell & c, Dimension k, Integer i ) const;
 
     /**
      * Sets the [k]-th digital coordinate of [c] to [i].
@@ -912,7 +986,7 @@ namespace DGtal
        @return the same element as [p] except for the incremented
        coordinate [k].
     */
-    Cell uGetIncr( const Cell & p, Dimension k ) const;
+    Cell uGetIncr( Cell p, Dimension k ) const;
 
     /**
        Useful to check if you are going out of the space.
@@ -953,7 +1027,7 @@ namespace DGtal
        @return the same element as [p] except for an decremented
        coordinate [k].
     */
-    Cell uGetDecr( const Cell & p, Dimension k ) const;
+    Cell uGetDecr( Cell p, Dimension k ) const;
 
     /**
        Useful to check if you are going out of the space.
@@ -985,7 +1059,7 @@ namespace DGtal
        @return the same element as [p] except for a coordinate [k]
        incremented with x.
     */
-    Cell uGetAdd( const Cell & p, Dimension k, const Integer & x ) const;
+    Cell uGetAdd( Cell p, Dimension k, const Integer & x ) const;
 
     /**
        NB: you can go out of the space.
@@ -996,7 +1070,7 @@ namespace DGtal
        @return the same element as [p] except for a coordinate [k]
        decremented with x.
     */
-    Cell uGetSub( const Cell & p, Dimension k, const Integer & x ) const;
+    Cell uGetSub( Cell p, Dimension k, const Integer & x ) const;
 
     /**
        Useful to check if you are going out of the space.
@@ -1023,7 +1097,7 @@ namespace DGtal
        @param vec any pointel.
        @return the unsigned code of the cell [p] translated by [coord].
     */
-    Cell uTranslation( const Cell & p, const Vector & vec ) const;
+    Cell uTranslation( Cell p, const Vector & vec ) const;
 
     /**
        Return the projection of [p] along the [k]th direction toward
@@ -1034,7 +1108,7 @@ namespace DGtal
        @param k the concerned coordinate.
        @return the projection.
     */
-    Cell uProjection( const Cell & p, const Cell & bound, Dimension k ) const;
+    Cell uProjection( Cell p, const Cell & bound, Dimension k ) const;
 
     /**
        Projects [p] along the [k]th direction toward
@@ -1090,7 +1164,7 @@ namespace DGtal
        @return the same element as [p] except for the incremented
        coordinate [k].
     */
-    SCell sGetIncr( const SCell & p, Dimension k ) const;
+    SCell sGetIncr( SCell p, Dimension k ) const;
 
     /**
        Useful to check if you are going out of the space.
@@ -1129,7 +1203,7 @@ namespace DGtal
        @return the same element as [p] except for an decremented
        coordinate [k].
     */
-    SCell sGetDecr( const SCell & p, Dimension k ) const;
+    SCell sGetDecr( SCell p, Dimension k ) const;
 
     /**
        Useful to check if you are going out of the space.
@@ -1160,7 +1234,7 @@ namespace DGtal
        @return the same element as [p] except for a coordinate [k]
        incremented with x.
     */
-    SCell sGetAdd( const SCell & p, Dimension k, const Integer & x ) const;
+    SCell sGetAdd( SCell p, Dimension k, const Integer & x ) const;
 
     /**
        NB: you can go out of the space.
@@ -1171,7 +1245,7 @@ namespace DGtal
        @return the same element as [p] except for a coordinate [k]
        decremented with x.
     */
-    SCell sGetSub( const SCell & p, Dimension k, const Integer & x ) const;
+    SCell sGetSub( SCell p, Dimension k, const Integer & x ) const;
 
     /**
        Useful to check if you are going out of the space.
@@ -1198,7 +1272,7 @@ namespace DGtal
        @param vec any pointel.
        @return the signed code of the cell [p] translated by [coord].
     */
-    SCell sTranslation( const SCell & p, const Vector & vec ) const;
+    SCell sTranslation( SCell p, const Vector & vec ) const;
 
     /**
        Return the projection of [p] along the [k]th direction toward
@@ -1209,7 +1283,7 @@ namespace DGtal
        @param k the concerned coordinate.
        @return the projection.
     */
-    SCell sProjection( const SCell & p, const SCell & bound, Dimension k ) const;
+    SCell sProjection( SCell p, const SCell & bound, Dimension k ) const;
 
     /**
        Projects [p] along the [k]th direction toward
@@ -1335,7 +1409,7 @@ namespace DGtal
        @note The cell should have an incident cell in this
        direction/orientation.
     */
-    Cell uIncident( const Cell & c, Dimension k, bool up ) const;
+    Cell uIncident( Cell c, Dimension k, bool up ) const;
 
     /**
        @param c any signed cell.
@@ -1356,7 +1430,7 @@ namespace DGtal
        @note The cell should have an incident cell in this
        direction/orientation.
     */
-    SCell sIncident( const SCell & c, Dimension k, bool up ) const;
+    SCell sIncident( SCell c, Dimension k, bool up ) const;
 
     /**
        @param c any unsigned cell.
@@ -1421,7 +1495,7 @@ namespace DGtal
        @return the direct incident cell of [p] along [k] (the incident
        cell along [k] whose sign is positive).
     */
-    SCell sDirectIncident( const SCell & p, Dimension k ) const;
+    SCell sDirectIncident( SCell p, Dimension k ) const;
 
     /**
        @param p any signed cell.
@@ -1430,7 +1504,7 @@ namespace DGtal
        @return the indirect incident cell of [p] along [k] (the incident
        cell along [k] whose sign is negative).
     */
-    SCell sIndirectIncident( const SCell & p, Dimension k ) const;
+    SCell sIndirectIncident( SCell p, Dimension k ) const;
 
 
     // ----------------------- Interface --------------------------------------
@@ -1456,7 +1530,8 @@ namespace DGtal
     Point myUpper;
     Cell myCellLower;
     Cell myCellUpper;
-    bool myIsClosed;
+    Closure myClosure[dim];
+    
     // ------------------------- Hidden services ------------------------------
   protected:
 
