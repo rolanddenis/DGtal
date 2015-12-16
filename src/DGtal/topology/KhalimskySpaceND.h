@@ -423,7 +423,8 @@ namespace DGtal
       {
         closed,   ///< The space is closed and non-periodic.
         open,     ///< The space is open.
-        periodic  ///< The space is periodic.
+        periodic, ///< The space is periodic.
+        mirror    ///< The space is periodic using mirroring.
       };
 
     // ----------------------- Standard services ------------------------------

@@ -371,14 +371,16 @@ private:
 public:
   // Provided helpers
 
-  /// @return true is the specified dimension is periodic
+  /// @return true is the specified dimension is periodic or mirror.
   inline
   bool isDimensionPeriodicHelper( DGtal::Dimension d ) const
     {
-      return derived().myClosure[ d ] == KhalimskySpace::periodic;
+      const Closure closure = derived().myClosure[ d ];
+      return    closure == KhalimskySpace::periodic
+             || closure == KhalimskySpace::mirror;
     }
   
-  /// @return true is there is at least one periodic dimension.
+  /// @return true is there is at least one periodic (or mirror) dimension.
   inline
   bool isAnyDimensionPeriodicHelper() const
     {
