@@ -2,6 +2,12 @@
 # DGtal 0.9.1
 
 ## New Features / Critical Changes
+- *General*
+ - DGtal requires now to have a C++11 enabled compiler (gcc>4.6, clang
+   >2.9, VS14, ...). This allows us to use new C++11 features in
+   DGtal core and to have more generic and reliable code. (David
+   Coeurjolly, [#1080](https://github.com/DGtal-team/DGtal/pull/1080))
+
 - *Base Package*
  - Traits class for containers in order to probe their category at compile time.
    (Jacques-Olivier Lachaud, [#1079](https://github.com/DGtal-team/DGtal/pull/1079))
@@ -16,12 +22,6 @@
    opening, closure, star, link, interior, boundary, set operations
    and relations, as a collapse operation.
    (Jacques-Olivier Lachaud, [#1079](https://github.com/DGtal-team/DGtal/pull/1079))
-
-- *General*
- - DGtal requires now to have a C++11 enabled compiler (gcc>4.6, clang
-   >2.9, VS14, ...). This allows us to use new C++11 features in 
-   DGtal core and to have more generic and reliable code. (David
- Coeurjolly, [#1080](https://github.com/DGtal-team/DGtal/pull/1080))
 
 - *Geometry Package*
  - Hull2DHelpers: implementation of the rotating caliper algorithm to compute

@@ -214,7 +214,7 @@ namespace DGtal
      * |--------------------|-------------|----------|----------|
      * | vector             |   false     |  false   |  false   |
      * | list               |   false     |  false   |  false   |
-     * | (to avoid)         |   false     |  false   |  true    |
+     * | (not valid)        |   false     |  false   |  true    |
      * | sorted vector (S)  |   false     |  true    |  false   |
      * | sorted list (S)    |   false     |  true    |  false   |
      * | set (S)            |    true     |  true    |  false   |
@@ -225,6 +225,10 @@ namespace DGtal
      * @note For pair containers (like map and unordered_map), the
      * data is not taken into account, which means that it can be lost
      * in some (modifier) operations.
+     *
+     * @note It is illogical to have a containers that is not
+     * associative and that is a pair container, since the pair
+     * represents an association.
      */
     template <typename Container, bool associative, bool ordered>
     struct SetFunctionsImpl
@@ -1255,78 +1259,6 @@ namespace DGtal
      * symmetric difference ^.
      */
     namespace setops {
-
-      //////////////////////// EQUALITY /////////////////////////
-      /** 
-       * Equality test.
-       *
-       * @param[in] S1 an input set.
-       * @param[in] S2 another input set.
-       *
-       * @return true iff \a S1 is equal to \a S2 (i.e. \a S1 is a
-       * subset of \a S2 and \a S2 is a subset of \a S1).
-       *
-       * @tparam Container any type of container (even a sequence, a
-       * set, an unordered_set, a map, etc).
-       */
-      template <typename Container>
-      bool operator==( const Container& S1, const Container& S2 )
-      {
-        return isEqual( S1, S2 );
-      }
-
-      //////////////////////// DIFFERENT /////////////////////////
-      /** 
-       * Difference test.
-       *
-       * @param[in] S1 an input set.
-       * @param[in] S2 another input set.
-       *
-       * @return true iff \a S1 is not equal to \a S2 (i.e. either \a
-       * S1 is not a subset of \a S2 or \a S2 is not a subset of \a
-       * S1).
-       *
-       * @tparam Container any type of container (even a sequence, a
-       * set, an unordered_set, a map, etc).
-       */
-      template <typename Container>
-      bool operator!=( const Container& S1, const Container& S2 )
-      {
-        return ! isEqual( S1, S2 );
-      }
-
-      //////////////////////// INCLUSION /////////////////////////
-      /** 
-       * Inclusion test (subset of).
-       *
-       * @param[in] S1 an input set.
-       * @param[in] S2 another input set.
-       * @return true iff \a S1 is a subset of \a S2.
-       *
-       * @tparam Container any type of container (even a sequence, a
-       * set, an unordered_set, a map, etc).
-       */
-      template <typename Container>
-      bool operator<=( const Container& S1, const Container& S2 )
-      {
-        return isSubset( S1, S2 );
-      }
-
-      /** 
-       * Inclusion test (supset of).
-       *
-       * @param[in] S1 an input set.
-       * @param[in] S2 another input set.
-       * @return true iff \a S2 is a subset of \a S1.
-       *
-       * @tparam Container any type of container (even a sequence, a
-       * set, an unordered_set, a map, etc).
-       */
-      template <typename Container>
-      bool operator>=( const Container& S1, const Container& S2 )
-      {
-        return isSubset( S2, S1 );
-      }
       
       /** 
        * Set difference operation. Updates the set S1 as S1 - S2. 

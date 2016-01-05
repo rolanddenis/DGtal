@@ -32,10 +32,21 @@ testCubicalComplex.cpp,
 
 We define a \b cubical \b complex \a C as a collection of cells living
 in some Khalimsky space. Two cells of \a C are \b incident if and only
-if they are incident in the Khalimsky space. 
+if they are incident in the Khalimsky space. A cubical complex
+provides many services related to set of (unsigned) cells living in a
+Khalimsky space: incidence operations, closure, star, link, cell set
+operations, cell set relations, collapse operation. 
+
 
 @note In opposition to the usual definition of simplical complex, we
-do not require that all faces of a cell of \a K belong also to \a K.
+do not require that all faces of a cell of \a C belong also to \a C.
+
+@note A digital surface is not a cubical complex, because it does not
+contain explicitely cells of dimension lower than n-1 and because it
+requires some sort of orientation. However, it is easy to build an
+ExplicitDigitalSurface or a LightExplicitDigitalSurface from a
+CubicalComplex that stores a set of d-1-cells. You just need to create
+a functor Surfel -> bool from the complex.
 
 To create a cubical complex, we need to specify in which Khalimsky
 space it lives and also, optionally, the type of container used for
@@ -79,6 +90,24 @@ complex from a digital surface (see \ref moduleDigitalSurfaces).
 You have also methods to remove some cells (CubicalComplex::eraseCell,
 CubicalComplex::eraseCells) and methods to check if a cell belongs to
 the complex (CubicalComplex::belongs).
+
+@note You may use \c std::unordered_map or \c boost::unordered_map
+instead of \c std::map. It is sometimes slightly faster. In this case
+you need to define a hash function for cells. Either you provide one,
+or you just include the file KhalimskyCellHashFunctions.h with:
+
+\code
+#include "DGtal/topology/KhalimskyCellHashFunctions.h"
+\endcode
+
+Last, there is a data associated with each cell of a complex. The data
+type must either be CubicalCellData or a type that derives from
+CubicalCellData. This data is used by the functions::collapse
+operation, a function that is used to make a homotopic thinning of the
+cubical complex. It may also be used by the user for other purposes,
+like storing flags, coordinates or anything else associated to a
+cell. Look at the documentation of CubicalCellData to see the default
+stored flags and data.
 
 @section dgtal_ccomplex_sec2  Displaying a 2D cubical complex
 
@@ -141,8 +170,8 @@ You have three methods to compute these "subcomplexes" of a complex \a
 X. In each case, you must give a subcomplex \a S of \a X which defines
 the cells for which you wish to compute the closure, star or link.
 
-@image html cubical-complex-illustrations-S.png "Cubical complex \a X in metallic grey and subcomplex \a S in dark grey."
-@image latex cubical-complex-illustrations-S.png "Cubical complex \a X in metallic grey and subcomplex \a S in dark grey." width=5cm
+@image html cubical-complex-illustrations-S.png "Cubical complex \a X in light grey and subcomplex \a S in dark grey."
+@image latex cubical-complex-illustrations-S.png "Cubical complex \a X in light grey and subcomplex \a S in dark grey." width=5cm
 
 
 - CubicalComplex::closure: returns the closure of the cells of \a S
@@ -204,16 +233,16 @@ empty intersection:
 
 A cubical complex can be seen as a generic container (it is a model of
 boost::Container). Remember though that it is not a model of
-boost::DefaultConstructible, because it must known a cellular grid
+boost::DefaultConstructible, because it must know a cellular grid
 space to be valid. You could thus use operations defined in
 DGtal::functions::setops (see \ref moduleSetFunctions) to perform set
 operations and relations on complexes. However, to use the specificity
 of the templated parameter CellContainer of CubicalComplex, it is
-better to use operations and relations defined in
-DGtal::function::ccops, for instance as follows:
+better to use operations and relations defined in namespace
+DGtal::function, for instance as follows:
 
 \code
-using namespace DGtal::functions::ccops;
+using namespace DGtal::functions;
 CC X( K );            // creates the cubical complex
 CC Xc  = ~X;          // closing of X
 CC Xco = *Xc;         // opening of Xc (interior of X).
@@ -222,22 +251,22 @@ CC Xbd2= X.boundary();// same result for pure complex.
 \endcode
 
 You have the following operations:
-- functions::ccops::operator|  : union of two complexes.
-- functions::ccops::operator|= : assignment union with another complex.
-- functions::ccops::operator&  : intersection of two complexes.
-- functions::ccops::operator&= : assignment intersection with another complex.
-- functions::ccops::operator-  : set difference of two complexes.
-- functions::ccops::operator-= : assignment set difference with another complex.
-- functions::ccops::operator^  : symmetric set difference of two complexes.
-- functions::ccops::operator^= : assignment symmetric set difference with another complex.
-- functions::ccops::operator~  : closing of a complex (smallest closed complex containg input complex).
-- functions::ccops::operator*  : opening of a complex (greatest open complex contained in input complex).
+- functions::operator|  : union of two complexes.
+- functions::operator|= : assignment union with another complex.
+- functions::operator&  : intersection of two complexes.
+- functions::operator&= : assignment intersection with another complex.
+- functions::operator-  : set difference of two complexes.
+- functions::operator-= : assignment set difference with another complex.
+- functions::operator^  : symmetric set difference of two complexes.
+- functions::operator^= : assignment symmetric set difference with another complex.
+- functions::operator~  : closing of a complex (smallest closed complex containg input complex).
+- functions::operator*  : opening of a complex (greatest open complex contained in input complex).
 
 And the following relations:
-- functions::ccops::operator<=  : inclusion of two complexes (subset).
-- functions::ccops::operator>=  : inclusion of two complexes (supset).
-- functions::ccops::operator==  : equality of two complexes (both subset and supset).
-- functions::ccops::operator!=  : non-equality of two complexes (equal is false).
+- functions::operator<=  : inclusion of two complexes (subset).
+- functions::operator>=  : inclusion of two complexes (supset).
+- functions::operator==  : equality of two complexes (both subset and supset).
+- functions::operator!=  : non-equality of two complexes (equal is false).
 
 All these operations are at most \b linear in the sum of the number of
 cells of input complexes, but they are generally exponential in the
@@ -265,14 +294,14 @@ keeping two cells \a fixed.
 @snippet topology/cubical-complex-illustrations.cpp cubical-complex-illustrations-collapse
 
 As you can see, when collapsing a complex X, you precise:
-- the subcomplex of X that can be collapsed (should be closed,
+- The subcomplex of X that can be collapsed (should be closed,
   otherwise it is closed).
-- a priority object that tells in which order cell are collapsed. If
+- A priority object that tells in which order cell are collapsed. If
   you use CubicalComplex::DefaultCellMapIteratorPriority, then the
   order follows the values stored in the data associated with each
   cell. You may use CubicalComplex::operator[] to change this value
-  for each cell.
-- various hints to speed up the process.
+  for each cell. The higher the value the sooner the cell is collapsed.
+- Various hints to speed up the process.
 
 Example topology/cubical-complex-collapse.cpp shows that it works also in 3D (in fact, it is nD).
 
