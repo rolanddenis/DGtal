@@ -1,7 +1,9 @@
 SET(DGTAL_TESTS_SRC_IO_WRITERS
        testPNMRawWriter 
        testMeshWriter
-       testGenericWriter)
+       testGenericWriter
+       testVTKLightWriter
+)
 
 
 FOREACH(FILE ${DGTAL_TESTS_SRC_IO_WRITERS})
