@@ -39,11 +39,6 @@ using namespace DGtal;
 
 ///////////////////////////////////////////////////////////////////////////////
 #include <iostream>
-#ifdef WITH_QT5
-  #include <QApplication>
-#else
-  #include <QtGui/qapplication.h>
-#endif
 #include "DGtal/base/Common.h"
 #include "DGtal/helpers/StdDefs.h"
 #include "DGtal/shapes/Shapes.h"
@@ -118,7 +113,7 @@ int main( int argc, char** argv )
  viewer << linelA << linelB << linelC;
 
 
- Cell center(Point(5,5,5));
+ Cell center = K.uCell(Point(5,5,5));
 // Testing display of oriented surfels:
  SCell ssurfelXZ = K.sCell( Point( 5, 6, 5 ), false );
  SCell ssurfelXY = K.sCell( Point( 5, 5, 6 ), false );

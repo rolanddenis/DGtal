@@ -36,14 +36,8 @@
 /** Prevents repeated inclusion of headers. */
 #define ArrayImageAdapter_h
 
-#if __cplusplus < 201103L
-  #error ArrayImageAdapter.h requires C++11.
-#endif
-
 //////////////////////////////////////////////////////////////////////////////
 // Inclusions
-#include <boost/assert.hpp>
-#include <boost/static_assert.hpp>
 #include <boost/concept/assert.hpp>
 #include <boost/iterator/iterator_concepts.hpp>
 #include <iterator>
@@ -60,11 +54,12 @@ namespace DGtal
 {
 
   /////////////////////////////////////////////////////////////////////////////
+  /// @cond
   /**
    * @brief Aim: Image adapter for generic arrays with sub-domain view capability.
    *
    * Description of template class 'ArrayImageAdapter' <p>
-   * It is an empty class that is specialized for HyperRectDomain (see corresponding documentation page).
+   * It is an empty class that is specialized for HyperRectDomain (see @ref DGtal::ArrayImageAdapter< TArrayIterator, HyperRectDomain< TSpace > >).
    *
    * @tparam TArrayIterator Type of a random-access iterator over the datas (can be a T* pointer).
    * @tparam TDomain  Type of the domain (must be an HyperRectDomain).
@@ -74,6 +69,7 @@ namespace DGtal
     typename TDomain
   >
   class ArrayImageAdapter;
+  /// @endcond
 
   /////////////////////////////////////////////////////////////////////////////
   /**
@@ -105,7 +101,6 @@ namespace DGtal
    *
    * @warning The array must be column-major ordered (but row-major order could be later accepted via template parameter, if needed ?)
    * @warning The domain must be an HyperRectDomain.
-   * @warning C++11 needs to be enabled in order to use this class.
    *
    * @tparam TArrayIterator Type of a random-access iterator over the datas (can be a T* pointer).
    * @tparam TSpace Type of the space associated to the HyperRectDomain (auto-deduced from TDomain template, see ArrayImageAdapter).
@@ -126,14 +121,14 @@ namespace DGtal
     BOOST_CONCEPT_ASSERT( (boost_concepts::RandomAccessTraversalConcept<TArrayIterator>) );
 
     public:
-      // Typedefs
+      // Aliases
       using Self = ArrayImageAdapter<TArrayIterator, HyperRectDomain<TSpace> >;           ///< Self type.
       using ArrayIterator   = TArrayIterator;                                             ///< The given random-access iterator's type.
       using Value           = typename std::iterator_traits<ArrayIterator>::value_type;   ///< The value type stored in the image.
       using Reference       = typename std::iterator_traits<ArrayIterator>::reference;    ///< Mutable reference type.
       using ConstReference  = const Reference;                                            ///< Constant reference type.
 
-      // DGtal typedefs and constant
+      // DGtal aliases and constant
       using Domain    = HyperRectDomain<TSpace>;      ///< Domain type.
       using Point     = typename Domain::Point;       ///< Point type.
       using Dimension = typename Domain::Dimension;   ///< Dimension type.
@@ -171,7 +166,7 @@ namespace DGtal
           , myFullDomain{ aFullDomain }
           , myViewDomain{ aViewDomain }
         {
-          BOOST_ASSERT_MSG(
+          ASSERT_MSG(
                  aFullDomain.lowerBound().isLower( aViewDomain.lowerBound() )
               && aFullDomain.upperBound().isUpper( aViewDomain.upperBound() ),
               "The viewable domain must be included into the full domain."
@@ -229,7 +224,7 @@ namespace DGtal
       inline
       Value getValue( Point const& aPoint ) const
         {
-          BOOST_ASSERT_MSG(
+          ASSERT_MSG(
               myFullDomain.isInside(aPoint),
               "The point is outside the full domain."
           );
@@ -245,7 +240,7 @@ namespace DGtal
       inline
       void setValue( Point const& aPoint, Value aValue )
         {
-          BOOST_ASSERT_MSG(
+          ASSERT_MSG(
               myFullDomain.isInside(aPoint),
               "The point is outside the full domain."
           );
@@ -283,7 +278,7 @@ namespace DGtal
         }
 
       /**
-       * @return a constant iterator pointing to the lower bound of the viewable domain (C++11).
+       * @return a constant iterator pointing to the lower bound of the viewable domain.
        */
       inline
       ConstIterator cbegin() const
@@ -310,7 +305,7 @@ namespace DGtal
         }
 
       /**
-       * @return a constant iterator pointing after the upper bound of the viewable domain (C++11).
+       * @return a constant iterator pointing after the upper bound of the viewable domain.
        */
       inline
       ConstIterator cend() const
@@ -329,7 +324,7 @@ namespace DGtal
       inline
       Reference dereference( Point const& /* aPoint */, typename Point::Coordinate aFullIndex )
         {
-          BOOST_ASSERT_MSG(
+          ASSERT_MSG(
               aFullIndex >= 0 && static_cast<typename Domain::Size>(aFullIndex) < myFullDomain.size(),
               "linearized index out of bounds !"
           );
@@ -344,7 +339,7 @@ namespace DGtal
       inline
       ConstReference dereference( Point const& /* aPoint */, typename Point::Coordinate aFullIndex ) const
         {
-          BOOST_ASSERT_MSG(
+          ASSERT_MSG(
               aFullIndex >= 0 && static_cast<typename Domain::Size>(aFullIndex) < myFullDomain.size(),
               "linearized index out of bounds !"
           );
@@ -420,7 +415,7 @@ namespace DGtal
            */
           Difference operator() ( Point const& aPoint ) const
             {
-              BOOST_ASSERT_MSG(
+              ASSERT_MSG(
                   myDomain.isInside(aPoint),
                   "The point is outside the domain !"
               );

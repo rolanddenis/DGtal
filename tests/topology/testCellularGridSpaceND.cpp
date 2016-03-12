@@ -82,8 +82,8 @@ bool testCellularGridSpaceND()
   Point kp( spel );
   Cell center = K.uCell( kp );
   Cell c1 = K.uCell( kp );
-  Cell clow = K.uCell( low, kp );
-  Cell chigh = K.uCell( high, kp );
+  Cell clow = K.uCell( low, center );
+  Cell chigh = K.uCell( high, center );
   trace.info() << c1 << clow << chigh
          << " topo(c1)=" << K.uTopology( c1 ) << " dirs=";
   for ( DirIterator q = K.uDirs( clow ); q != 0; ++q )
@@ -415,8 +415,8 @@ bool testFindABel()
   SCell s001 = Surfaces<KSpace>::findABel( K, shape_set , p000 , p001 );
 
   trace.endBlock();
-  return ( (s010 == SCell( Point(1,2,1), true  ) ) &&
-           (s001 == SCell( Point(1,1,2), false ) ) );
+  return ( (s010 == K.sCell( Point(1,2,1), true  ) ) &&
+           (s001 == K.sCell( Point(1,1,2), false ) ) );
 }
 
 template <typename KSpace>

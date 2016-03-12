@@ -63,8 +63,8 @@ checkInsert( VContainer1 & v, LContainer2 & l,
   bool is_equal = isEqual( v, l );
   for ( unsigned int i = 0; i < nb; ++i )
     {
-      unsigned int idx = random() % ( l.max_size() );
-      double val = ( (double)random() ) / RAND_MAX;
+      unsigned int idx = rand() % ( l.max_size() );
+      double val = ( (double)rand() ) / RAND_MAX;
       insert( v, l, idx, val );
       is_equal &= isEqual( v, l );
     }
@@ -86,7 +86,7 @@ checkErase( VContainer1 & v, LContainer2 & l,
   bool is_equal = isEqual( v, l );
   for ( unsigned int i = 0; i < nb; ++i )
     {
-      unsigned int idx = random() % ( l.max_size() );
+      unsigned int idx = rand() % ( l.max_size() );
       erase( v, l, idx );
       //std::cout << "  (" << i << "/" << nb << ") l=" << l << std::endl; 
       is_equal &= isEqual( v, l );
