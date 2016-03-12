@@ -43,6 +43,8 @@
 #include <iostream>
 #include "DGtal/base/Common.h"
 #include "DGtal/topology/CPreCellularGridSpaceND.h"
+#include "DGtal/base/ConstAlias.h"
+#include "DGtal/topology/CCellularGridSpaceND.h"
 //////////////////////////////////////////////////////////////////////////////
 
 namespace DGtal
@@ -90,9 +92,9 @@ namespace DGtal
     CanonicSCellEmbedder();
 
     /**
-       Constructor from space. 
+       Constructor from space.
     */
-    CanonicSCellEmbedder( const KSpace & aKSpace );
+    CanonicSCellEmbedder( ConstAlias<KSpace> aKSpace );
 
     /**
        Copy constructor.
@@ -115,7 +117,7 @@ namespace DGtal
     /**
        Map a signed cell to its corresponding point in the Euclidean
        space.
-       
+
        @param cell any signed cell in the digital space.
        @return its canonical embedding in the Euclidean space.
     */
@@ -124,7 +126,7 @@ namespace DGtal
     /**
        Map a signed cell to its corresponding point in the Euclidean
        space.
-       
+
        @param cell any signed cell in the digital space.
        @return its canonical embedding in the Euclidean space.
     */
