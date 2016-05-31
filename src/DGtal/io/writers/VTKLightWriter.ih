@@ -312,7 +312,6 @@ write ( std::string const& aFieldName, TImage const& aField, TFunctor const& aFu
   // Image value type and VTK value type deduced from the functor.
   using ImageValue = typename TImage::Value;
   using Value = typename std::result_of< TFunctor( ImageValue ) >::type;
-  //using Value = decltype( aFunctor(  ) );
 
   // Write header if not already done
   init();

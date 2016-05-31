@@ -108,8 +108,8 @@ namespace DGtal
     /**
      * Constructor
      *
-     * @param aFileName  name of the file ...
-     * @param aDomain    domain of the datas to be exported.
+     * @param aFileName  name of the file.
+     * @param aDomain    domain of the data to be exported.
      */
     VTKLightWriter(std::string const& aFileName, Domain aDomain, RealPoint aSpacing = RealPoint::diagonal(1) );
 
@@ -118,6 +118,18 @@ namespace DGtal
      */
     ~VTKLightWriter();
 
+    /// Copy constructor. Deleted.
+    VTKLightWriter ( const VTKLightWriter & /* other */ ) = delete;
+
+    /// Move constructor. Deleted.
+    VTKLightWriter ( VTKLightWriter && /* other */ ) = delete;
+
+    /// Copy assignment operator. Deleted.
+    VTKLightWriter & operator= ( const VTKLightWriter & /* other */ ) = delete;
+
+    /// Move assignment operator. Deleted.
+    VTKLightWriter & operator= ( VTKLightWriter && /* other */ ) = delete;
+
     /**
      * Checks the validity/consistency of the object.
      * @return 'true' if the object is valid, 'false' otherwise.
@@ -125,7 +137,7 @@ namespace DGtal
     bool isValid() const;
 
     /**
-     * Write the VTK header.
+     * Writes the VTK header.
      *
      * It is automatically done at the first data export
      * @return a reference to the writer instance
@@ -135,7 +147,7 @@ namespace DGtal
 
     ///@{
     /**
-     * Set the name of the next field
+     * Sets the name of the next field
      *
      * @param aFieldName the name of the next field.
      * @return a reference to the writer instance.
@@ -145,7 +157,7 @@ namespace DGtal
     ///@}
 
     /**
-     * Write a field
+     * Writes a field
      *
      * @tparam TImage type of an image that models CConstImage (auto-deduced).
      * @param  aField the image.
@@ -158,7 +170,9 @@ namespace DGtal
     operator<< ( TImage const& aField );
 
     /**
-     * Write a field, given his name and optionally specifying export type.
+     * Writes a field, given his name and optionally specifying a conversion functor.
+     *
+     * By default, the VTK value type is deduced from the image.
      *
      * When giving a functor, it will be used to convert the values from
      * the given image. The return type of the functor operator() method
@@ -170,7 +184,7 @@ namespace DGtal
      *
      * @tparam TImage   type of an image that models CConstImage (auto-deduced).
      * @tparam TFunctor type of the functor that convert values (auto-deduced).
-     * @return a reference to the write instance.
+     * @return a reference to the writer instance.
      */
     template <
       typename TImage,
@@ -180,45 +194,17 @@ namespace DGtal
 
 
     /**
-     * Close the file
+     * Closes the file
      */
     void close();
 
-    // ------------------------- Protected Datas ------------------------------
-  protected:
     // ------------------------- Private Datas --------------------------------
   private:
-    Domain  myDomain;           ///< Exported domain.
-    RealPoint   mySpacing;      ///< Spacing.
-    std::string myFieldName;    ///< Current field name.
+    Domain        myDomain;     ///< Exported domain.
+    RealPoint     mySpacing;    ///< Spacing.
+    std::string   myFieldName;  ///< Current field name.
     std::ofstream myFileStream; ///< File stream.
-    bool myHeader;      ///< true if the VTK header has been writed.
-
-    // ------------------------- Hidden services ------------------------------
-  protected:
-
-    /**
-     * Constructor.
-     * Forbidden by default (protected to avoid g++ warnings).
-     */
-    VTKLightWriter() = delete;
-
-  private:
-
-    /**
-     * Copy constructor.
-     * @param other the object to clone.
-     * Forbidden by default.
-     */
-    VTKLightWriter ( const VTKLightWriter & /* other */ ) = delete;
-
-    /**
-     * Assignment.
-     * @param other the object to copy.
-     * @return a reference on 'this'.
-     * Forbidden by default.
-     */
-    VTKLightWriter & operator= ( const VTKLightWriter & /* other */ ) = delete;
+    bool          myHeader;     ///< true if the VTK header has been writed.
 
     // ------------------------- Internals ------------------------------------
   private:
