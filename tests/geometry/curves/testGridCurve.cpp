@@ -34,7 +34,6 @@
 #include <fstream>
 #include <sstream>
 #include <exception>
-#include <boost/program_options.hpp>
 
 #include "DGtal/base/Common.h"
 
@@ -319,7 +318,7 @@ template <typename Range>
 void testRangeConceptChecking()
 {
     BOOST_CONCEPT_ASSERT(( CDrawableWithBoard2D<Range> ));
-    BOOST_CONCEPT_ASSERT(( CConstBidirectionalRange<Range> ));
+    BOOST_CONCEPT_ASSERT(( concepts::CConstBidirectionalRange<Range> ));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
