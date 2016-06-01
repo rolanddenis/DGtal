@@ -52,6 +52,7 @@ DGtal::Display2DFactory::drawDECSignedKhalimskyCell(DGtal::Board2D& board, const
     FATAL_ERROR( dim == 2 );
 
     using KPS = DGtal::Z2i::KPreSpace;
+    const KPS K{};
 
     //FIXME: as for Display3D models, embedder should be factorized
     //and not instantiated at each call.

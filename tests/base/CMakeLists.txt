@@ -28,13 +28,10 @@ SET(DGTAL_TESTS_SRC
    testContainerTraits
    testSetFunctions
    testSimpleRandomAccessRangeFromPoint
+   testPartialTemplateSpecialization
    testBitFieldArray
    testBigLabelledMap
    testBigLabelledMap-benchmark
-   testPartialTemplateSpecialization
-   testContainerTraits
-   testSetFunctions
-   testSimpleRandomAccessRangeFromPoint
 )
 
 FOREACH(FILE ${DGTAL_TESTS_SRC})

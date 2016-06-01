@@ -1041,6 +1041,8 @@ DGtal::Surfaces<TKSpace>::uFillExterior( const KSpace & aKSpace,
   unsigned int numberCellFilled=0;
   std::deque<Cell> pixels;
   Cell p =  aKSpace.uFirst( typename KSpace::PreCell( Point::diagonal(1) ) );
+  const Cell lowerCell = aKSpace.uFirst( p );
+  const Cell upperCell = aKSpace.uLast( p );
   
   bool in_mode = empty_is_outside;
   do
