@@ -45,6 +45,7 @@
 #include <iostream>
 #include <set>
 #include <map>
+#include <array>
 #include <DGtal/base/Common.h>
 #include <DGtal/kernel/CInteger.h>
 #include <DGtal/kernel/PointVector.h>
@@ -91,13 +92,13 @@ namespace DGtal
     using UnsignedInteger = typename NumberTraits<Integer>::UnsignedVersion;
     using Point   = PointVector< dim, Integer >;
     using PreCell = KhalimskyPreCell< dim, Integer >;
-    using KhalimskySpace = KhalimskySpaceND< dim, TInteger >;
-    using KhalimskyPreSpace = KhalimskyPreSpaceND< dim, TInteger >;
+    using CellularGridSpace = KhalimskySpaceND< dim, TInteger >;
+    using PreCellularGridSpace = KhalimskyPreSpaceND< dim, TInteger >;
     using Self    = KhalimskyCell< dim, Integer >;
 
     // Friendship
     friend class KhalimskySpaceND< dim, TInteger >;
-    friend class KhalimskySpaceNDHelper< KhalimskySpace >;
+    friend class KhalimskySpaceNDHelper< CellularGridSpace >;
 
   private:
     // Underlying pre-cell
@@ -215,13 +216,13 @@ namespace DGtal
     using UnsignedInteger = typename NumberTraits<Integer>::UnsignedVersion;
     using Point   = PointVector< dim, Integer >;
     using SPreCell = SignedKhalimskyPreCell< dim, Integer >;
-    using KhalimskySpace = KhalimskySpaceND< dim, TInteger >;
-    using KhalimskyPreSpace = KhalimskyPreSpaceND< dim, TInteger >;
+    using CellularGridSpace = KhalimskySpaceND< dim, TInteger >;
+    using PreCellularGridSpace = KhalimskyPreSpaceND< dim, TInteger >;
     using Self    = SignedKhalimskyCell< dim, Integer >;
 
     // Friendship
     friend class KhalimskySpaceND< dim, TInteger >;
-    friend class KhalimskySpaceNDHelper< KhalimskySpace >;
+    friend class KhalimskySpaceNDHelper< CellularGridSpace >;
 
   private:
     // Underlying signed pre-cell
@@ -372,11 +373,9 @@ namespace DGtal
    * method must follow the same conditions.
    * This validity can be tested with the dedicated methods uIsValid() and sIsValid().
    *
-   * Exceptions exist for uCell(const Cell &) const and sCell(const SCell &) const that are specially featured
+   * Exceptions exist for uCell(const PreCell &) const and sCell(const SPreCell &) const that are specially featured
    * to correct Khalimsky coordinates of a given cell.
-   * In addition, methods returning digital or Khalimsky coordinate of a cell have a flag to control if this
-   * coordinate must be corrected.
-   * However, when a method accepts a coordinate as parameter, it is always corrected along periodic dimensions.
+   * In addition, when a method accepts a coordinate as parameter, it is always corrected along periodic dimensions.
    *
    * @tparam dim the dimension of the digital space.
    * @tparam TInteger the Integer class used to specify the arithmetic computations (default type = int32).
@@ -409,8 +408,8 @@ namespace DGtal
 
     // Spaces
     typedef SpaceND<dim, Integer> Space;
-    typedef KhalimskySpaceND<dim, Integer>    KhalimskySpace;
-    typedef KhalimskyPreSpaceND<dim, Integer> KhalimskyPreSpace;
+    typedef KhalimskySpaceND<dim, Integer>    CellularGridSpace;
+    typedef KhalimskyPreSpaceND<dim, Integer> PreCellularGridSpace;
 
     // Cells
     typedef KhalimskyCell< dim, Integer > Cell;
@@ -420,29 +419,21 @@ namespace DGtal
 
     typedef SCell Surfel;
     typedef bool Sign;
-    using DirIterator = typename KhalimskyPreSpace::DirIterator;
+    using DirIterator = typename PreCellularGridSpace::DirIterator;
 
     // Points and Vectors
     typedef PointVector< dim, Integer > Point;
     typedef PointVector< dim, Integer > Vector;
 
 
-#if defined ( WIN32 )
     // static constants
-    static const Dimension dimension = dim;
-    static const Dimension DIM = dim;
-    static const Sign POS = true;
-    static const Sign NEG = false;
-#else
-    // static constants
-    static const Dimension dimension = dim;
-    static const Dimension DIM;
-    static const Sign POS;
-    static const Sign NEG;
-#endif //WIN32
+    static const constexpr Dimension dimension = dim;
+    static const constexpr Dimension DIM = dim;
+    static const constexpr Sign POS = true;
+    static const constexpr Sign NEG = false;
 
     template < typename CellType >
-    using AnyCellCollection = typename KhalimskyPreSpace::template AnyCellCollection< CellType >;
+    using AnyCellCollection = typename PreCellularGridSpace::template AnyCellCollection< CellType >;
 
     // Neighborhoods, Incident cells, Faces and Cofaces
     typedef AnyCellCollection<Cell> Cells;
@@ -571,7 +562,7 @@ namespace DGtal
      */
     bool init( const Point & lower,
                const Point & upper,
-               Closure closure[dim] );
+               const std::array<Closure, dim> & closure );
 
     /// @}
 
@@ -902,85 +893,6 @@ namespace DGtal
 
     ///@}
 
-    // ----------------------- Pre-cell creation services --------------------------
-    /** @name Pre-cell creation services (static methods)
-     * @{
-     */
-  public:
-
-    /** From the Khalimsky coordinates of a cell,
-     * builds the corresponding unsigned pre-cell.
-     *
-     * @param kp an integer point (Khalimsky coordinates of cell).
-     * @return the unsigned pre-cell.
-     */
-    static PreCell uPreCell( const Point & kp );
-
-    /** From the digital coordinates of a point in Zn and a cell type,
-     * builds the corresponding unsigned pre-cell.
-     *
-     * @param p an integer point (digital coordinates of cell).
-     * @param c another cell defining the topology.
-     * @return the pre-cell having the topology of [c] and the given
-     * digital coordinates [p].
-     */
-    static PreCell uPreCell( Point p, const PreCell & c );
-
-    /** From the Khalimsky coordinates of a cell and a sign,
-     * builds the corresponding signed pre-cell.
-     *
-     * @param kp an integer point (Khalimsky coordinates of cell).
-     * @param sign the sign of the cell (either POS or NEG).
-     * @return the signed pre-cell.
-     */
-    static SPreCell sPreCell( const Point & kp, Sign sign = POS );
-
-    /** From the digital coordinates of a point in Zn and a signed cell type,
-     * builds the corresponding signed pre-cell.
-     *
-     * @param p an integer point (digital coordinates of cell).
-     * @param c another cell defining the topology and sign.
-     * @return the pre-cell having the topology and sign of [c] and the given
-     * digital coordinates [p].
-     */
-    static SPreCell sPreCell( Point p, const SPreCell & c );
-
-    /** From the digital coordinates of a point in Zn,
-     * builds the corresponding pre-spel (pre-cell of maximal dimension).
-     *
-     * @param p an integer point (digital coordinates of cell).
-     * @return the pre-spel having the given digital coordinates [p].
-     */
-    static PreCell uPreSpel( Point p );
-
-    /** From the digital coordinates of a point in Zn,
-     * builds the corresponding pre-spel (pre-cell of maximal dimension).
-     *
-     * @param p an integer point (digital coordinates of cell).
-     * @param sign the sign of the cell (either POS or NEG).
-     * @return the signed pre-spel having the given digital coordinates [p].
-     */
-    static SPreCell sPreSpel( Point p, Sign sign = POS );
-
-    /** From the digital coordinates of a point in Zn,
-     * builds the corresponding pre-pointel (pre-cell of dimension 0).
-     *
-     * @param p an integer point (digital coordinates of cell).
-     * @return the pre-pointel having the given digital coordinates [p].
-     */
-    static PreCell uPrePointel( Point p );
-
-    /** From the digital coordinates of a point in Zn,
-     * builds the corresponding pre-pointel (pre-cell of dimension 0).
-     *
-     * @param p an integer point (digital coordinates of cell).
-     * @param sign the sign of the cell (either POS or NEG).
-     * @return the signed pre-pointel having the given digital coordinates [p].
-     */
-    static SPreCell sPrePointel( Point p, Sign sign = POS );
-
-    ///@}
-
     // ----------------------- Read accessors to cells ------------------------
     /** @name Read accessors to cells
      * @{
@@ -989,7 +901,7 @@ namespace DGtal
     /**
      * @param c any unsigned cell.
      * @param k any valid dimension.
-     * @return its Khalimsky coordinate along [k]. 
+     * @return its Khalimsky coordinate along [k].
      * @pre  `uIsValid(c)` is \a true.
      */
     Integer uKCoord( const Cell & c, Dimension k ) const;
@@ -2020,7 +1932,7 @@ ose sign is positive).
     Point myUpper;
     Cell myCellLower;
     Cell myCellUpper;
-    Closure myClosure[dim];
+    std::array<Closure, dimension> myClosure;
 
     // ------------------------- Hidden services ------------------------------
   protected:

@@ -31,27 +31,6 @@
 #include <DGtal/kernel/NumberTraits.h>
 //////////////////////////////////////////////////////////////////////////////
 
-///////////////////////////////////////////////////////////////////////////////
-// IMPLEMENTATION of static constants
-///////////////////////////////////////////////////////////////////////////////
-
-#if (!defined(WIN32))
-/*template < Dimension dim, typename TInteger >
-const Dimension
-DGtal::KhalimskyPreSpaceND< dim, TInteger >::dimension = dim;
-*/
-template < DGtal::Dimension dim, typename TInteger >
-const DGtal::Dimension
-DGtal::KhalimskyPreSpaceND< dim, TInteger >::DIM = dim;
-
-template < DGtal::Dimension dim, typename TInteger >
-const typename DGtal::KhalimskyPreSpaceND< dim, TInteger >::Sign
-DGtal::KhalimskyPreSpaceND< dim, TInteger >::POS = true;
-
-template < DGtal::Dimension dim, typename TInteger >
-const typename DGtal::KhalimskyPreSpaceND< dim, TInteger >::Sign
-DGtal::KhalimskyPreSpaceND< dim, TInteger >::NEG = false;
-#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 // IMPLEMENTATION of inline methods.
@@ -786,6 +765,42 @@ uGetIncr( Cell p, DGtal::Dimension k )
 //-----------------------------------------------------------------------------
 template < DGtal::Dimension dim, typename TInteger>
 inline
+bool
+DGtal::KhalimskyPreSpaceND< dim, TInteger>::
+uIsMax( const Cell &, DGtal::Dimension )
+{
+  return false;
+}
+//-----------------------------------------------------------------------------
+template < DGtal::Dimension dim, typename TInteger>
+inline
+bool
+DGtal::KhalimskyPreSpaceND< dim, TInteger>::
+uIsMin( const Cell &, DGtal::Dimension )
+{
+  return false;
+}
+//-----------------------------------------------------------------------------
+template < DGtal::Dimension dim, typename TInteger>
+inline
+bool
+DGtal::KhalimskyPreSpaceND< dim, TInteger>::
+uIsInside( const Cell &, DGtal::Dimension )
+{
+  return true;
+}
+//-----------------------------------------------------------------------------
+template < DGtal::Dimension dim, typename TInteger>
+inline
+bool
+DGtal::KhalimskyPreSpaceND< dim, TInteger>::
+uIsInside( const Cell & )
+{
+  return true;
+}
+//-----------------------------------------------------------------------------
+template < DGtal::Dimension dim, typename TInteger>
+inline
 typename DGtal::KhalimskyPreSpaceND< dim, TInteger>::Cell
 DGtal::KhalimskyPreSpaceND< dim, TInteger>::
 uGetDecr( Cell p, DGtal::Dimension k )
@@ -893,6 +908,42 @@ sGetIncr( SCell p, DGtal::Dimension k )
   ASSERT( k < DIM );
   p.myCoordinates[ k ] += 2;;
   return p;
+}
+//-----------------------------------------------------------------------------
+template < DGtal::Dimension dim, typename TInteger>
+inline
+bool
+DGtal::KhalimskyPreSpaceND< dim, TInteger>::
+sIsMax( const SCell &, DGtal::Dimension )
+{
+  return false;
+}
+//-----------------------------------------------------------------------------
+template < DGtal::Dimension dim, typename TInteger>
+inline
+bool
+DGtal::KhalimskyPreSpaceND< dim, TInteger>::
+sIsMin( const SCell &, DGtal::Dimension )
+{
+  return false;
+}
+//-----------------------------------------------------------------------------
+template < DGtal::Dimension dim, typename TInteger>
+inline
+bool
+DGtal::KhalimskyPreSpaceND< dim, TInteger>::
+sIsInside( const SCell &, DGtal::Dimension )
+{
+  return true;
+}
+//-----------------------------------------------------------------------------
+template < DGtal::Dimension dim, typename TInteger>
+inline
+bool
+DGtal::KhalimskyPreSpaceND< dim, TInteger>::
+sIsInside( const SCell & )
+{
+  return true;
 }
 //-----------------------------------------------------------------------------
 template < DGtal::Dimension dim, typename TInteger>
@@ -1322,7 +1373,7 @@ void
 DGtal::KhalimskyPreSpaceND< dim, TInteger>::
 selfDisplay ( std::ostream & out )
 {
-  out << "[KhalimskyPreSpaceND]";
+  out << "[KhalimskyPreSpaceND<" << dimension << ">]";
 }
 //-----------------------------------------------------------------------------
 template < DGtal::Dimension dim, typename TInteger>

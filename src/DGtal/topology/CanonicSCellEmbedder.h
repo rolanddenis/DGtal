@@ -42,9 +42,8 @@
 // Inclusions
 #include <iostream>
 #include "DGtal/base/Common.h"
-#include "DGtal/topology/CPreCellularGridSpaceND.h"
 #include "DGtal/base/ConstAlias.h"
-#include "DGtal/topology/CCellularGridSpaceND.h"
+#include "DGtal/topology/CPreCellularGridSpaceND.h"
 //////////////////////////////////////////////////////////////////////////////
 
 namespace DGtal
@@ -60,7 +59,7 @@ namespace DGtal
 
    Model of CSCellEmbedder.
 
-   @tparam TKSpace the type of cellular grid space where the embedder works, a model of CCellularGridSpaceND.
+   @tparam TKSpace the type of cellular grid space where the embedder works, a model of CPreCellularGridSpaceND.
  */
   template <typename TKSpace>
   struct CanonicSCellEmbedder
