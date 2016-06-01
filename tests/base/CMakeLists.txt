@@ -25,6 +25,9 @@ SET(DGTAL_TESTS_SRC
    testClone2
    testOwningOrAliasingPtr
    testCatch
+   testContainerTraits
+   testSetFunctions
+   testSimpleRandomAccessRangeFromPoint
    testBitFieldArray
    testBigLabelledMap
    testBigLabelledMap-benchmark

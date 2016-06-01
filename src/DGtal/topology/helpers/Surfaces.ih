@@ -978,6 +978,7 @@ DGtal::Surfaces<TKSpace>::uFillInterior( const KSpace & aKSpace,
   Cell p =  aKSpace.uFirst( typename KSpace::PreCell( Point(1,1) ) );
   const Cell lowerCell = aKSpace.uFirst( p );
   const Cell upperCell = aKSpace.uLast( p );
+  
   bool in_mode = empty_is_inside;   
   do 
     {
@@ -1043,6 +1044,7 @@ DGtal::Surfaces<TKSpace>::uFillExterior( const KSpace & aKSpace,
   Cell p =  aKSpace.uFirst( typename KSpace::PreCell( Point(1,1) ) );
   const Cell lowerCell = aKSpace.uFirst( p );
   const Cell upperCell = aKSpace.uLast( p );
+  
   bool in_mode = empty_is_outside;   
   do 
     {

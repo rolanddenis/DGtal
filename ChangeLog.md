@@ -2,6 +2,16 @@
 
 ## New Features / Critical Changes
 
+- *Documentation*
+ - New "@seeDGtalTools" doxygen command to cite a DGtalTools tool in
+   DGtal documentation (David Coeurjolly,
+   [#1179](https://github.com/DGtal-team/DGtal/pull/1179))
+ 
+- *Geometry Package*
+ - New robust normal vector estimator using spherical accumulators and statistical
+   voting (Boulc'h & Marlet, SGP 2012).
+   (David Coeurjolly, [#1149](https://github.com/DGtal-team/DGtal/pull/1149))
+
 ## Changes
 - *Configuration/General*
  - Cleaning remaining preprocessor directives related to C++11 features.
@@ -9,14 +19,45 @@
  - Travis Continuous integration will check that DGtalTools still compiles with
    changes in new pull-requests. (David Coeurjolly,
    [#1133](https://github.com/DGtal-team/DGtal/pull/1133))
+ - Add cmake configuration file NeighborhoodTablesConfig to
+   decompress and install look up tables. (Pablo Hernandez-Cerdan,
+   [#1155](https://github.com/DGtal-team/DGtal/pull/1155))
 
 - *Base Package*
  - Alias and ConstAlias now raise compilation error when using invalid
    constructor, like from a rvalue reference. Adding ConstAlias in many classes
    that need it.
    (Roland Denis, [#1140](https://github.com/DGtal-team/DGtal/pull/1140))
+   (With ITK related compilation fix, Bertrand Kerautret
+   [#1153](https://github.com/DGtal-team/DGtal/pull/1153))
+ - Moving all base concepts into namespace concepts. Update doc and
+   concepts graphs accordingly. (Jacques-Olivier Lachaud, [#1164]
+   (https://github.com/DGtal-team/DGtal/pull/1164))
+
+- *IO Package*
+ - Viewer3D: add a mode to display ball primitive with OpenGL point instead of
+   quadrangulated mesh.
+   (Bertrand Kerautret [#1162](https://github.com/DGtal-team/DGtal/pull/1162))
+ - Viewer3D: add a new mode to have the light source position defined from the
+   camera (default) or from the scene coordinate system (key P to change
+   position mode). A new lambertian rendering mode was added.
+   (Bertrand Kerautret [#1149](https://github.com/DGtal-team/DGtal/pull/1149))
+ - Add the possibility to interact in QGLViewer Viewer3D class with the voxel
+   primitive (was limited to surfel). As with surfel, the user may assign integer
+   identifiers (OpenGL names) to voxel and callback functions, which are called
+   when voxel are selected. The selected elements are now highlighted.
+   (Bertrand Kerautret, [#1146](https://github.com/DGtal-team/DGtal/pull/1146))
 
 ## Bug Fixes
+- *Configuration/General*
+ - Simplification of the windows build instructions. (David
+   Coeurjolly, [#1160](https://github.com/DGtal-team/DGtal/pull/1160))
+ - Various fixes in the documentation (e.g. links to concepts
+   pages). (David Coeurjolly,
+   [#1161](https://github.com/DGtal-team/DGtal/pull/1161))
+ - Fixing issues raised on some algorithms when changing Euclidean ring
+   for SpaceND and KhalimskySpaceND. (Jérémy Levallois, [#1163](https://github.com/DGtal-team/DGtal/pull/1163))
+
 - *DEC Package*
  - Fixing warnings in DiscreteExteriorCalculus and DiscreteExteriorCalculusFactory.
    (Roland Denis, [#1139](https://github.com/DGtal-team/DGtal/pull/1139))
@@ -29,12 +70,17 @@
    some improvements on bounding box computation with orientation check.
    (B. Kerautret, [#1123](https://github.com/DGtal-team/DGtal/pull/1123))
 
+- *Image Package*
+ - Fixing issue [#779](https://github.com/DGtal-team/DGtal/issues/779) by
+   storing domain with smart pointer in ImageContainerBySTLMap.
+   (Roland Denis [#1151](https://github.com/DGtal-team/DGtal/pull/1151))
+
 - *IO Package*
  - Display3D: Fix embedder usage when using default constructor in Debug mode.
-   (Roland Denis [##1143](https://github.com/DGtal-team/DGtal/pull/1143))
+   (Roland Denis [#1143](https://github.com/DGtal-team/DGtal/pull/1143))
  - Viewer3D: Fix a problem when the show() method was called at the end of the
    main program (the list creation was not called).
-   (Bertrand Kerautret [##1138](https://github.com/DGtal-team/DGtal/pull/1138))
+   (Bertrand Kerautret [#1138](https://github.com/DGtal-team/DGtal/pull/1138))
  - Viewer3D: add three new modes for shape rendering (default, metallic and
    plastic). The rendering can be changed by using the key M. The user can
    also choose its own rendering with some setter/getter on the opengl
@@ -48,15 +94,32 @@
  - Fixing issue [#899](https://github.com/DGtal-team/DGtal/issues/899) in
    all color maps, (David Coeurjolly, Bertrand Kerautret
    [#1134](https://github.com/DGtal-team/DGtal/pull/1134))
--  GenericReader: include longvol reader in GenericReader for 64 bit images.
+ -  GenericReader: include longvol reader in GenericReader for 64 bit images.
    Update the test for 64 bit longvol. (Bertrand Kerautret
    [#1135](https://github.com/DGtal-team/DGtal/pull/1135))
+ - Fix the extension removal in Obj filename export in Board3D. (David
+   Coeurjolly,[#1154](https://github.com/DGtal-team/DGtal/pull/1154)))
 
 - *Topology Package*
   - Fix wrong starting point for surface tracking in example code
     frontierAndBoundary.cpp.
     (Roland Denis, [#1144](https://github.com/DGtal-team/DGtal/pull/1144))
+  - Fix interior/exterior fill methods of topology/helpers/Surfaces class which
+    was wrong on 3d and on closed Khalimsky space.
+    (Bertrand Kerautret, [#1156](https://github.com/DGtal-team/DGtal/pull/1156))
+  - Add pre-calculated look up tables to speed up Object::isSimple calculations.
+    (Pablo Hernandez-Cerdan, [#1155](https://github.com/DGtal-team/DGtal/pull/1155))
+  - Fix issue [#1168]
+    (https://github.com/DGtal-team/DGtal/issues/1168), related to bad
+    linear interpolation for binary volume data in
+    volMarchingCubes.cpp (Jacques-Olivier Lachaud,
+    [#1169](https://github.com/DGtal-team/DGtal/pull/1169))
 
+- *Shape Package*
+  - Fix a tubular mesh construction problem (missing faces) which appears
+    when the center line is oriented in a main axis direction (in
+    createTubularMesh()). Also improves and fixes the face construction.
+    (Bertrand Kerautret, [#1157](https://github.com/DGtal-team/DGtal/pull/1157))
 
 # DGtal 0.9.1
 
