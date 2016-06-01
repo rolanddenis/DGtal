@@ -49,6 +49,7 @@
 #include <map>
 #include <set>
 #include "DGtal/base/Common.h"
+#include "DGtal/base/ConstAlias.h"
 #include "DGtal/images/CImage.h"
 #include "DGtal/images/ImageHelper.h"
 #include "DGtal/kernel/sets/CDigitalSet.h"
@@ -164,7 +165,6 @@ namespace DGtal
     typedef TPointPredicate PointPredicate; 
 
     //points
-    typedef typename Image::Point Vector;
     typedef typename Image::Point Point;
     BOOST_STATIC_ASSERT(( boost::is_same< Point, typename AcceptedPointSet::Point >::value ));
     BOOST_STATIC_ASSERT(( boost::is_same< Point, typename PointPredicate::Point >::value ));
@@ -256,7 +256,7 @@ namespace DGtal
      * @see init
      */
     FMM(Image& aImg, AcceptedPointSet& aSet,
-	const PointPredicate& aPointPredicate);
+        ConstAlias<PointPredicate> aPointPredicate);
     
     /**
      * Constructor.
@@ -264,8 +264,8 @@ namespace DGtal
      * @see init
      */
     FMM(Image& aImg, AcceptedPointSet& aSet, 
-	const PointPredicate& aPointPredicate, 
-	const Area& aAreaThreshold, const Value& aValueThreshold);
+        ConstAlias<PointPredicate> aPointPredicate, 
+        const Area& aAreaThreshold, const Value& aValueThreshold);
     
     /**
      * Constructor.
@@ -273,8 +273,8 @@ namespace DGtal
      * @see init
      */
     FMM(Image& aImg, AcceptedPointSet& aSet,
-	const PointPredicate& aPointPredicate, 
-	PointFunctor& aPointFunctor );
+        ConstAlias<PointPredicate> aPointPredicate, 
+        PointFunctor& aPointFunctor );
     
     /**
      * Constructor.
@@ -282,9 +282,9 @@ namespace DGtal
      * @see init
      */
     FMM(Image& aImg, AcceptedPointSet& aSet, 
-	const PointPredicate& aPointPredicate, 
-	const Area& aAreaThreshold, const Value& aValueThreshold,
-	PointFunctor& aPointFunctor );
+        ConstAlias<PointPredicate> aPointPredicate, 
+        const Area& aAreaThreshold, const Value& aValueThreshold,
+        PointFunctor& aPointFunctor );
     
     /**
      * Destructor.

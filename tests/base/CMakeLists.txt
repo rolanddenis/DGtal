@@ -9,7 +9,6 @@ SET(DGTAL_TESTS_SRC
    testOutputIteratorAdapter
    testClock
    testTrace
-   testcpp11
    testCountedPtr
    testCountedPtrOrPtr
    testCountedConstPtrOrConstPtr
@@ -26,8 +25,11 @@ SET(DGTAL_TESTS_SRC
    testClone2
    testOwningOrAliasingPtr
    testCatch
-   testBitFieldArray
+   testPartialTemplateSpecialization
+   testContainerTraits
+   testSetFunctions
    testSimpleRandomAccessRangeFromPoint
+   testBitFieldArray
    testBigLabelledMap
    testBigLabelledMap-benchmark
    )

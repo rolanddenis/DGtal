@@ -40,9 +40,14 @@
 
 //////////////////////////////////////////////////////////////////////////////
 // Inclusions
+#include "DGtal/base/Common.h"
+
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#ifdef WIN32
+#include <windows.h>
+#endif
 #ifdef APPLE
 #include <OpenGL/gl.h>
 #include <OpenGL/glu.h>
@@ -61,7 +66,6 @@
 #include <QGLWidget>
 #include <QKeyEvent>
 
-#include "DGtal/base/Common.h"
 #include "DGtal/kernel/SpaceND.h"
 #include "DGtal/topology/KhalimskySpaceND.h"
 #include "DGtal/base/CountedPtr.h"
@@ -140,6 +144,8 @@ namespace DGtal
     using Display::getSelectCallback3D;
     typedef typename Display::RealPoint RealPoint;
 
+    enum RenderingMode {RenderingDefault, RenderingMetallic, RenderingPlastic, RenderingLambertian };
+
     // ----------------------- Standard services ------------------------------
   public:
 
@@ -156,17 +162,9 @@ namespace DGtal
      * @param KSEmb the Khalimsky space
      */
     Viewer3D(const KSpace &KSEmb):QGLViewer(), Display3D<Space,KSpace>(KSEmb)
-    {};
-
-    /**
-     *Constructor with a space and a khalimsky space
-     *@param SEmb a space
-     *@param KSEmb a khalimsky space
-     **/
-    Viewer3D(const Space &SEmb, const KSpace &KSEmb) : QGLViewer(), Display3D<Space,KSpace>(SEmb, KSEmb)
-    {};
-
-
+    {
+      resize(800,600);
+    }
 
     /**
      * Set camera position.
@@ -228,6 +226,70 @@ namespace DGtal
     }
 
 
+    /**
+     * Change the light shininess coefficients used in opengl
+     * rendering (used in glMaterialf with GL_SPECULAR parameters). 
+     *
+     * @param[in] matShininessCoeff the value of the shininess coefficient (defined in [0, 128], default 50.0).
+     * 
+     **/
+    void setGLMaterialShininessCoefficient(const GLfloat matShininessCoeff);
+
+    
+    /**
+     * Change the light ambient coefficients used in opengl
+     * rendering (used in glLightfv with GL_AMBIENT parameters). 
+     *
+     * @param[in] lightAmbientCoeffs the values of specular coefficient of RGBA channels (defined in [0,1], default: {0.0,0.0,0.0,1.0}).
+
+     * 
+     **/
+    void setGLLightAmbientCoefficients(const GLfloat lightAmbientCoeffs [4]);
+
+    /**
+     * Change the material ambient coefficients used in opengl
+     * rendering (used in glMaterialf with GL_AMBIENT parameters). 
+     *
+     * @param[in] lightDiffuseCoeffs the values of specular coefficient of RGBA channels (defined in [0,1], default: {1.0,1.0,1.0,1.0}).
+
+     * 
+     **/
+    void setGLLightDiffuseCoefficients(const GLfloat lightDiffuseCoeffs [4]);
+
+
+    /**
+     * Change the light specular coefficients used in opengl
+     * rendering (used in glLightfv with GL_SPECULAR parameters). 
+     *
+     * @param[in] lightSpecularCoeffs the values of specular coefficient of RGBA channels (defined in [0,1], default: {1.0,1.0,1.0,1.0}).
+     * 
+     **/
+    void setGLLightSpecularCoefficients(const GLfloat lightSpecularCoeffs [4]);
+    
+
+
+    /**
+     *  Change the primitive to display ball (OpenGl points instead
+     *  balls created with quads).
+     * 
+     *
+     *  @param[in] useOpenGLPt if true all points will be displayed
+     *  with OpenGl points instead the default balls (defined from
+     *  quads).
+     *
+     **/    
+    void setUseGLPointForBalls(bool useOpenGLPt);
+
+    
+    /**
+     * Change the current rendering mode of the viewer.
+     * 
+     * @param[in] aRenderMode the mode of the rendering.
+     * 
+     **/
+    void updateRenderingCoefficients(const RenderingMode aRenderMode);
+    
+    
     /// the 3 possible axes for the image direction
     enum ImageDirection {xDirection, yDirection, zDirection, undefDirection };
     /// the modes of representation of an image
@@ -241,9 +303,13 @@ namespace DGtal
     bool myIsBackgroundDefault;
     /// objects have shadows which follow the camera if false
     bool myViewWire;
-    /// to improve the display of gl line
-    double myGLLineMinWidth;
-
+    double myGLPointMinWidth = 1.5; /// to improve the display of gl points    
+    double myGLLineMinWidth = 1.5; /// to improve the display of gl line
+    /// flag to save automatically or not the Viewer3d state when closing the viewer
+    bool myAutoSaveState;
+    // define the default rendering mode of the viewer
+    RenderingMode myRenderingMode = RenderingDefault;
+    
     /**
      * Used to display the 2D domain of an image.
      * @note has to be public because of external functions
@@ -279,7 +345,7 @@ namespace DGtal
        * @param mode the mode of representation
        */
       template<typename TDomain>
-      Image2DDomainD3D( TDomain aDomain, Viewer3D::ImageDirection normalDir=zDirection,
+      Image2DDomainD3D( TDomain aDomain, ImageDirection normalDir=zDirection,
                         double xBottomLeft=0.0, double yBottomLeft=0.0, double zBottomLeft=0.0, std::string mode= "BoundingBox")
       {
         BOOST_CONCEPT_ASSERT(( concepts::CDomain < TDomain >));
@@ -300,7 +366,7 @@ namespace DGtal
        * @param yBottomLeft the x coordinate of bottom left image point.
        * @param zBottomLeft the x coordinate of bottom left image point.
        **/
-      void updateDomainOrientation( Viewer3D::ImageDirection normalDir,
+      void updateDomainOrientation( ImageDirection normalDir,
                                     double xBottomLeft, double yBottomLeft, double zBottomLeft);
 
 
@@ -393,14 +459,14 @@ namespace DGtal
        * @param xBottomLeft the x coordinate of bottom left image point (default 0).
        * @param yBottomLeft the x coordinate of bottom left image point (default 0).
        * @param zBottomLeft the x coordinate of bottom left image point (default 0).
-       * @param aMode the mode of representation
+       * @param aMode the mode of representation (default GrayScaleMode).
        */
       template <typename TImageType, typename TFunctor>
 
       TextureImage( const TImageType & image, const TFunctor &aFunctor,
-                    Viewer3D::ImageDirection normalDir=zDirection,
+                    ImageDirection normalDir=zDirection,
                     double xBottomLeft=0.0, double yBottomLeft=0.0, double zBottomLeft=0.0,
-                    TextureMode aMode= 1)
+                    TextureMode aMode= GrayScaleMode)
       {
         BOOST_CONCEPT_ASSERT(( concepts::CConstImage < TImageType > ));
         BOOST_CONCEPT_ASSERT(( concepts::CUnaryFunctor<TFunctor, typename TImageType::Value, unsigned int> )) ;
@@ -423,7 +489,7 @@ namespace DGtal
        * @param yBottomLeft the x coordinate of bottom left image point.
        * @param zBottomLeft the x coordinate of bottom left image point.
        **/
-      void updateImageOrientation( Viewer3D::ImageDirection normalDir,
+      void updateImageOrientation( ImageDirection normalDir,
                                    double xBottomLeft, double yBottomLeft, double zBottomLeft);
 
 
@@ -571,6 +637,23 @@ namespace DGtal
 
 
     /**
+     *  @brief Overload of the QGLViewer method in order to change the
+     *  order of display (to fix the QGLViewer axis display trough
+     *  transparency).
+     **/
+    virtual void paintGL();
+
+
+    /**
+     *  @brief Overload QWidget method in order to add a call to
+     * updateList() method (to ensure that the lists are well created
+     * in the particular case where show() is called at the end of the
+     * program).
+     **/    
+    virtual void show();
+
+
+    /**
      * Add a TextureImage in the list of image to be displayed.
      * @param image a TextureImage including image data buffer and position, orientation.
      *
@@ -706,6 +789,8 @@ namespace DGtal
 
 
 
+    
+
     // ------------------------- Protected Datas ------------------------------
   private:
 
@@ -730,10 +815,10 @@ namespace DGtal
 
 
     /**
-     * Draw a linel by using the [gluCShere] primitive.
-     * @param pointel the pointel to draw
+     * Draw a ball by using quads strip primitive.
+     * @param[in] aBall the ball to be drawn
      */
-    void glDrawGLBall ( typename Viewer3D<Space,KSpace>::BallD3D pointel );
+    void glDrawGLBall (const typename Viewer3D<Space,KSpace>::BallD3D & aBall );
 
 
 
@@ -891,8 +976,42 @@ namespace DGtal
 
 
 
+    /**
+     * @brief Overload of the QGLViewer method which returns an XML
+     * QDomElement representing the QGLViewer state. This overload adds the light
+     * position attribute.
+     *
+     * @param name the name of the QDomElement tag.  
+     * @param document the QDomElement factory used to create QDomElement.
+     * @see initFromDOMElement
+     */
+    virtual  QDomElement domElement(const QString& name, QDomDocument& document) const;
+    
 
+    /**
+     * @brief Overload of the QGLViewer method which restores the
+     * viewer state from a QDomDocument element. This overload
+     * recovers and loads default viewer attributes with the add of the
+     * the light position.
+     *
+     * @param element QDomDocument used to apply the restoration.
+     *
+     * @see domElement
+     */    
+    virtual void initFromDOMElement(const QDomElement& element);
+    
+    
+    /**
+     * @brief Overload the QWidget method to customize the viewer state auto saving.
+     * Now it save the viewer state if the flag myAutoSaveState is true (false by default)
+     * and call the QGLWidget::closeEvent().
+     * @param e the QCloseEvent calling the method.
+     */
+    
+    protected: virtual void closeEvent	(	QCloseEvent * 	e	);
+    
 
+    
     // ------------------------- Internals ------------------------------------
   private:
 
@@ -1074,12 +1193,16 @@ namespace DGtal
 
 
     /**
-     * Creates an OpenGL list of type GL_QUADS from a vector of CubeD3D.
-     * @param[in] aVectCubes a vector of cubes (Cube3D) containing the cubes to be displayed.
+     * Creates an OpenGL list of type GL_QUADS from a CubeD3D.  Only
+     * one OpenGL list is created but each map compoment (CubeD3D
+     * vector) are marked by its identifier through the OpenGl
+     * glPushName() function.
+     * See @ref moduleQGLInteraction for more details.
+     * @param[in] aCubeMap  a map of cube (CubesMap) associating a name to a vector of CubeD3D.
      * @param[in] idList the Id of the list (should be given by glGenLists).
      **/
-    void glCreateListCubes( const VectorCubes & aVectCubes,
-                              unsigned int idList);
+    void glCreateListCubesMaps(const typename Display3D<Space, KSpace>::CubesMap &aCubeMap, unsigned int idList);
+
 
 
     /**
@@ -1175,20 +1298,43 @@ namespace DGtal
 
 
     /**
-     * Update the container of GLTextureImage object with the given vector of TextureImage.
+     * Updates the container of GLTextureImage object with the given vector of TextureImage.
      * @param[in] aVectImage the vector containing
      *
      **/
     void glUpdateTextureImages(const VectorTextureImage  &aVectImage);
 
 
+    /**
+     * Updates opengl light rendering mode (GL_LIGHT_MODEL_TWO_SIDE)
+     * according to the values of private attribute
+     * myIsDoubleFaceRendering.
+     **/
+    
+    void glUpdateLightRenderingMode() const;
+    
+    /**
+     * Updates the light source coordinates (myLightPosition) from the
+     * camera relative coordinates (myLightPositionRefCamera). It
+     * could be useful when the light source position is fix according
+     * to camera position.
+     **/
+    void updateLightCoordsFromCamera();
+
+    /**
+     * Updates the camera relative light source coordinates
+     *  (myLightPositionRefCamera) from the scene light coordinates
+     *  (myLightPosition). It could be useful when the light source
+     *  position is fix in the main scene.
+     **/
+    void updateRelativeCameraFromLightPosition();
 
 
-
-
+    
+    
   public:
     /**
-     * Rotate Image2DDomainD3D or TextureImage  vertex from a given
+     * Rotates Image2DDomainD3D or TextureImage  vertex from a given
      * angle and a rotation direction. The center of rotation is defined
      * from the image center point.
      *
@@ -1241,9 +1387,6 @@ namespace DGtal
     /// lists of the list to draw
     //GLuint myListToAff;
 
-    GLuint myCubeSetListId;
-    GLuint myCubeSetListWiredId;
-
     GLuint myTriangleSetListId;
     GLuint myTriangleSetListWiredId;
 
@@ -1257,15 +1400,20 @@ namespace DGtal
     GLuint myQuadsMapId;
     GLuint myQuadsMapWiredId;
 
+    GLuint myCubesMapId;
+    GLuint myCubeSetListWiredId;
+
     /// number of lists in myListToAff
 
     unsigned int myNbListe;
-    unsigned int myNbCubeSetList;
     unsigned int myNbLineSetList;
     unsigned int myNbBallSetList;
     unsigned int myNbPrismSetList;
 
-
+    /// used to displayed selected elements
+    int mySelectedElementId = -1;
+    unsigned char mySelectionColorShift = 150;
+    
     /// information linked to the navigation in the viewer
     qglviewer::Vec myOrig, myDir, myDirSelector, mySelectedPoint;
     /// a point selected with postSelection @see postSelection
@@ -1278,11 +1426,31 @@ namespace DGtal
     double camera_position[3]; ///< camera position
     double camera_direction[3]; ///< camera direction
     double camera_upVector[3]; ///< camera up-vector
+    
+    bool   myLightPositionFixToCamera = true; // when false the light position is fix according to the scene.
+    double myLightTheta; /// the light position (inclination)
+    double myLightPhi; /// the light position (azimuth)
+    double myLightR; /// the light position (distance)
+    GLfloat myLightPosition [4] = {0.0f, 0.0f, 1.0f, 1.0f}; // the light position in cartesian coordinate
+    GLfloat myLightPositionRefCameraDefault [3] = {-100.0f, 100.0f, 0.0f}; // the light default position according to the camera position
+    GLfloat myLightPositionRefCamera [3] = {0.0f, 0.0f, 0.0f}; // the light position according to the camera position
+    GLfloat myMaterialShininessCoeff[1] =  {50.0f} ; // the material shininess coefficient used in opengl rendering 
+    GLfloat myMaterialSpecularCoeffs[4] = { 1.0f, 1.0f, 1.0f, 1.0f }; // the light specular coefficients used in opengl rendering 
+    GLfloat myLightSpecularCoeffs[4] = { 0.3f, 0.3f, 0.3f, 1.0f }; // the light specular coefficients used in opengl rendering 
+    GLfloat myLightAmbientCoeffs[4] = { 0.0f, 0.0f, 0.0f, 1.0f }; // the material ambient coefficients used in opengl rendering  
+    GLfloat myLightDiffuseCoeffs[4] = { 0.7f, 0.7f, 0.7f, 1.0f }; // the material diffuse coefficients used in opengl rendering  
 
-    float myLightTheta; /// the light position (inclination)
-    float myLightPhi; /// the light position (azimuth)
-    float myLightR; /// the light position (distance)
-    GLfloat myLightPosition [4]; // the light position in cartesian coordinates
+    const GLfloat myDefaultRenderSpec = 0.3f; // default specular coefficients for default mode rendering
+    const GLfloat myDefaultRenderDiff = 0.7f; // default diffuse coefficients for metallic mode rendering    
+    const GLfloat myLambertRenderSpec = 0.0f; // default specular coefficients for default mode rendering
+    const GLfloat myLambertRenderDiff = 0.9f; // default diffuse coefficients for metallic mode rendering
+    const GLfloat myMetallicRenderSpec = 0.5f; // default specular coefficients for metallic mode rendering
+    const GLfloat myMetallicRenderDiff = 0.5f; // default diffuse coefficients for metallic mode rendering
+    const GLfloat myPlasticRenderSpec = 0.8f; // default specular coefficients for platic mode rendering
+    const GLfloat myPlasticRenderDiff = 0.2f; // default diffuse coefficients for platic mode rendering
+    
+    bool myUseGLPointsForBalls =  false; // to display balls with GL points (instead real ball) 
+
     double ZNear; ///< znear distance
     double ZFar; ///< zfar distance
 
@@ -1290,12 +1458,12 @@ namespace DGtal
     float myMeshDefaultLineWidth;
 
     // To apply openGL ajustment only on visualisation
-    float myGLScaleFactorX;
-    float myGLScaleFactorY;
-    float myGLScaleFactorZ;
-
+    float myGLScaleFactorX=1.0;
+    float myGLScaleFactorY=1.0;
+    float myGLScaleFactorZ=1.0;
+    
     // Used to apply interactive light rotation
-    float myLigthRotationStep; /// the angle rotation increment used for interactive light move
+    double myLigthRotationStep; /// the angle rotation increment used for interactive light move
     int myRefMouseXPos; /// the reference mouse x-position used to determince the light position change (azimuth)
     int myRefMouseYPos; /// the reference mouse y-position used to determince the light position change (inclination)
     bool myIsMovingLight; /// flag to display the ligth source when it is moved by the user

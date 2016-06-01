@@ -131,9 +131,15 @@ void DGtal::Board3D<Space, KSpace>::saveOBJ(const std::string & filename, const 
   size_t k, j; //id of each elements and sub elements of a list for the .OBJ identification
   std::ofstream outOBJ; //OBJ file where to write
   std::ofstream outMTL; //MTL file where to write
-  
-  
-  std::string noExt(filename.substr(0, filename.find_first_of("."))); //the filename withoutOBJ any extention
+
+  //the filename without OBJ any extention
+  std::string noExt;
+  size_t lastdot = filename.find_last_of(".");
+  if (lastdot != std::string::npos)
+    noExt = filename.substr(0, lastdot);
+  else
+    noExt = filename;
+    
   std::stringstream nameOBJ;
   std::stringstream nameMTL;
   nameOBJ << noExt << ".obj";
@@ -141,13 +147,13 @@ void DGtal::Board3D<Space, KSpace>::saveOBJ(const std::string & filename, const 
   
   outOBJ.open(nameOBJ.str().c_str());
   outOBJ << "#  OBJ format"<< std::endl;
-  outOBJ << "# generated from Board3D from the DGTal library"<< std::endl;
+  outOBJ << "# generated from Board3D from the DGtal library"<< std::endl;
   outOBJ << "mtllib " <<  nameMTL.str() << std::endl;
   outOBJ << std::endl;
   
   outMTL.open(nameMTL.str().c_str());
   outMTL << "#  MTL format"<< std::endl;
-  outMTL << "# generated from Board3D from the DGTal library"<< std::endl;
+  outMTL << "# generated from Board3D from the DGtal library"<< std::endl;
   
   
   //myClippingPlaneList++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -324,30 +330,25 @@ void DGtal::Board3D<Space, KSpace>::saveOBJ(const std::string & filename, const 
           
           apoint1 = ((s_it->point1) - shift)*scale;
           apoint2 = ((s_it->point2) - shift)*scale;
-          tmpStream << "v " << apoint1[0]     << " " << apoint1[1] -width << " " << apoint1[2] << std::endl;
-          tmpStream << "v " << apoint1[0]     << " " << apoint1[1] +width << " " << apoint1[2] << std::endl;
-          tmpStream << "v " << apoint2[0]     << " " << apoint2[1]     << " " << apoint2[2] +width<< std::endl;
-          tmpStream << "v " << apoint2[0]     << " " << apoint2[1]     << " " << apoint2[2] -width<< std::endl;
-          tmpStream << "v " << apoint2[0]     << " " << apoint2[1] +width << " " << apoint2[2] << std::endl;
-          tmpStream << "v " << apoint2[0]     << " " << apoint2[1] -width << " " << apoint2[2] << std::endl;
-          tmpStream << "v " << apoint1[0]     << " " << apoint1[1]     << " " << apoint1[2] -width << std::endl;
-          tmpStream << "v " << apoint1[0]     << " " << apoint1[1]     << " " << apoint1[2] +width<< std::endl;
-          
-          
-          tmpStream  << "vn " <<  "-1"  << " " << "0" << " " << "0" << std::endl;//left
-          tmpStream  << "vn " <<  "0"  << " " << "0" << " " << "-1" << std::endl;//front
-          tmpStream  << "vn " <<  "0"  << " " << "1" << " " << "0" << std::endl;//up
-          tmpStream  << "vn " <<  "0"  << " " << "0" << " " << "1" << std::endl;//back
-          tmpStream  << "vn " <<  "0"  << " " << "-1" << " " << "0" << std::endl;//down
-          tmpStream  << "vn " <<  "1"  << " " << "0" << " " << "0" << std::endl;//right
-          
-          
-          tmpStream << "f " << "-8//-6" << " " << "-7//-6" << " " << "-5//-6"<< " " << "-6//-6" << std::endl;//left
-          tmpStream << "f " << "-8//-5" << " " << "-6//-5" << " " << "-2//-5"<< " " << "-4//-5"<< std::endl;//front
-          tmpStream << "f " << "-8//-4" << " " << "-7//-4" << " " << "-3//-4"<< " " << "-4//-4"<< std::endl;//up
-          tmpStream << "f " << "-7//-3" << " " << "-5//-3" << " " << "-1//-3"<< " " << "-3//-3"<< std::endl;//back
-          tmpStream << "f " << "-6//-2" << " " << "-5//-2" << " " << "-1//-2"<< " " << "-2//-2"<< std::endl;//down
-          tmpStream << "f " << "-4//-1" << " " << "-3//-1" << " " << "-1//-1"<< " " << "-2//-1"<< std::endl;//right
+          tmpStream << "v " << apoint1[0]     << " " << apoint1[1] -width << " " << apoint1[2] -width << std::endl;
+          tmpStream << "v " << apoint1[0]     << " " << apoint1[1] -width << " " << apoint1[2] +width << std::endl;
+          tmpStream << "v " << apoint1[0]     << " " << apoint1[1] +width << " " << apoint1[2] -width << std::endl;
+          tmpStream << "v " << apoint1[0]     << " " << apoint1[1] +width << " " << apoint1[2] +width<< std::endl;
+
+          tmpStream << "v " << apoint2[0]     << " " << apoint2[1] -width << " " << apoint2[2] -width << std::endl;
+          tmpStream << "v " << apoint2[0]     << " " << apoint2[1] -width << " " << apoint2[2] +width << std::endl;
+          tmpStream << "v " << apoint2[0]     << " " << apoint2[1] +width << " " << apoint2[2] -width << std::endl;
+          tmpStream << "v " << apoint2[0]     << " " << apoint2[1] +width << " " << apoint2[2] +width<< std::endl;
+         
+          tmpStream  << "vn " <<  "0"  << " " << "0" << " " << "1" << std::endl;//up
+          tmpStream  << "vn " <<  "0"  << " " << "0" << " " << "-1" << std::endl;//back
+   
+          tmpStream  << "f " << "-7//" << " " << "-8//" << " " << "-4//"<< " " << "-3//" << std::endl;//left
+          tmpStream << "f " << "-5//" << " " << "-7//" << " " << "-3//"<< " " << "-1//"<< std::endl;//front
+          tmpStream << "f " << "-3//-2" << " " << "-4//-2" << " " << "-2//-2"<< " " << "-1//-2"<< std::endl;//up
+          tmpStream << "f " << "-8//-1" << " " << "-7//-1" << " " << "-5//-1"<< " " << "-6//-1"<< std::endl;//back
+          tmpStream << "f " << "-2//" << " " << "-4//" << " " << "-8//"<< " " << "-6//"<< std::endl;//down
+          tmpStream << "f " << "-1//" << " " << "-2//" << " " << "-6//"<< " " << "-5//"<< std::endl;//right
           
           j++;
         }
@@ -377,31 +378,26 @@ void DGtal::Board3D<Space, KSpace>::saveOBJ(const std::string & filename, const 
   // myCubeSetList++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   {
     j  = 0 ; //id of each Cube sub list for the .OBJ identification
-    k = 0; // id of each list
     
     
     //Foreach list
-    for(typename std::vector<std::vector< typename Board3D<Space, KSpace>::CubeD3D> >::const_iterator it =Board3D<Space, KSpace>::myCubeSetList.begin();
-        it != Board3D<Space, KSpace>::myCubeSetList.end();   it++)
+    for(typename Board3D<Space, KSpace>::CubesMap::const_iterator it =Board3D<Space, KSpace>::myCubesMap.begin();
+        it != Board3D<Space, KSpace>::myCubesMap.end();   it++)
     {
-      //If we have at least a cube to export
-      if ( it->begin() != it->end() )
-      {
+    
         std::stringstream name;
         std::ostringstream tmpStream;
-        if ( Board3D<Space, KSpace>::myCubeSetNameList.at(k) == "" )
-          name << "myCubeSetList_" << k ;
-        else
-          name << Board3D<Space, KSpace>::myCubeSetNameList.at(k)<< "_"<<k;
+
+        name << "myCubeSetList_" << it->first ;
         outOBJ << "o  " << name.str() << std::endl;
-      }
+      
       
       //For each list, we force the cube color to be set in the OBJ file
       unsigned int prevMaterialIndex = std::numeric_limits<unsigned int>::max();  //index to the last voxel material
       
       //Foreach cube in the list
-      for (typename std::vector< typename Board3D<Space, KSpace>::CubeD3D>::const_iterator s_it = it->begin();
-           s_it != it->end(); ++s_it)
+      for (typename std::vector< typename Board3D<Space, KSpace>::CubeD3D>::const_iterator s_it = it->second.begin();
+           s_it != it->second.end(); ++s_it)
       {
         //Color
         unsigned int matid = getMaterialIndex(s_it->color);
@@ -484,11 +480,16 @@ void DGtal::Board3D<Space, KSpace>::saveOBJ(const std::string & filename, const 
           outOBJ << "f " << "-4" << " " << "-1" << " " <<"-2" << " " <<"-3" << std::endl;//top
 
           
-          j ++;
+       
         }
+        
+      
+      j++;
+      
       }
       k++;
     }
+
   }
   
   //OPT quad

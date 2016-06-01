@@ -161,7 +161,7 @@ namespace DGtal
                                           HyperRectDomain<typename Domain::Space > >::value));
 
     /// values range
-    BOOST_CONCEPT_ASSERT(( CLabel<TValue> ));
+  BOOST_CONCEPT_ASSERT(( concepts::CLabel<TValue> ));
     typedef TValue Value;
     //typedef ConstRangeAdapter<typename Domain::ConstIterator, Self, Value > ConstRange;
     typedef DefaultConstImageRange<Self> ConstRange;
@@ -560,7 +560,7 @@ namespace DGtal
       return Iterator(myData, myArraySize, myArraySize);
     }
 
-    void selfDisplay(std::ostream & out);
+    void selfDisplay(std::ostream & out) const;
 
     bool isValid() const
     {
@@ -804,7 +804,7 @@ namespace DGtal
    */
   template<typename TDomain, typename TValue, typename THashKey >
   std::ostream&
-  operator<< ( std::ostream & out,  ImageContainerByHashTree<TDomain, TValue, THashKey> & object )
+  operator<< ( std::ostream & out,  const ImageContainerByHashTree<TDomain, TValue, THashKey> & object )
   {
     object.selfDisplay( out);
     return out;
