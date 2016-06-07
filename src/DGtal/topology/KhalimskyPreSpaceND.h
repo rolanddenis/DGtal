@@ -87,7 +87,7 @@ namespace DGtal
 
     // Public members
   public:
-    Point myCoordinates; ///< Khalimsky coordinates of the cell. Public to allow easy coordinate manipulations.
+    Point coordinates; ///< Khalimsky coordinates of the cell. Public to allow easy coordinate manipulations.
 
     // Standard interface
   public:
@@ -184,8 +184,8 @@ namespace DGtal
 
     // Public members
   public:
-    Point myCoordinates;  ///< Khalimsky coordinates of the cell.
-    bool  myPositive;     ///< Cell sign.
+    Point coordinates;  ///< Khalimsky coordinates of the cell.
+    bool  positive;     ///< Cell sign.
 
     // Standard interface
   public:
