@@ -529,40 +529,10 @@ You will obtain such a result (with also the result on 3D images):
 */
 }
 
-/**
-*  Example of 2D slice images extraction from 3D images.
-
-   \image html lobsterSliceZ_20.png   "Example of resulting 2D slices images of the sample/lobster.vol file."
-
-* \example images/extract2DSlicesImagesFrom3D.cpp
-**/
-
-/**
-*  Example of 2D images extraction from 3D images.
-
-   \image html lobster2DExtract.png   "Example of one of the  resulting 2D  images of the sample/lobster.vol file (with increased size)."
-
-* \example images/extract2DImagesFrom3D.cpp
-**/
-
-
-/**
-*  Example of 2D images extraction from 3D images and 3D visualisation.
-
-   \image html lobsterVisu3DSlicesZ.png   "Example of 3D visualisation of 2D slices images of the sample/lobster.vol file."
-
-* \example images/extract2DImagesFrom3DandVisu.cpp
-**/
 
 
 
-/**
- * Examples of 2D and 3D basic image subsampling.
 
- \image html imageBasicSubsamplingExample.png "Illustration of the resulting subsampling produced by this example."
-
-* \example images/imageBasicSubsampling.cpp
-**/
 
 
 

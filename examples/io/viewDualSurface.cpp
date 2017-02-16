@@ -20,10 +20,18 @@
  *
  * @date 2011/03/25
  *
- * An example file named digitalSetFromVol.
+ * An example file named viewDualSurface.
  *
  * This file is part of the DGtal library.
  */
+
+
+/**
+ *  Example of viewing dual surfaces in Viewer3D.  
+ *  \image html viewDualSurface.png " " 
+ *  \example io/viewDualSurface.cpp
+ **/
+
 
 ///////////////////////////////////////////////////////////////////////////////
 #include <iostream>
@@ -393,7 +401,7 @@ int main( int argc, char** argv )
 {
   typedef KSpace::CellSet CellSet;
   QApplication application(argc,argv);
-  //! [ExampleDisplay3DToOFF]
+
   KSpace KS;
 
   Viewer3D<Z3i::Space,Z3i::KSpace> viewer(KS);
@@ -444,6 +452,6 @@ int main( int argc, char** argv )
             }
       }
   viewer << Viewer3D<>::updateDisplay;
-  //! [ExampleDisplay3DToOFF]
+
   return application.exec();
 }
