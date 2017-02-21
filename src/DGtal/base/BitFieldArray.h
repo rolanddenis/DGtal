@@ -241,17 +241,18 @@ public:
 
   /// Read the value.
   inline
-  operator T() const
+  operator const T() const
     {
       return myBitFieldArray.getValue(myIndex);
     }
 
   /// Write a value.
   inline
-  T operator= ( T const& aValue )
+  Proxy& operator= ( T const& aValue )
     {
       myBitFieldArray.setValue( myIndex, aValue );
-      return aValue;
+      //return aValue;
+      return *this;
     }
 
 private:
