@@ -47,8 +47,6 @@
 #include <boost/config.hpp> // BOOST_STATIC_CONSTANT
 #include <boost/static_assert.hpp>
 #include <boost/iterator/iterator_facade.hpp>
-#include <boost/version.hpp>
-
 
 #include <DGtal/base/Bits.h>
 
@@ -152,7 +150,7 @@ public:
   /** Reads an element.
    * @param i The index of the element.
    * @param aRefValue A reference value that will be overwrited with the readed value.
-   *                  Only useful if the given bit size is lower than the real size of \p Value, 
+   *                  Only useful if the given bit size is lower than the real size of \p Value,
    *                  in order to avoid random values on the others bits.
    */
   Value getValue( SizeType i, Value aRefValue = Value() ) const;
@@ -161,7 +159,7 @@ public:
    * @param i The index of the element.
    * @param aValuePtr address where to write the element.
    */
-  
+
   void getValueInto( SizeType i, Value* aValuePtr ) const;
 
   /** Writes an element.
@@ -335,7 +333,7 @@ private:
     {
       return myIndex == other.myIndex;
     }
-  
+
   /// Test equality with a constant iterator.
   inline bool equal( Self::ConstIterator const& other ) const
     {
