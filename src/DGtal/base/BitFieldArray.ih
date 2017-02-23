@@ -25,6 +25,7 @@
 // Inclusions
 #include <cstring>
 #include <algorithm>
+#include <type_traits>
 
 #include <DGtal/base/Assert.h>
 ///////////////////////////////////////////////////////////////////////////////
@@ -42,10 +43,7 @@ namespace
    * @tparam V The boolean value
    */
   template < bool V >
-  struct Boolean
-    {
-      enum { value = V };
-    };
+  using Boolean = std::integral_constant< bool, V >;
 
   /** Compile-time tests if \p A is divisible by \p B.
    * @tparam A The \p A value.
@@ -366,10 +364,16 @@ namespace
     {
     };
 
-  /** Working integer type depending on the properties of the element size.
+  /** Working unsigned integer type depending on the properties of the element size.
+   *
    * @tparam S  The element size in bits.
    * @tparam IsMultipleOfChar true if \p S is a multiple of 8.
    * @tparam IsMultipleOfLong true if \p S is a multiple of the bit size of a unsigned long int.
+   *
+   * We have to choose an adapter unsigned integer type in order to use bitwise
+   * shift operators without side effect.
+   *
+   * TODO: explanation about the alignement requirement and the risk of undefined behaviour.
    *
    * The default implementation uses an unsigned long int (i.e. std::size_t) as the working integer type.
    */
@@ -380,7 +384,8 @@ namespace
   >
   struct BitFieldArrayInteger
     {
-      typedef std::size_t type;
+      //typedef std::size_t type;
+      using type = unsigned char;
     };
 
   /** Working integer type depending on the properties of the element size.
@@ -392,7 +397,7 @@ namespace
   template < std::size_t S >
   struct BitFieldArrayInteger< S, true, false >
     {
-      typedef unsigned char type;
+      using type = unsigned char;
     };
 
   /** Dispatcher to get the working integer type depending on the element size.
@@ -419,7 +424,7 @@ T BitFieldArray<T,S,N>::getValue( SizeType i, Value aRefValue ) const
 {
   ASSERT_MSG( i < N, "Trying to read out of bounds.");
 
-  typedef typename BitFieldArrayIntegerDispatch<S>::type Integer;
+  using Integer = typename BitFieldArrayIntegerDispatch<S>::type;
 
   BitFieldArrayImplDispatch< S, N, Integer >
     ::getValue(
@@ -438,7 +443,7 @@ void BitFieldArray<T,S,N>::getValueInto( SizeType i, Value* aValuePtr ) const
 {
   ASSERT_MSG( i < N, "Trying to read out of bounds.");
 
-  typedef typename BitFieldArrayIntegerDispatch<S>::type Integer;
+  using Integer = typename BitFieldArrayIntegerDispatch<S>::type;
 
   BitFieldArrayImplDispatch< S, N, Integer >
     ::getValue(
@@ -455,7 +460,7 @@ void BitFieldArray<T,S,N>::setValue( SizeType i, Value const& value )
 {
   ASSERT_MSG( i < N, "Trying to write out of bounds.");
 
-  typedef typename BitFieldArrayIntegerDispatch<S>::type Integer;
+  using Integer = typename BitFieldArrayIntegerDispatch<S>::type;
 
   BitFieldArrayImplDispatch < S, N, Integer >
     ::setValue(

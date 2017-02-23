@@ -41,18 +41,14 @@
 
 #include <cstddef>
 #include <iostream>
+#include <memory> // std::addressof
+#include <array>
 
 #include <boost/config.hpp> // BOOST_STATIC_CONSTANT
 #include <boost/static_assert.hpp>
 #include <boost/iterator/iterator_facade.hpp>
-#include <boost/array.hpp>
 #include <boost/version.hpp>
 
-#if BOOST_VERSION >= 105600
-#   include <boost/core/addressof.hpp> // To get memory adresse even when & is overloaded.
-#else
-#   include <boost/utility.hpp>
-#endif
 
 #include <DGtal/base/Bits.h>
 
@@ -128,26 +124,26 @@ public:
   class ConstIterator;
 
   // DGtal typedefs
-  typedef BitFieldArray<T, S, N>  Self; ///< Self type.
-  typedef T     Value; ///< Type of an element.
-  typedef Proxy Reference; ///< Proxy to an element (does not behaves like a lvalue reference!).
-  typedef const Value     ConstReference; ///< Constant reference (in fact, a rvalue).
-  typedef std::size_t     SizeType;
-  typedef std::ptrdiff_t  DifferenceType;
+  using Self            = BitFieldArray<T, S, N>; ///< Self type.
+  using Value           = T;                      ///< Type of an element.
+  using Reference       = Proxy;                  ///< Proxy to an element (does not behaves like a lvalue reference!).
+  using ConstReference  = const Value;            ///< Constant reference (in fact, a rvalue).
+  using SizeType        = std::size_t;
+  using DifferenceType  = std::ptrdiff_t;
 
   // Standard typedefs
-  typedef Value           value_type;
-  typedef Reference       reference;
-  typedef ConstReference  const_reference;
-  typedef SizeType        size_type;
-  typedef DifferenceType  difference_type;
-  typedef Iterator        iterator;
-  typedef ConstIterator   const_iterator;
+  using value_type      = Value;
+  using reference       = Reference;
+  using const_reference = ConstReference;
+  using size_type       = SizeType;
+  using difference_type = DifferenceType;
+  using iterator        = Iterator;
+  using const_iterator  = ConstIterator;
 
   /** Capacity of this array.
    * @return the capacity of this array.
    */
-  static inline
+  static inline constexpr
   SizeType size()
     {
       return N;
@@ -215,9 +211,20 @@ public:
       return ConstIterator( *this, N );
     }
 
+  /// Returns a constant iterator to the beginning.
+  inline ConstIterator cbegin() const
+    {
+      return ConstIterator( *this );
+    }
+
+  /// Returns a constant iterator to the end.
+  inline ConstIterator cend() const
+    {
+      return ConstIterator( *this, N );
+    }
 
 private:
-  boost::array<char, sizeInByte> myStorage; ///< Internal storage.
+  std::array<char, sizeInByte> myStorage; ///< Internal storage.
 
 }; // end of class BitFieldArray
 
@@ -293,8 +300,8 @@ public:
   struct PtrProxy
     {
       explicit PtrProxy( T const& aValue ) : myValue(aValue) {}
-      T const* operator->() const { return boost::addressof(myValue); }
-      operator T const* () const { return boost::addressof(myValue); }
+      T const* operator->() const { return std::addressof(myValue); }
+      operator T const* ()  const { return std::addressof(myValue); }
       T myValue;
     };
 
