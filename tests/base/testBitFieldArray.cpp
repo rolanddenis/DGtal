@@ -49,6 +49,13 @@ template < std::size_t Size >
 struct StructLongArray
 {
   unsigned long int longArray[Size]; ///< The array.
+  
+  /// Returns the number of components in the structure.
+  static inline constexpr
+  std::size_t size()
+    {
+      return Size;
+    }
 
   /** Reads a value
    * @param i Index of the value.
@@ -88,6 +95,13 @@ struct StructLongArray
 template <>
 struct StructLongArray<0>
 {
+  /// Returns the number of components in the structure.
+  static inline constexpr
+  std::size_t size()
+    {
+      return 0;
+    }
+
   /// Reads nothing, just returns 0.
   static inline
   unsigned long getValue ( std::size_t /* i */ )
@@ -336,7 +350,6 @@ struct StructOfBitSize
         }
     }
 };
-
 
 /** Structure of given bit size, using unsigned char and bit-field.
  *
@@ -918,6 +931,10 @@ struct BenchHelper
           << 1000 * sizeof(BitField) << " "
           << 1000 * sizeof(BitFieldNoLong) << " " << std::flush;
 
+      os  << alignof(BitField) << " "
+          << alignof(BitField) << " "
+          << alignof(BitFieldNoLong) << " " << std::flush;
+
       os << benchReadBitFieldArray() << " " << std::flush;
       os << benchReadBitFieldCArray() << " " << std::flush;
       os << benchReadBitFieldNoLongCArray() << " " << std::flush;
@@ -934,9 +951,10 @@ TEST_CASE( "Bench test", "[.bench]" )
 {
   std::cout << "# Gnuplot cmd: set logscale y; plot for [i=5:10] 'bench.dat' u 1:i w lp title columnheader(i)" << std::endl
     << "Value_size "
-    << "BitFieldArray_1000size BitFieldCArray_1000size BitFieldCArrayNoLong_1000size "
-    << "BitFieldArray_read BitFieldCArray_read BitFieldCArrayNoLong_read "
-    << "BitFieldArray_write BitFieldCArray_write BitFieldCArrayNoLong_write"
+    << "\"BitFieldArray align\" \"BitFieldCArray align\" \"BitFieldCArrayNoLong align\" "
+    << "\"BitFieldArray size x1000\" \"BitFieldCArray size x1000\" \"BitFieldCArrayNoLong size x1000\" "
+    << "\"BitFieldArray read\" \"BitFieldCArray read\" \"BitFieldCArrayNoLong read\" "
+    << "\"BitFieldArray write\" \"BitFieldCArray write\" \"BitFieldCArrayNoLong write\""
     << std::endl;
 
 #define BOOST_PP_LOCAL_MACRO(S) \

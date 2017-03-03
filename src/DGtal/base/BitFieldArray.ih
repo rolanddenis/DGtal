@@ -378,14 +378,34 @@ namespace
    * The default implementation uses an unsigned long int (i.e. std::size_t) as the working integer type.
    */
   template <
-    std::size_t S,
-    bool IsMultipleOfChar,
-    bool IsMultipleOfLong
+    bool SizeMultipleOfChar,
+    bool CharAligned,
+    bool ShortAligned,
+    bool IntAligned,
+    bool LongAligned
   >
   struct BitFieldArrayInteger
     {
       //typedef std::size_t type;
       using type = unsigned char;
+    };
+
+  template <>
+  struct BitFieldArrayInteger<false, true, true, false, false>
+    {
+      using type = unsigned short;
+    };
+
+  template < >
+  struct BitFieldArrayInteger<false, true, true, true, false>
+    {
+      using type = unsigned int;
+    };
+
+  template < >
+  struct BitFieldArrayInteger<false, true, true, true, true>
+    {
+      using type = std::size_t;
     };
 
   /** Working integer type depending on the properties of the element size.
@@ -394,18 +414,24 @@ namespace
    * Specialized implementation that uses an unsigned char as the working integer type when
    * the element size is a multiple of 8 but not a multiple to the unsigned long int bit size.
    */
+  /*
   template < std::size_t S >
   struct BitFieldArrayInteger< S, true, false >
     {
       using type = unsigned char;
     };
-
+  */
   /** Dispatcher to get the working integer type depending on the element size.
    * @tparam S  The element size in bits.
    */
-  template < std::size_t S >
+  template < std::size_t S, std::size_t A >
   struct BitFieldArrayIntegerDispatch
-    : BitFieldArrayInteger< S, IsDivisibleBy< S, 8 >::value, IsDivisibleBy< S, 8*sizeof(std::size_t) >::value >
+    : BitFieldArrayInteger< IsDivisibleBy< S, 8 >::value,
+                            IsDivisibleBy< A, 8 >::value,
+                            IsDivisibleBy< A, 8*sizeof(unsigned short) >::value, 
+                            IsDivisibleBy< A, 8*sizeof(unsigned int) >::value, 
+                            IsDivisibleBy< A, 8*sizeof(std::size_t) >::value // TODO: verifying if x64
+                          >
     {};
 
 } // anonymous namespace
@@ -424,7 +450,8 @@ T BitFieldArray<T,S,N>::getValue( SizeType i, Value aRefValue ) const
 {
   ASSERT_MSG( i < N, "Trying to read out of bounds.");
 
-  using Integer = typename BitFieldArrayIntegerDispatch<S>::type;
+  //using Integer = typename BitFieldArrayIntegerDispatch<S>::type;
+  using Integer = typename BitFieldArrayIntegerDispatch< S, 8 * alignof(Value)>::type;
 
   BitFieldArrayImplDispatch< S, N, Integer >
     ::getValue(
@@ -443,7 +470,8 @@ void BitFieldArray<T,S,N>::getValueInto( SizeType i, Value* aValuePtr ) const
 {
   ASSERT_MSG( i < N, "Trying to read out of bounds.");
 
-  using Integer = typename BitFieldArrayIntegerDispatch<S>::type;
+  //using Integer = typename BitFieldArrayIntegerDispatch<S>::type;
+  using Integer = typename BitFieldArrayIntegerDispatch< S, 8 * alignof(Value)>::type;
 
   BitFieldArrayImplDispatch< S, N, Integer >
     ::getValue(
@@ -460,7 +488,8 @@ void BitFieldArray<T,S,N>::setValue( SizeType i, Value const& value )
 {
   ASSERT_MSG( i < N, "Trying to write out of bounds.");
 
-  using Integer = typename BitFieldArrayIntegerDispatch<S>::type;
+  //using Integer = typename BitFieldArrayIntegerDispatch<S>::type;
+  using Integer = typename BitFieldArrayIntegerDispatch< S, 8 * alignof(Value)>::type;
 
   BitFieldArrayImplDispatch < S, N, Integer >
     ::setValue(
