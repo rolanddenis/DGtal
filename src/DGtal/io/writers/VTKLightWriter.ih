@@ -41,6 +41,7 @@
 #include <DGtal/base/Exceptions.h>
 #include <DGtal/kernel/domains/HyperRectDomain.h>
 #include <DGtal/images/CConstImage.h>
+#include <DGtal/base/Assert.h>
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -177,7 +178,7 @@ namespace DGtal
 template <typename TSpace, VTKFormat Format>
 inline
 VTKLightWriter< HyperRectDomain<TSpace>, Format >::
-VTKLightWriter( std::string const& aFileName, HyperRectDomain<TSpace> aDomain, RealPoint aSpacing )
+VTKLightWriter( std::string const& aFileName, HyperRectDomain<TSpace> const& aDomain, RealPoint const& aSpacing )
     : myDomain( aDomain ), mySpacing( aSpacing ),
       myFieldName( "" ),
       myFileStream( aFileName + ".vtk", std::ofstream::out | std::ofstream::binary ),
@@ -210,6 +211,68 @@ VTKLightWriter< HyperRectDomain<TSpace>, Format >::
 isValid() const
 {
     return myFileStream.good();
+}
+
+/**
+ * Modifies the grid spacing.
+ */
+template <typename TSpace, VTKFormat Format>
+inline
+VTKLightWriter< HyperRectDomain<TSpace>, Format > &
+VTKLightWriter< HyperRectDomain<TSpace>, Format >::
+setSpacing( RealPoint const& aSpacing )
+{
+  ASSERT_MSG( !myHeader, "Grid spacing should not be modified after data has been exported." );
+  mySpacing = aSpacing;
+}
+
+/**
+ * Returns the grid spacing.
+ */
+template <typename TSpace, VTKFormat Format>
+inline
+typename VTKLightWriter< HyperRectDomain<TSpace>, Format >::RealPoint const&
+VTKLightWriter< HyperRectDomain<TSpace>, Format >::
+getSpacing() const
+{
+  return mySpacing;
+}
+
+/**
+ * Modifies the grid extent.
+ */
+template <typename TSpace, VTKFormat Format>
+inline
+VTKLightWriter< HyperRectDomain<TSpace>, Format > &
+VTKLightWriter< HyperRectDomain<TSpace>, Format >::
+setExtent( RealPoint const& anExtent )
+{
+  ASSERT_MSG( !myHeader, "Grid extent should not be modified after data has been exported." );
+  setSpacing( anExtent / ( myDomain.upperBound() - myDomain.lowerBound() ) );
+}
+
+/**
+ * Returns the grid extent.
+ */
+template <typename TSpace, VTKFormat Format>
+inline
+typename VTKLightWriter< HyperRectDomain<TSpace>, Format >::RealPoint
+VTKLightWriter< HyperRectDomain<TSpace>, Format >::
+getExtent() const
+{
+  return mySpacing * ( myDomain.upperBound() - myDomain.lowerBound() );
+}
+
+/**
+ * Returns the data domain.
+ */
+template <typename TSpace, VTKFormat Format>
+inline
+typename VTKLightWriter< HyperRectDomain<TSpace>, Format >::Domain const&
+VTKLightWriter< HyperRectDomain<TSpace>, Format >::
+getDomain() const
+{
+  return myDomain;
 }
 
 /**

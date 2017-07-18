@@ -62,8 +62,8 @@ namespace DGtal
    */
   enum VTKFormat
     {
-      VTKLegacyASCII, ///< Legacy VTK format storing values in ASCII.
-      VTKLegacyBinary ///< Legacy VTK format storing values in binary (faster).
+      VTKLegacyASCII,  ///< Legacy VTK format storing values in ASCII.
+      VTKLegacyBinary, ///< Legacy VTK format storing values in binary (faster).
     };
 #endif
 
@@ -73,7 +73,7 @@ namespace DGtal
   /**
    * VTK writer for DGtal Images
    *
-   * @tparam TDomain  Type of the domain used for export.
+   * @tparam TDomain  Type of the domain used for export. Currently, only HyperRectDomain are supported.
    * @tparam Format   File format (see VTKFormat).
    *
    * @see http://www.vtk.org/VTK/img/file-formats.pdf
@@ -100,10 +100,10 @@ namespace DGtal
     BOOST_STATIC_ASSERT_MSG( TSpace::dimension <= 3, "VTK support up to 3 dimensional data." );
 
     // Aliases
-    using Domain = HyperRectDomain< TSpace >;       ///< Domain type.
-    using Self = VTKLightWriter< Domain, Format >;  ///< Self type.
-    using Point = typename TSpace::Point;           ///< Point type.
-    using RealPoint = typename TSpace::RealPoint;   ///< Point type with real values.
+    using Domain    = HyperRectDomain< TSpace >;          ///< Domain type.
+    using Self      = VTKLightWriter< Domain, Format >;   ///< Self type.
+    using Point     = typename TSpace::Point;             ///< Point type.
+    using RealPoint = typename TSpace::RealPoint;         ///< Point type with real values.
 
     /**
      * Constructor
@@ -111,7 +111,9 @@ namespace DGtal
      * @param aFileName  name of the file.
      * @param aDomain    domain of the data to be exported.
      */
-    VTKLightWriter(std::string const& aFileName, Domain aDomain, RealPoint aSpacing = RealPoint::diagonal(1) );
+    VTKLightWriter( std::string const& aFileName,
+                    Domain const& aDomain,
+                    RealPoint const& aSpacing = RealPoint::diagonal(1) );
 
     /**
      * Destructor
@@ -119,16 +121,16 @@ namespace DGtal
     ~VTKLightWriter();
 
     /// Copy constructor. Deleted.
-    VTKLightWriter ( const VTKLightWriter & /* other */ ) = delete;
+    VTKLightWriter ( Self const & /* other */ ) = delete;
 
-    /// Move constructor. Deleted.
-    VTKLightWriter ( VTKLightWriter && /* other */ ) = delete;
+    /// Move constructor
+    VTKLightWriter ( Self && /* other */ ) = default;
 
     /// Copy assignment operator. Deleted.
-    VTKLightWriter & operator= ( const VTKLightWriter & /* other */ ) = delete;
+    Self & operator= ( Self const & /* other */ ) = delete;
 
-    /// Move assignment operator. Deleted.
-    VTKLightWriter & operator= ( VTKLightWriter && /* other */ ) = delete;
+    /// Move assignment operator.
+    Self & operator= ( Self && /* other */ ) = default;
 
     /**
      * Checks the validity/consistency of the object.
@@ -137,13 +139,43 @@ namespace DGtal
     bool isValid() const;
 
     /**
+     * Modifies the grid spacing.
+     * @pre No data must have been written into the file.
+     * @param aSpacing  The spacing between each data points.
+     * @return a reference to the writer instance.
+     */
+    Self & setSpacing( RealPoint const& aSpacing );
+
+    /**
+     * Returns the grid spacing.
+     */
+    RealPoint const& getSpacing() const;
+
+    /**
+     * Modifies the grid extent.
+     * @pre No data must have been written into the file.
+     * @param anExtent  The extent of all the data.
+     * @return a reference to the writer instance.
+     */
+    Self & setExtent( RealPoint const& anExtent );
+
+    /**
+     * Returns the grid extent.
+     */
+    RealPoint getExtent() const;
+
+    /**
+     * Returns the data domain.
+     */
+    Domain const& getDomain() const;
+
+    /**
      * Writes the VTK header.
      *
      * It is automatically done at the first data export
      * @return a reference to the writer instance
      */
     Self & init();
-
 
     ///@{
     /**
@@ -204,7 +236,7 @@ namespace DGtal
     RealPoint     mySpacing;    ///< Spacing.
     std::string   myFieldName;  ///< Current field name.
     std::ofstream myFileStream; ///< File stream.
-    bool          myHeader;     ///< true if the VTK header has been writed.
+    bool          myHeader;     ///< true if the VTK header has been writen.
 
     // ------------------------- Internals ------------------------------------
   private:
