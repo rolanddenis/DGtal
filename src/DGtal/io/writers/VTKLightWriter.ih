@@ -60,8 +60,8 @@ template <typename T>
 struct VTKType1D
 {
   //! Return the dimension of the type
-  static inline constexpr
-  size_t dim() { return 1; }
+  static constexpr
+  std::size_t dim() { return 1; }
 
   //! Write a value to the stream.
   template < typename TStream, typename TValue >
@@ -149,6 +149,7 @@ struct VTKDataWriter< DGtal::VTKLegacyBinary >
   static inline
   void write( TStream & stream, TValue const& value )
     {
+      // FIXME: check correct endiannes conversion (there is maybe a bug with unsigned int or short ?)
       //stream.write( reinterpret_cast<const char *>(&value), sizeof value );
       // *@#! endianness
       const char* raw = reinterpret_cast<const char *>(&value);
@@ -183,9 +184,23 @@ VTKLightWriter( std::string const& aFileName, HyperRectDomain<TSpace> const& aDo
       myFieldName( "" ),
       myFileStream( aFileName + ".vtk", std::ofstream::out | std::ofstream::binary ),
       myHeader( false ),
-      myDataStream( myFileStream )
+      myDataStream( &myFileStream )
 {}
 
+/**
+ * Move constructor.
+ */
+template <typename TSpace, VTKFormat Format>
+inline
+VTKLightWriter< HyperRectDomain<TSpace>, Format >::
+VTKLightWriter( VTKLightWriter && other )
+    : myDomain( std::move(other.myDomain) ),
+      mySpacing( std::move(other.mySpacing) ),
+      myFieldName( std::move(other.myFieldName) ),
+      myFileStream( std::move(other.myFileStream) ),
+      myHeader( std::move(other.myHeader) ),
+      myDataStream( &myFileStream )
+{}
 /**
  * Destructor.
  */
@@ -210,7 +225,7 @@ bool
 VTKLightWriter< HyperRectDomain<TSpace>, Format >::
 isValid() const
 {
-    return myFileStream.good();
+    return myFileStream.good() && myFileStream.is_open();
 }
 
 /**
@@ -416,10 +431,10 @@ close()
  */
 template <typename TSpace, VTKFormat Format>
 VTKLightWriter< HyperRectDomain<TSpace>, Format >::DataStream::
-DataStream( std::ofstream & aFileStream )
-  : myFileStream( aFileStream )
+DataStream( std::ofstream* aFileStreamPtr )
+  : myFileStreamPtr( aFileStreamPtr )
 {
-  myFileStream.imbue( std::locale() ); // Dot separator for decimal numbers
+  myFileStreamPtr->imbue( std::locale() ); // Dot separator for decimal numbers
 }
 
 template <typename TSpace, VTKFormat Format>
@@ -428,7 +443,7 @@ typename VTKLightWriter< HyperRectDomain<TSpace>, Format >::DataStream &
 VTKLightWriter< HyperRectDomain<TSpace>, Format >::DataStream::
 operator<< ( TValue const& aValue )
 {
-  VTKDataWriter<Format>::write( myFileStream, aValue );
+  VTKDataWriter<Format>::write( *myFileStreamPtr, aValue );
   return *this;
 }
 
@@ -445,7 +460,7 @@ void
 VTKLightWriter< HyperRectDomain<TSpace>, Format >::DataStream::
 separator()
 {
-  myFileStream << VTKDataWriter<Format>::separator();
+  (*myFileStreamPtr) << VTKDataWriter<Format>::separator();
 }
 
 } // namespace DGtal

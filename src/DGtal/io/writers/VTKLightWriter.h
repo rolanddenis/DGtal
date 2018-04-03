@@ -55,8 +55,6 @@
 namespace DGtal
 {
 
-#ifndef DGTAL_VTK_FORMAT_ENUM
-#define DGTAL_VTK_FORMAT_ENUM
   /** Format specification for VTK files.
    * @see http://www.vtk.org/VTK/img/file-formats.pdf
    */
@@ -65,7 +63,6 @@ namespace DGtal
       VTKLegacyASCII,  ///< Legacy VTK format storing values in ASCII.
       VTKLegacyBinary, ///< Legacy VTK format storing values in binary (faster).
     };
-#endif
 
   /////////////////////////////////////////////////////////////////////////////
   // template class VTKLightWriter
@@ -123,14 +120,14 @@ namespace DGtal
     /// Copy constructor. Deleted.
     VTKLightWriter ( Self const & /* other */ ) = delete;
 
-    /// Move constructor
-    VTKLightWriter ( Self && /* other */ ) = default;
+    /// Move constructor.
+    VTKLightWriter ( Self && /* other */ );
 
     /// Copy assignment operator. Deleted.
     Self & operator= ( Self const & /* other */ ) = delete;
 
-    /// Move assignment operator.
-    Self & operator= ( Self && /* other */ ) = default;
+    /// Move assignment operator. Deleted
+    VTKLightWriter & operator= ( Self && /* other */ ) = delete;
 
     /**
      * Checks the validity/consistency of the object.
@@ -185,7 +182,7 @@ namespace DGtal
      * @return a reference to the writer instance.
      */
     Self & operator<< ( std::string const& aFieldName );
-    Self & operator<< ( const char* aFieldName );
+    Self & operator<< ( const char* aFieldName ); // TODO: check if needed
     ///@}
 
     /**
@@ -246,7 +243,7 @@ namespace DGtal
      */
     struct DataStream
       {
-        DataStream( std::ofstream & aFileStream );
+        DataStream( std::ofstream* aFileStreamPtr );
 
         std::string data_format();
 
@@ -255,7 +252,7 @@ namespace DGtal
 
         void separator();
 
-        std::ofstream & myFileStream;
+        std::ofstream* myFileStreamPtr;
       };
 
     DataStream myDataStream;

@@ -4,6 +4,8 @@
 #include <DGtal/images/ImageContainerBySTLVector.h>
 #include <DGtal/base/BasicFunctors.h>
 
+// FIXME: real test using Catch !!!
+
 int main ()
 {
   using namespace DGtal;
@@ -21,8 +23,11 @@ int main ()
 
   VTKLightWriter<Domain> vtk( "test", domain, {0.5, 0.5} );
   vtk << "image" << image;
-  vtk.write( "image_float", image, functors::Cast<float>() );
-  vtk.close();
+  VTKLightWriter<Domain> vtk2(std::move(vtk));
+  std::cout << "Is vtk valid ? "  << vtk.isValid()  << std::endl;
+  std::cout << "Is vtk2 valid ? " << vtk2.isValid() << std::endl;
+  vtk2.write( "image_float", image, functors::Cast<float>() );
+  vtk2.close();
 
   return 0;
 }
