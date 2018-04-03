@@ -137,6 +137,9 @@ struct VTKDataWriter< DGtal::VTKLegacyASCII >
 
   static inline
   std::string data_format() { return "ASCII"; }
+  
+  static inline
+  std::string file_extension() { return "vtk"; }
 };
 
 //! VTK Stream writer for Legacy binary format
@@ -160,6 +163,9 @@ struct VTKDataWriter< DGtal::VTKLegacyBinary >
 
   static inline
   std::string data_format() { return "BINARY"; }
+
+  static inline
+  std::string file_extension() { return "vtk"; }
 };
 
 } // namespace
@@ -180,13 +186,17 @@ namespace DGtal
 template <typename TSpace, VTKFormat Format>
 inline
 VTKFieldWriter< HyperRectDomain<TSpace>, Format >::
-VTKFieldWriter( std::string const& aFileName, HyperRectDomain<TSpace> const& aDomain, RealPoint const& aSpacing )
+VTKFieldWriter( std::string const& aFileName, HyperRectDomain<TSpace> const& aDomain, RealPoint const& aSpacing, bool hasExtension )
     : myDomain( aDomain ), mySpacing( aSpacing ),
       myFieldName( "" ),
-      myFileStream( aFileName + ".vtk", std::ofstream::out | std::ofstream::binary ),
       myHeader( false ),
       myDataStream( &myFileStream )
-{}
+{
+  if (hasExtension)
+    myFileStream.open(aFileName, std::ofstream::out | std::ofstream::binary);
+  else
+    myFileStream.open(aFileName + "." + VTKDataWriter<Format>::file_extension() , std::ofstream::out | std::ofstream::binary);
+}
 
 /**
  * Move constructor.

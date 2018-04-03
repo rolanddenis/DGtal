@@ -1,8 +1,10 @@
-#include <DGtal/io/writers/VTKFieldWriter.h>
-#include <DGtal/kernel/SpaceND.h>
-#include <DGtal/kernel/domains/HyperRectDomain.h>
-#include <DGtal/images/ImageContainerBySTLVector.h>
-#include <DGtal/base/BasicFunctors.h>
+#include "DGtal/io/writers/VTKFieldWriter.h"
+#include "DGtal/io/writers/VTKWriter.h"
+#include "DGtal/io/writers/GenericWriter.h"
+#include "DGtal/kernel/SpaceND.h"
+#include "DGtal/kernel/domains/HyperRectDomain.h"
+#include "DGtal/images/ImageContainerBySTLVector.h"
+#include "DGtal/base/BasicFunctors.h"
 
 // FIXME: real test using Catch !!!
 
@@ -28,6 +30,10 @@ int main ()
   std::cout << "Is vtk2 valid ? " << vtk2.isValid() << std::endl;
   vtk2.write( "image_float", image, functors::Cast<float>() );
   vtk2.close();
+
+  VTKWriter<Image>::exportVTK("test2.vtk", image);
+
+  image >> "test3.vtk";
 
   return 0;
 }

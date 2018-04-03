@@ -106,12 +106,15 @@ namespace DGtal
     /**
      * Constructor
      *
-     * @param aFileName  name of the file.
-     * @param aDomain    domain of the data to be exported.
+     * @param aFileName   name of the file, without the extension.
+     * @param aDomain     domain of the data to be exported.
+     * @param aSpacing    the grid spacing.
+     * @param hasExtension  if true, aFileName has already an extension.
      */
     VTKFieldWriter( std::string const& aFileName,
                     Domain const& aDomain,
-                    RealPoint const& aSpacing = RealPoint::diagonal(1) );
+                    RealPoint const& aSpacing = RealPoint::diagonal(1),
+                    bool hasExtension = false);
 
     /**
      * Destructor

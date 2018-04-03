@@ -1,0 +1,80 @@
+/**
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU Lesser General Public License as
+ *  published by the Free Software Foundation, either version 3 of the
+ *  License, or  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ **/
+
+/**
+ * @file VTKWriter.ih
+ * @author Roland Denis (\c roland.denis@math.univ-lyon1.fr )
+ * Institut Camille Jordan - ICJ (CNRS, UMR 5208), Université Lyon 1, France
+ *
+ * @date 2018/04/03
+ *
+ * Implementation of inline methods defined in VTKWriter.h
+ *
+ * This file is part of the DGtal library.
+ */
+
+//////////////////////////////////////////////////////////////////////////////
+#include "DGtal/io/writers/VTKFieldWriter.h"
+#include "DGtal/base/Exceptions.h"
+//////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////
+// IMPLEMENTATION of inline methods.
+///////////////////////////////////////////////////////////////////////////////
+
+namespace DGtal
+{
+
+///////////////////////////////////////////////////////////////////////////////
+// ----------------------- Standard services ------------------------------
+
+template <typename TImage, typename TFunctor>
+bool
+VTKWriter<TImage, TFunctor>::
+exportVTK(const std::string & filename, const Image & anImage,
+          const Functor & aFunctor,
+          const std::string & aFieldName,
+          bool saveASCII)
+{
+  using Domain = typename Image::Domain;
+  using Space  = typename Domain::Space;
+  using RealPoint = typename Space::RealPoint;
+
+  try
+    {
+      if (saveASCII)
+        {
+          VTKFieldWriter<typename Image::Domain, VTKLegacyASCII> vtk(filename, anImage.domain(), RealPoint::diagonal(1), true);
+          vtk.write(aFieldName, anImage, aFunctor);
+          vtk.close();
+        }
+      else
+        {
+          VTKFieldWriter<typename Image::Domain, VTKLegacyBinary> vtk(filename, anImage.domain(), RealPoint::diagonal(1), true);
+          vtk.write(aFieldName, anImage, aFunctor);
+          vtk.close();
+        }
+    }
+  catch (...)
+    {
+      throw IOException();
+    }
+
+  return true;
+}
+
+} // namespace DGtal
+
