@@ -17,8 +17,9 @@
 #pragma once
 
 /**
- * @file VTKLightWriter.h
- * @author Roland Denis (\c roland.denis@univ-savoie.fr )
+ * @file VTKFieldWriter.h
+ * @author Roland Denis (\c roland.denis@math.univ-lyon1.fr )
+ * Institut Camille Jordan - ICJ (CNRS, UMR 5208), Université Lyon 1, France
  * LAboratory of MAthematics - LAMA (CNRS, UMR 5127), University of Savoie, France
  *
  * @date 2015/01/22
@@ -26,15 +27,15 @@
  * This file is part of the DGtal library.
  */
 
-#if defined(VTKLightWriter_RECURSES)
-#error Recursive header files inclusion detected in VTKLightWriter.h
-#else // defined(VTKLightWriter_RECURSES)
+#if defined(VTKFieldWriter_RECURSES)
+#error Recursive header files inclusion detected in VTKFieldWriter.h
+#else // defined(VTKFieldWriter_RECURSES)
 /** Prevents recursive inclusion of headers. */
-#define VTKLightWriter_RECURSES
+#define VTKFieldWriter_RECURSES
 
-#if !defined VTKLightWriter_h
+#if !defined VTKFieldWriter_h
 /** Prevents repeated inclusion of headers. */
-#define VTKLightWriter_h
+#define VTKFieldWriter_h
 
 //////////////////////////////////////////////////////////////////////////////
 // Inclusions
@@ -65,7 +66,7 @@ namespace DGtal
     };
 
   /////////////////////////////////////////////////////////////////////////////
-  // template class VTKLightWriter
+  // template class VTKFieldWriter
   /// @cond
   /**
    * VTK writer for DGtal Images
@@ -79,7 +80,7 @@ namespace DGtal
     typename TDomain,
     VTKFormat Format = VTKLegacyBinary
   >
-  class VTKLightWriter;
+  class VTKFieldWriter;
   /// @endcond
 
   /** VTK writer for DGtal images that doesn't depend on the VTK library.
@@ -90,7 +91,7 @@ namespace DGtal
    * @see http://www.vtk.org/VTK/img/file-formats.pdf
    */
   template <typename TSpace, VTKFormat Format >
-  class VTKLightWriter< HyperRectDomain<TSpace>, Format >
+  class VTKFieldWriter< HyperRectDomain<TSpace>, Format >
   {
   public:
 
@@ -98,7 +99,7 @@ namespace DGtal
 
     // Aliases
     using Domain    = HyperRectDomain< TSpace >;          ///< Domain type.
-    using Self      = VTKLightWriter< Domain, Format >;   ///< Self type.
+    using Self      = VTKFieldWriter< Domain, Format >;   ///< Self type.
     using Point     = typename TSpace::Point;             ///< Point type.
     using RealPoint = typename TSpace::RealPoint;         ///< Point type with real values.
 
@@ -108,26 +109,26 @@ namespace DGtal
      * @param aFileName  name of the file.
      * @param aDomain    domain of the data to be exported.
      */
-    VTKLightWriter( std::string const& aFileName,
+    VTKFieldWriter( std::string const& aFileName,
                     Domain const& aDomain,
                     RealPoint const& aSpacing = RealPoint::diagonal(1) );
 
     /**
      * Destructor
      */
-    ~VTKLightWriter();
+    ~VTKFieldWriter();
 
     /// Copy constructor. Deleted.
-    VTKLightWriter ( Self const & /* other */ ) = delete;
+    VTKFieldWriter ( Self const & /* other */ ) = delete;
 
     /// Move constructor.
-    VTKLightWriter ( Self && /* other */ );
+    VTKFieldWriter ( Self && /* other */ );
 
     /// Copy assignment operator. Deleted.
     Self & operator= ( Self const & /* other */ ) = delete;
 
     /// Move assignment operator. Deleted
-    VTKLightWriter & operator= ( Self && /* other */ ) = delete;
+    VTKFieldWriter & operator= ( Self && /* other */ ) = delete;
 
     /**
      * Checks the validity/consistency of the object.
@@ -257,20 +258,20 @@ namespace DGtal
 
     DataStream myDataStream;
 
-  }; // end of class VTKLightWriter
+  }; // end of class VTKFieldWriter
 
 } // namespace DGtal
 
 
 ///////////////////////////////////////////////////////////////////////////////
 // Includes inline functions.
-#include "VTKLightWriter.ih"
+#include "VTKFieldWriter.ih"
 
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-#endif // !defined VTKLightWriter_h
+#endif // !defined VTKFieldWriter_h
 
-#undef VTKLightWriter_RECURSES
-#endif // else defined(VTKLightWriter_RECURSES)
+#undef VTKFieldWriter_RECURSES
+#endif // else defined(VTKFieldWriter_RECURSES)
 

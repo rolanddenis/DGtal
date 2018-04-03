@@ -15,13 +15,14 @@
  **/
 
 /**
- * @file VTKLightWriter.ih
- * @author Roland Denis (\c roland.denis@univ-savoie.fr )
+ * @file VTKFieldWriter.ih
+ * @author Roland Denis (\c roland.denis@math.univ-lyon1.fr )
+ * Institut Camille Jordan - ICJ (CNRS, UMR 5208), Université Lyon 1, France
  * LAboratory of MAthematics - LAMA (CNRS, UMR 5127), University of Savoie, France
  *
  * @date 2015/01/22
  *
- * Implementation of inline methods defined in VTKLightWriter.h
+ * Implementation of inline methods defined in VTKFieldWriter.h
  *
  * This file is part of the DGtal library.
  */
@@ -178,8 +179,8 @@ namespace DGtal
  */
 template <typename TSpace, VTKFormat Format>
 inline
-VTKLightWriter< HyperRectDomain<TSpace>, Format >::
-VTKLightWriter( std::string const& aFileName, HyperRectDomain<TSpace> const& aDomain, RealPoint const& aSpacing )
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::
+VTKFieldWriter( std::string const& aFileName, HyperRectDomain<TSpace> const& aDomain, RealPoint const& aSpacing )
     : myDomain( aDomain ), mySpacing( aSpacing ),
       myFieldName( "" ),
       myFileStream( aFileName + ".vtk", std::ofstream::out | std::ofstream::binary ),
@@ -192,8 +193,8 @@ VTKLightWriter( std::string const& aFileName, HyperRectDomain<TSpace> const& aDo
  */
 template <typename TSpace, VTKFormat Format>
 inline
-VTKLightWriter< HyperRectDomain<TSpace>, Format >::
-VTKLightWriter( VTKLightWriter && other )
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::
+VTKFieldWriter( VTKFieldWriter && other )
     : myDomain( std::move(other.myDomain) ),
       mySpacing( std::move(other.mySpacing) ),
       myFieldName( std::move(other.myFieldName) ),
@@ -206,8 +207,8 @@ VTKLightWriter( VTKLightWriter && other )
  */
 template <typename TSpace, VTKFormat Format>
 inline
-VTKLightWriter< HyperRectDomain<TSpace>, Format >::
-~VTKLightWriter()
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::
+~VTKFieldWriter()
 {
   close();
 }
@@ -222,7 +223,7 @@ VTKLightWriter< HyperRectDomain<TSpace>, Format >::
 template <typename TSpace, VTKFormat Format>
 inline
 bool
-VTKLightWriter< HyperRectDomain<TSpace>, Format >::
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::
 isValid() const
 {
     return myFileStream.good() && myFileStream.is_open();
@@ -233,8 +234,8 @@ isValid() const
  */
 template <typename TSpace, VTKFormat Format>
 inline
-VTKLightWriter< HyperRectDomain<TSpace>, Format > &
-VTKLightWriter< HyperRectDomain<TSpace>, Format >::
+VTKFieldWriter< HyperRectDomain<TSpace>, Format > &
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::
 setSpacing( RealPoint const& aSpacing )
 {
   ASSERT_MSG( !myHeader, "Grid spacing should not be modified after data has been exported." );
@@ -246,8 +247,8 @@ setSpacing( RealPoint const& aSpacing )
  */
 template <typename TSpace, VTKFormat Format>
 inline
-typename VTKLightWriter< HyperRectDomain<TSpace>, Format >::RealPoint const&
-VTKLightWriter< HyperRectDomain<TSpace>, Format >::
+typename VTKFieldWriter< HyperRectDomain<TSpace>, Format >::RealPoint const&
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::
 getSpacing() const
 {
   return mySpacing;
@@ -258,8 +259,8 @@ getSpacing() const
  */
 template <typename TSpace, VTKFormat Format>
 inline
-VTKLightWriter< HyperRectDomain<TSpace>, Format > &
-VTKLightWriter< HyperRectDomain<TSpace>, Format >::
+VTKFieldWriter< HyperRectDomain<TSpace>, Format > &
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::
 setExtent( RealPoint const& anExtent )
 {
   ASSERT_MSG( !myHeader, "Grid extent should not be modified after data has been exported." );
@@ -271,8 +272,8 @@ setExtent( RealPoint const& anExtent )
  */
 template <typename TSpace, VTKFormat Format>
 inline
-typename VTKLightWriter< HyperRectDomain<TSpace>, Format >::RealPoint
-VTKLightWriter< HyperRectDomain<TSpace>, Format >::
+typename VTKFieldWriter< HyperRectDomain<TSpace>, Format >::RealPoint
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::
 getExtent() const
 {
   return mySpacing * ( myDomain.upperBound() - myDomain.lowerBound() );
@@ -283,8 +284,8 @@ getExtent() const
  */
 template <typename TSpace, VTKFormat Format>
 inline
-typename VTKLightWriter< HyperRectDomain<TSpace>, Format >::Domain const&
-VTKLightWriter< HyperRectDomain<TSpace>, Format >::
+typename VTKFieldWriter< HyperRectDomain<TSpace>, Format >::Domain const&
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::
 getDomain() const
 {
   return myDomain;
@@ -294,8 +295,8 @@ getDomain() const
  * Write the VTK header
  */
 template <typename TSpace, VTKFormat Format>
-VTKLightWriter< HyperRectDomain<TSpace>, Format > &
-VTKLightWriter< HyperRectDomain<TSpace>, Format >::
+VTKFieldWriter< HyperRectDomain<TSpace>, Format > &
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::
 init()
 {
   if ( !myHeader )
@@ -343,8 +344,8 @@ init()
  */
 template <typename TSpace, VTKFormat Format>
 inline
-VTKLightWriter< HyperRectDomain<TSpace>, Format > &
-VTKLightWriter< HyperRectDomain<TSpace>, Format >::
+VTKFieldWriter< HyperRectDomain<TSpace>, Format > &
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::
 operator<< ( std::string const& aFieldName )
 {
   myFieldName = aFieldName;
@@ -353,8 +354,8 @@ operator<< ( std::string const& aFieldName )
 
 template <typename TSpace, VTKFormat Format>
 inline
-VTKLightWriter< HyperRectDomain<TSpace>, Format > &
-VTKLightWriter< HyperRectDomain<TSpace>, Format >::
+VTKFieldWriter< HyperRectDomain<TSpace>, Format > &
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::
 operator<< ( const char* aFieldName )
 {
   myFieldName = aFieldName;
@@ -366,8 +367,8 @@ operator<< ( const char* aFieldName )
  */
 template <typename TSpace, VTKFormat Format>
 template <typename TImage>
-VTKLightWriter< HyperRectDomain<TSpace>, Format > &
-VTKLightWriter< HyperRectDomain<TSpace>, Format >::
+VTKFieldWriter< HyperRectDomain<TSpace>, Format > &
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::
 operator<< ( TImage const& aField )
 {
   return write( myFieldName, aField );
@@ -381,8 +382,8 @@ template <
   typename TImage,
   typename TFunctor
 >
-VTKLightWriter< HyperRectDomain<TSpace>, Format > &
-VTKLightWriter< HyperRectDomain<TSpace>, Format >::
+VTKFieldWriter< HyperRectDomain<TSpace>, Format > &
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::
 write ( std::string const& aFieldName, TImage const& aField, TFunctor const& aFunctor )
 {
   BOOST_CONCEPT_ASSERT( (concepts::CConstImage<TImage>) );
@@ -420,7 +421,7 @@ write ( std::string const& aFieldName, TImage const& aField, TFunctor const& aFu
  */
 template <typename TSpace, VTKFormat Format>
 void
-VTKLightWriter< HyperRectDomain<TSpace>, Format >::
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::
 close()
 {
   myFileStream.close();
@@ -430,7 +431,7 @@ close()
  * Internale data stream
  */
 template <typename TSpace, VTKFormat Format>
-VTKLightWriter< HyperRectDomain<TSpace>, Format >::DataStream::
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::DataStream::
 DataStream( std::ofstream* aFileStreamPtr )
   : myFileStreamPtr( aFileStreamPtr )
 {
@@ -439,8 +440,8 @@ DataStream( std::ofstream* aFileStreamPtr )
 
 template <typename TSpace, VTKFormat Format>
 template <typename TValue>
-typename VTKLightWriter< HyperRectDomain<TSpace>, Format >::DataStream &
-VTKLightWriter< HyperRectDomain<TSpace>, Format >::DataStream::
+typename VTKFieldWriter< HyperRectDomain<TSpace>, Format >::DataStream &
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::DataStream::
 operator<< ( TValue const& aValue )
 {
   VTKDataWriter<Format>::write( *myFileStreamPtr, aValue );
@@ -449,7 +450,7 @@ operator<< ( TValue const& aValue )
 
 template <typename TSpace, VTKFormat Format>
 std::string
-VTKLightWriter< HyperRectDomain<TSpace>, Format >::DataStream::
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::DataStream::
 data_format()
 {
   return VTKDataWriter<Format>::data_format();
@@ -457,7 +458,7 @@ data_format()
 
 template <typename TSpace, VTKFormat Format>
 void
-VTKLightWriter< HyperRectDomain<TSpace>, Format >::DataStream::
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::DataStream::
 separator()
 {
   (*myFileStreamPtr) << VTKDataWriter<Format>::separator();
