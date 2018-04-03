@@ -102,7 +102,7 @@ namespace DGtal
      **/
     static bool exportFile(const std::string &filename,
                            const TContainer &anImage,
-                           const TFunctor & aFunctor = TFunctor() )  throw(DGtal::IOException);
+                           const TFunctor & aFunctor = TFunctor() );
   };
 
   /**
@@ -124,7 +124,7 @@ namespace DGtal
      *
      **/
     static bool exportFile(const std::string &filename,  const TContainer &anImage, const std::string &datasetName="UInt8Array3D",
-                           const TFunctor & aFunctor = TFunctor() )  throw(DGtal::IOException);
+                           const TFunctor & aFunctor = TFunctor() );
 
   };
 
@@ -148,7 +148,7 @@ namespace DGtal
      *
      **/
     static bool exportFile(const std::string &filename,  const TContainer &anImage,
-                           const TFunctor & aFunctor = TFunctor() )  throw(DGtal::IOException);
+                           const TFunctor & aFunctor = TFunctor() );
 
   };
 
@@ -172,7 +172,7 @@ namespace DGtal
     static bool exportFile(const std::string &filename,
                            const TContainer &anImage,
                            const std::string &datasetName="UInt8Array3D",
-                           const TFunctor & aFunctor = TFunctor() )  throw(DGtal::IOException);
+                           const TFunctor & aFunctor = TFunctor() );
 
   };
 
@@ -195,10 +195,37 @@ namespace DGtal
 
     static bool exportFile(const std::string &filename,
                            const TContainer &anImage,
-                           const TFunctor & aFunctor = TFunctor() )  throw(DGtal::IOException);
+                           const TFunctor & aFunctor = TFunctor() );
 
   };
 
+
+  /**
+   * GenericWriter
+   * Template partial specialisation for images of dimension 2 with image value DGtal::Color 
+   **/
+  template <typename TContainer,  typename TFunctor>
+  struct GenericWriter<TContainer, 2, DGtal::Color, TFunctor>
+  {
+    BOOST_CONCEPT_ASSERT((  concepts::CConstImage<TContainer> )) ;
+
+    /**
+     * Export the 2D image file.
+     * @param filename the filename of the saved image (with a extension name).
+     * @param anImage the image to be saved.
+     * @param aFunctor to apply image transformation before saving.
+     *
+     **/
+
+    static bool exportFile(const std::string &filename,
+                           const TContainer &anImage,
+                           const TFunctor & aFunctor = TFunctor() );
+
+  };
+
+
+
+  
   /**
    * GenericWriter
    * Template partial specialisation for images of dimension 2 and Functor returning a Color object
@@ -221,7 +248,7 @@ namespace DGtal
      **/
 
     static bool exportFile(const std::string &filename, const TContainer &anImage,
-                           const HueShadeColorMap<TValue> & aFunctor )  throw(DGtal::IOException);
+                           const HueShadeColorMap<TValue> & aFunctor );
 
   };
 
@@ -241,7 +268,7 @@ namespace DGtal
      *
      **/
     static bool exportFile(const std::string &filename, const TContainer &anImage,
-                           const TFunctor & aFunctor = TFunctor() )  throw(DGtal::IOException);
+                           const TFunctor & aFunctor = TFunctor() );
 
   };
 
@@ -256,7 +283,7 @@ namespace DGtal
    */
   template <typename TImageContainer >
   bool
-  operator >> ( const TImageContainer & aContainer,  const std::string & aFilename  ) throw (DGtal::IOException);
+  operator >> ( const TImageContainer & aContainer,  const std::string & aFilename  );
 
 
 } // namespace DGtal

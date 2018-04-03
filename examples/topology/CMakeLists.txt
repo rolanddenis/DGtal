@@ -8,13 +8,17 @@ SET(DGTAL_EXAMPLES_TOPO_SRC
   trackImplicitPolynomialSurfaceToOFF
   generateSimplicityTables2D
   generateSimplicityTables3D
+  generateVoxelComplexTables
   digitalSetToCubicalComplexes2D
   cubical-complex-illustrations
+  cubicalComplexThinning
+  area-estimation-with-digital-surface
+  area-estimation-with-indexed-digital-surface
 )
 
 FOREACH(FILE ${DGTAL_EXAMPLES_TOPO_SRC}) 
   add_executable(${FILE} ${FILE})
-  target_link_libraries ( ${FILE} DGtalIO DGtal
+  target_link_libraries ( ${FILE}  DGtal
     ${DGtalLibDependencies})   
 ENDFOREACH(FILE)
 
@@ -37,7 +41,7 @@ if (  WITH_VISU3D_QGLVIEWER )
    )
   FOREACH(FILE ${DGTAL_EXAMPLES_QGL_SRC}) 
    add_executable(${FILE} ${FILE})
-    target_link_libraries ( ${FILE} DGtalIO DGtal
+    target_link_libraries ( ${FILE}  DGtal
                             ${DGtalLibDependencies})   
   ENDFOREACH(FILE)
 

@@ -27,6 +27,13 @@
  * This file is part of the DGtal library.
  */
 
+/**
+ *  Example of 2D image display in 3D by 3D embedding.
+ *
+ * \image html viewer3D-8bis.png "Illustration of multiple 2D image extraction and visualisation  from 3D embedding"
+ * \example io/viewers/viewer3D-8bis-2Dimages.cpp
+ */
+
 ///////////////////////////////////////////////////////////////////////////////
 #include <iostream>
 #include "DGtal/base/Common.h"
@@ -101,10 +108,7 @@ int main( int argc, char** argv )
   viewer << MyViewer::updateDisplay;
 
 
-return application.exec();
-
-  trace.endBlock();
-  return 0;
+  return application.exec();
 }
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////

@@ -12,6 +12,24 @@
  * This file is part of the DGtal library.
  */
 
+/**
+Traverses a 2D graph in different ways (enumeration, breadth-first traversal, depth-first traversal).
+
+@see \ref dgtal_graph_def_2
+
+@verbatim
+# Commands
+$ ./examples/graph/graphTraversal
+# see files graphTraversal-enum.eps, graphTraversal-bfs.eps, graphTraversal-dfs-range.eps.
+@endverbatim
+
+@image html graphTraversal-enum.png "Coloring vertices of an object graph according to the enumeration order."
+@image html graphTraversal-bfs.png "Coloring vertices of an object graph according to the topological distance to a seed (breadth-first traversal)."
+@image html graphTraversal-dfs-range.png "Coloring vertices of an object graph according to their order given by a depth-first traversal."
+
+\example graph/graphTraversal.cpp
+*/
+
 ///////////////////////////////////////////////////////////////////////////////
 //! [graphTraversal-basicIncludes]
 #include <iostream>
@@ -63,7 +81,7 @@ int main( int /* argc */, char** /* argv */ )
   cmap_grad.addColor( Color( 255, 255, 0 ) );
   cmap_grad.addColor( Color( 255, 0, 0 ) );
   cmap_grad.addColor( Color( 255, 0, 255 ) );
-  
+
   Board2D board;
   board << SetMode( domain.className(), "Paving" )
         << domain << SetMode( p1.className(), "Paving" );
@@ -90,9 +108,9 @@ int main( int /* argc */, char** /* argv */ )
     std::vector<Vertex> neighbors;
     for ( Graph::ConstIterator it = g.begin(), itEnd = g.end();
           it != itEnd; ++it, ++nn )
-      { 
+      {
         Vertex vtx = *it;
-        std::back_insert_iterator< std::vector<Vertex> > neighIt 
+        std::back_insert_iterator< std::vector<Vertex> > neighIt
           = std::back_inserter( neighbors );
         g.writeNeighbors( neighIt, vtx );
         mm += neighbors.size();
@@ -142,6 +160,5 @@ int main( int /* argc */, char** /* argv */ )
   board.saveEPS("graphTraversal-dfs-range.eps");
   //! [graphTraversal-graph-dfs-range]
 
-  return true;
+  return 0;
 }
-

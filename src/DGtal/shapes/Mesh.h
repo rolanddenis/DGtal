@@ -142,7 +142,11 @@ namespace DGtal
      **/
     typedef typename VertexStorage::iterator Iterator;
 
-    
+    /**
+     * Define the size type of the containers.
+     **/
+    typedef typename std::size_t Size;
+
 
 
     // ----------------------- Standard services ------------------------------
@@ -435,13 +439,13 @@ namespace DGtal
      * Return the number of faces contained on the mesh object.
      * @return the number of faces.
      **/
-    unsigned int nbFaces() const;
+    Size nbFaces() const;
 
     /**
      * Return the number of faces contained on the mesh object.
      * @return the number of faces.
      **/
-    unsigned int  nbVertex() const;
+    Size  nbVertex() const;
     
     
     
@@ -551,20 +555,23 @@ namespace DGtal
     createTubularMesh(Mesh<TPoint> &aMesh,  const std::vector<TPoint> &aSkeleton, const std::vector<double> &aVectOfRadius, 
                       const double angleStep = 0.2, const DGtal::Color &aMeshColor = DGtal::Color::White );
 
-    
-
     /**
      * Generates a surface mesh defined from a sequence of 2D
-     * height values (can be seen as a height map). 
+     * height values (can be seen as a height map).
      *
-     * @param[out] aMesh the mesh in which the new tube mesh will be created.
-     * @param[in] anValueSequence the sequence of values defining the height points.
-     * @param[in] lengthSequence the number of points constituing a line in the height map.
-     * @param[in] stepX the x grid step to define the scale of the resulting mesh. 
-     * @param[in] stepY the y grid step to define the scale of the resulting mesh. 
-     * @param[in] stepZ the z grid step to define the scale of the resulting mesh. 
+     * @param[out] aMesh the mesh in which the new surface mesh will be created.
+     * @param[in] anValueSequence the sequence of values defining the height
+     *points.
+     * @param[in] lengthSequence the number of points constituing a line in the
+     *height map.
+     * @param[in] stepX the x grid step to define the scale of the resulting
+     *mesh.
+     * @param[in] stepY the y grid step to define the scale of the resulting
+     *mesh.
+     * @param[in] stepZ the z grid step to define the scale of the resulting
+     *mesh.
      *
-     * @param[in] aMeshColor the color given to the generated tube mesh. 
+     * @param[in] aMeshColor the color given to the generated tube mesh.
      *
      **/
     template <typename TValue>

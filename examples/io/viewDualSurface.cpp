@@ -20,10 +20,18 @@
  *
  * @date 2011/03/25
  *
- * An example file named digitalSetFromVol.
+ * An example file named viewDualSurface.
  *
  * This file is part of the DGtal library.
  */
+
+
+/**
+ *  Example of viewing dual surfaces in Viewer3D.  
+ *  \image html viewDualSurface.png " " 
+ *  \example io/viewDualSurface.cpp
+ **/
+
 
 ///////////////////////////////////////////////////////////////////////////////
 #include <iostream>
@@ -107,7 +115,7 @@ void naiveConvexHull
   // purge faces.
   for ( unsigned int i = 0; i < indices.size(); ++i )
     {
-      unsigned int s = indices[ i ].size();
+      auto s = indices[ i ].size();
       for ( unsigned int j = i+1; j < indices.size(); )
         {
           if ( indices[ j ].size() == s )
@@ -127,14 +135,6 @@ void naiveConvexHull
           else ++j;
         }
     }
-  // std::cerr << "----------- " << std::endl;
-  // for ( unsigned int i = 0; i < indices.size(); ++i )
-  //   {
-  //     std::cerr << "( ";
-  //     for ( unsigned int j = 0; j < indices[ i ].size(); ++j )
-  //       std::cerr << indices[ i ][ j ] << " ";
-  //     std::cerr << ")" << std::endl;
-  //   }
 }
 
 double rescale( double x )
@@ -393,7 +393,7 @@ int main( int argc, char** argv )
 {
   typedef KSpace::CellSet CellSet;
   QApplication application(argc,argv);
-  //! [ExampleDisplay3DToOFF]
+
   KSpace KS;
 
   Viewer3D<Z3i::Space,Z3i::KSpace> viewer(KS);
@@ -444,6 +444,6 @@ int main( int argc, char** argv )
             }
       }
   viewer << Viewer3D<>::updateDisplay;
-  //! [ExampleDisplay3DToOFF]
+
   return application.exec();
 }

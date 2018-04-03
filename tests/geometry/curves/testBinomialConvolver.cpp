@@ -47,9 +47,6 @@ using namespace DGtal;
  */
 bool testBinomialConvolver()
 {
-  unsigned int nbok = 0;
-  unsigned int nb = 0;
-  
   trace.beginBlock ( "Testing block ..." );
   typedef PointVector<2, double> RealPoint;
   std::vector< RealPoint > points;
@@ -90,8 +87,8 @@ bool testBinomialConvolver()
     CurvatureBCFct;
   typedef BinomialConvolverEstimator< MyBinomialConvolver, TangentBCFct> BCTangentEstimator;
   typedef BinomialConvolverEstimator< MyBinomialConvolver, CurvatureBCFct> BCCurvatureEstimator;
-  BOOST_CONCEPT_ASSERT(( CCurveLocalGeometricEstimator< BCTangentEstimator > ));
-  BOOST_CONCEPT_ASSERT(( CCurveLocalGeometricEstimator< BCCurvatureEstimator > ));
+  BOOST_CONCEPT_ASSERT(( concepts::CCurveLocalGeometricEstimator< BCTangentEstimator > ));
+  BOOST_CONCEPT_ASSERT(( concepts::CCurveLocalGeometricEstimator< BCCurvatureEstimator > ));
   BCTangentEstimator tgtEstimator;
   BCCurvatureEstimator curvEstimator;
 
@@ -105,13 +102,9 @@ bool testBinomialConvolver()
     << " " << curvEstimator.eval( it ) 
     << std::endl;
     }
-  nbok += true ? 1 : 0; 
-  nb++;
-  trace.info() << "(" << nbok << "/" << nb << ") "
-         << "true == true" << std::endl;
   trace.endBlock();
   
-  return nbok == nb;
+  return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

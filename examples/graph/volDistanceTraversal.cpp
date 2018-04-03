@@ -10,6 +10,23 @@
  *
  * This file is part of the DGtal library.
  */
+/**
+
+  Displays the Euclidean distance to a starting surfel on the boundary
+  of a vol shape (traversal by mix distance/breadth-first, see
+  \ref DGtal::DistanceBreadthFirstVisitor).
+
+@see \ref dgtal_graph_def_2_4
+
+@verbatim
+# Commands
+$ ./examples/graph/volDistanceTraversal ../examples/samples/cat10.vol 0 255 100
+@endverbatim
+
+@image html volDistanceTraversal-cat10.png "Coloring vertices of a vol boundary according to the Euclidean distance to a starting surfel (distance breadth-first traversal)."
+
+\example graph/volDistanceTraversal.cpp
+*/
 
 ///////////////////////////////////////////////////////////////////////////////
 //! [volDistanceTraversal-basicIncludes]
@@ -112,8 +129,7 @@ int main( int argc, char** argv )
   typedef SCellEmbedder::Value RealPoint;
   typedef RealPoint::Coordinate Scalar;
   typedef ExactPredicateLpSeparableMetric<Space,2> Distance;
-
-  typedef std::binder1st< Distance > DistanceToPoint;
+  using DistanceToPoint = std::function<double(const Space::Point &)>;
   typedef DGtal::functors::Composer<SCellEmbedder, DistanceToPoint, Scalar> VertexFunctor;
   typedef DistanceBreadthFirstVisitor< MyDigitalSurface, VertexFunctor, std::set<SCell> >
     MyDistanceVisitor;
@@ -122,7 +138,7 @@ int main( int argc, char** argv )
 
   SCellEmbedder embedder( ks );
   Distance distance;
-  DistanceToPoint distanceToPoint = std::bind1st( distance, embedder( bel ) );
+  DistanceToPoint distanceToPoint = std::bind( distance, embedder( bel ), std::placeholders::_1 );
   VertexFunctor vfunctor( embedder, distanceToPoint );
   MyDistanceVisitor visitor( digSurf, vfunctor, bel );
 

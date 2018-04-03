@@ -27,6 +27,17 @@
  * This file is part of the DGtal library.
  */
 
+/**
+ *   A simple example illustrating the filling of the
+ *   interior/exterior of a given 2D contour. This program outputs
+ *   these images:
+ *
+ * @see \ref dgtal_helpsurf_sec4
+ * 
+ * @image html ctopo-fillContours.png 
+ * \example  topology/ctopo-fillContours.cpp
+ */
+
 ///////////////////////////////////////////////////////////////////////////////
 #include <iostream>
 #include "ConfigExamples.h"
@@ -105,7 +116,7 @@ int main( int /*argc*/, char** /*argv*/ )
                                                               interiorCellImage, 1, false);  
   //! [ctopoFillContoursFillRegion]
 
-  aBoard << CustomStyle(K.uSpel(Z2i::Point(0,0)).className(),  new CustomColors(DGtal::Color::None, Color(200, 200, 200)) );
+  aBoard << CustomStyle(K.lowerCell().className(),  new CustomColors(DGtal::Color::None, Color(200, 200, 200)) );
   for(BoolImage2D::Domain::ConstIterator it = interiorCellImage.domain().begin(); 
       it!=interiorCellImage.domain().end(); it++){
     if(interiorCellImage(*it)){
@@ -126,7 +137,7 @@ int main( int /*argc*/, char** /*argv*/ )
                                                               exteriorCellHoleImage, 1,  false);  
   //! [ctopoFillContoursFillRegionHoles]  
 
-  aBoard2 << CustomStyle(K.uSpel(Z2i::Point(0,0)).className(),  
+  aBoard2 << CustomStyle(K.lowerCell().className(),
                           new CustomColors(DGtal::Color::None, Color(200, 200, 200)) );
   for(BoolImage2D::Domain::ConstIterator it = interiorCellHoleImage.domain().begin();
       it!=interiorCellHoleImage.domain().end(); it++){
@@ -134,7 +145,7 @@ int main( int /*argc*/, char** /*argv*/ )
       aBoard2 << K.uSpel(*it);
     }
   }
-  aBoard2 << CustomStyle(K.uSpel(Z2i::Point(0,0)).className(),  
+  aBoard2 << CustomStyle(K.lowerCell().className(),
                          new CustomColors(DGtal::Color::None, Color(100, 100, 100)) );
   for(BoolImage2D::Domain::ConstIterator it = exteriorCellHoleImage.domain().begin(); 
       it!=exteriorCellHoleImage.domain().end(); it++){

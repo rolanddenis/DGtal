@@ -27,6 +27,15 @@
  * This file is part of the DGtal library.
  */
 
+
+/**
+ * Converting a digital set to cubical complex.
+ * @see @ref  moduleCubicalComplex
+ * @image html cubicalComplexes.png "Resulting cubical complex obtained on a flower shape."
+ * @example topology/digitalSetToCubicalComplexes2D.cpp
+*/
+
+
 ///////////////////////////////////////////////////////////////////////////////
 #include <iostream>
 #include <cmath>
@@ -88,23 +97,23 @@ int main( int , char** )
   
   typedef CC::CellMapConstIterator CellMapConstIterator;
   for ( Dimension d = 0; d <= 2; ++d )
-    for ( CellMapConstIterator it = complex.begin( d ), itE = complex.end( d );
-	 it != itE; ++it )
-	 {
-	   if ( d == 0 )
-	     board << CustomStyle( it->first.className(),
-				   new CustomColors( Color( 0, 0, 0 ),
-						     Color( 0, 0, 0 ) ) );
-	  else if ( d == 1 )
-	       board << CustomStyle( it->first.className(),
-				     new CustomColors( Color( 200, 0, 0 ),
-						       Color( 100, 255, 100 ) ) );
-	  else
-		 board << CustomStyle( it->first.className(),
-				       new CustomColors( Color( 0, 0, 200 ),
-							 Color( 100, 255, 100 ) ) );
-		 board << it->first;
-	 }
+      for ( CellMapConstIterator it = complex.begin( d ), itE = complex.end( d );
+              it != itE; ++it )
+      {
+          if ( d == 0 )
+              board << CustomStyle( it->first.className(),
+                      new CustomColors( Color( 0, 0, 0 ),
+                          Color( 0, 0, 0 ) ) );
+          else if ( d == 1 )
+              board << CustomStyle( it->first.className(),
+                      new CustomColors( Color( 200, 0, 0 ),
+                          Color( 100, 255, 100 ) ) );
+          else
+              board << CustomStyle( it->first.className(),
+                      new CustomColors( Color( 0, 0, 200 ),
+                          Color( 100, 255, 100 ) ) );
+          board << it->first;
+      }
   
   board.saveEPS ( "cubicalComplexes.eps" );
   trace.endBlock();

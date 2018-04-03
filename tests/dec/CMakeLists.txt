@@ -6,7 +6,7 @@ if(WITH_EIGEN)
     add_test(testDiscreteExteriorCalculus testDiscreteExteriorCalculus)
 
     add_executable(testLinearStructure testLinearStructure)
-    target_link_libraries(testLinearStructure DGtal DGtalIO)
+    target_link_libraries(testLinearStructure DGtal )
     add_test(testLinearStructure testLinearStructure)
 
     add_executable(testDiscreteExteriorCalculusExtended testDiscreteExteriorCalculusExtended)
@@ -14,8 +14,12 @@ if(WITH_EIGEN)
     #add_test(testDiscreteExteriorCalculusExtended testDiscreteExteriorCalculusExtended)
 
     add_executable(testEmbedding testEmbedding)
-    target_link_libraries(testEmbedding DGtal DGtalIO)
+    target_link_libraries(testEmbedding DGtal )
     add_test(testEmbedding testEmbedding)
+
+    add_executable(testHeatLaplace testHeatLaplace)
+    target_link_libraries(testHeatLaplace DGtal )
+    add_test(testHeatLaplace testHeatLaplace)
 
 endif(WITH_EIGEN)
 
