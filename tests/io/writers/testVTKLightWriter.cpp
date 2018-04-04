@@ -23,8 +23,16 @@ int main ()
   for ( auto const& pt : domain )
     image.setValue( pt, 0.14 * ( pt - Point(5,5) ).norm() );
 
+  using RealPoint = PointVector<2, Real>;
+  using VectorImage = ImageContainerBySTLVector<Domain, PointVector<2, Real>>;
+  VectorImage vector_image( domain );
+  for ( auto const& pt : domain )
+      vector_image.setValue( pt, 0.14 * ( pt - RealPoint(5, 5) ).getNormalized() );
+
   VTKFieldWriter<Domain> vtk( "test", domain, {0.5, 0.5} );
   vtk << "image" << image;
+  vtk << "vector" << vector_image;
+
   auto vtk2 = std::move(vtk);
   std::cout << "Is vtk valid ? "  << vtk.isValid()  << std::endl;
   std::cout << "Is vtk2 valid ? " << vtk2.isValid() << std::endl;
@@ -34,6 +42,7 @@ int main ()
   VTKWriter<Image>::exportVTK("test2.vtk", image);
 
   image >> "test3.vtk";
+
 
   return 0;
 }
