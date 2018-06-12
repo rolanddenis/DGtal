@@ -73,3 +73,32 @@ INCLUDE(Install)
 # Unzip and install topology Look up Tables.
 # -----------------------------------------------------------------------------
 INCLUDE(NeighborhoodTablesConfig)
+
+SET(CMAKE_CXX_FLAGS_RELNATIVE
+    "${CMAKE_CXX_FLAGS_RELEASE} -march=native -mtune=native"
+    CACHE STRING "Flags used by the CXX compiler during release builds for native architecture."
+    FORCE )
+SET(CMAKE_C_FLAGS_RELNATIVE
+    "${CMAKE_C_FLAGS_RELEASE} -fprofile-arcs -ftest-coverage"
+    CACHE STRING "Flags used by the C compiler during release builds for native architecture."
+    FORCE )
+SET(CMAKE_EXE_LINKER_FLAGS_RELNATIVE
+    ""
+    CACHE STRING "Flags used for linking binaries during release builds for native architecture."
+    FORCE )
+SET(CMAKE_SHARED_LINKER_FLAGS_RELNATIVE
+    ""
+    CACHE STRING "Flags used by the shared libraries linker during release builds for native architecture."
+    FORCE )
+
+MARK_AS_ADVANCED(
+    CMAKE_CXX_FLAGS_RELNATIVE
+    CMAKE_C_FLAGS_RELNATIVE
+    CMAKE_EXE_LINKER_FLAGS_RELNATIVE
+    CMAKE_SHARED_LINKER_FLAGS_RELNATIVE )
+
+# Update the documentation string of CMAKE_BUILD_TYPE for GUIs
+SET( CMAKE_BUILD_TYPE "${CMAKE_BUILD_TYPE}" CACHE STRING
+    "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel RelNative."
+    FORCE )
+
