@@ -1,3 +1,6 @@
+#include <cstdint>
+#include <string>
+
 #include "DGtal/io/writers/VTKFieldWriter.h"
 #include "DGtal/io/writers/VTKWriter.h"
 #include "DGtal/io/writers/GenericWriter.h"
@@ -21,13 +24,13 @@ int main ()
   const Domain domain( {1, 2}, {11, 10} );
   Image image( domain );
   for ( auto const& pt : domain )
-    image.setValue( pt, 0.14 * ( pt - Point(5,5) ).norm() );
+    image.setValue( pt, /* 0.14 * */ ( pt - Point(5,5) ).norm() );
 
   using RealPoint = PointVector<2, Real>;
   using VectorImage = ImageContainerBySTLVector<Domain, PointVector<2, Real>>;
   VectorImage vector_image( domain );
   for ( auto const& pt : domain )
-      vector_image.setValue( pt, 0.14 * ( pt - RealPoint(5, 5) ).getNormalized() );
+      vector_image.setValue( pt, /* 0.14 * */ ( pt - RealPoint(5, 5) ).getNormalized() );
 
   VTKFieldWriter<Domain> vtk( "test", domain, {0.5, 0.5} );
   vtk << "image" << image;
@@ -37,6 +40,15 @@ int main ()
   std::cout << "Is vtk valid ? "  << vtk.isValid()  << std::endl;
   std::cout << "Is vtk2 valid ? " << vtk2.isValid() << std::endl;
   vtk2.write( "image_float", image, functors::Cast<float>() );
+  vtk2.write( "image_char", image, functors::Cast<char>() );
+  vtk2.write( "image_unsigned_char", image, functors::Cast<unsigned char>() );
+  vtk2.write( "image_short", image, functors::Cast<short>() );
+  vtk2.write( "image_unsigned_short", image, functors::Cast<unsigned short>() );
+  vtk2.write( "image_int", image, functors::Cast<int>() );
+  vtk2.write( "image_unsigned_int", image, functors::Cast<unsigned int>() );
+  vtk2.write( "image_long", image, functors::Cast<long>() );
+  vtk2.write( "image_unsigned_long", image, functors::Cast<unsigned long>() );
+  vtk2.write( "image_uint8", image, functors::Cast<std::string>() );
   vtk2.close();
 
   VTKWriter<Image>::exportVTK("test2.vtk", image);

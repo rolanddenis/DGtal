@@ -30,6 +30,7 @@
 
 //////////////////////////////////////////////////////////////////////////////
 #include <cstdlib>
+#include <cstdint>
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -56,13 +57,17 @@ namespace DGtal {
 // Anonymous namespace
 namespace {
 
-//! Type info helper for scalar types.
+//! Type info helper for 1D scalar dataset types.
 template <typename T>
-struct VTKTypeScalar
+struct VTKType1DScalar
 {
   //! Return the dimension of the type
   static constexpr
   std::size_t dim() { return 1; }
+
+  //! Return the dataset type
+  static inline
+  std::string datasetType() { return "SCALARS"; }
 
   //! Write a value to the stream.
   template < typename TStream, typename TValue >
@@ -73,83 +78,157 @@ struct VTKTypeScalar
     }
 };
 
-//! Type info helper for Vector types.
+//! Type info helper for vector dataset types (allow Glyph filter usage in Paraview)
 template <typename T, std::size_t N>
 struct VTKTypeVector
 {
+  static_assert( 1 <= N && N <= 3, "Vector dataset must have dimension between 1 and 3" );
+
   //! Return the dimension of the type
   static constexpr
   std::size_t dim() { return N; }
+  
+  //! Return the dataset type //FIXME: go to a specific type traits for export.
+  static inline
+  std::string datasetType() { return "VECTORS"; }
 
   //! Write a value to the stream.
   template < typename TStream, typename TValue >
   static inline
   void write( TStream & stream, TValue const& value )
     {
-      // Should be inlined by the compiler
+      // Should be unrolled by the compiler
       for ( std::size_t i = 0; i < N; ++i )
         stream << static_cast<T>(value[i]);
+      for ( std::size_t i = N; i < 3; ++i )
+        stream << T(0);
     }
 };
 
-//! VTK data type name
+// Dummy template to delay the static error at the instantiation step.
+template <bool> struct VTKTypeTraitsError : std::false_type {};
+
+template <bool IsInt, bool IsFloat, bool IsSigned, std::size_t Size>
+struct VTKTypeTraitsImpl
+{
+  static_assert(VTKTypeTraitsError<IsInt>::value, "Invalid type for VTK file format.");
+};
+
+//! unsigned char
+template <>
+struct VTKTypeTraitsImpl<true, false, false, 1>
+{
+  using least_type = std::uint_least8_t;
+  static constexpr std::size_t size() { return 1; }
+  static inline    std::string name() { return "unsigned_char"; }
+};
+
+//! signed char
+template <>
+struct VTKTypeTraitsImpl<true, false, true, 1>
+{
+  using least_type = std::int_least8_t;
+  static constexpr std::size_t size() { return 1; }
+  static inline std::string name() { return "char"; }
+};
+
+//! unsigned short int
+template <>
+struct VTKTypeTraitsImpl<true, false, false, 2>
+{
+  using least_type = std::uint_least16_t;
+  static constexpr std::size_t size() { return 2; }
+  static inline    std::string name() { return "unsigned_short"; }
+};
+
+//! signed short int
+template <>
+struct VTKTypeTraitsImpl<true, false, true, 2>
+{
+  using least_type = std::int_least16_t;
+  static constexpr std::size_t size() { return 2; }
+  static inline std::string name() { return "short"; }
+};
+
+//! unsigned int
+template <>
+struct VTKTypeTraitsImpl<true, false, false, 4>
+{
+  using least_type = std::uint_least32_t;
+  static constexpr std::size_t size() { return 4; }
+  static inline    std::string name() { return "unsigned_int"; }
+};
+
+//! signed int
+template <>
+struct VTKTypeTraitsImpl<true, false, true, 4>
+{
+  using least_type = std::int_least32_t;
+  static constexpr std::size_t size() { return 4; }
+  static inline std::string name() { return "int"; }
+};
+
+//! unsigned long long int
+template <>
+struct VTKTypeTraitsImpl<true, false, false, 8>
+{
+  using least_type = std::uint_least64_t;
+  static constexpr std::size_t size() { return 8; }
+  static inline    std::string name() { return "vtktypeuint64"; }
+};
+
+//! signed long long int
+template <>
+struct VTKTypeTraitsImpl<true, false, true, 8>
+{
+  using least_type = std::int_least64_t;
+  static constexpr std::size_t size() { return 8; }
+  static inline std::string name() { return "vtktypeint64"; }
+};
+
+//! float
+template <>
+struct VTKTypeTraitsImpl<false, true, true, 4>
+{
+  using least_type = float;
+  static constexpr std::size_t size() { return 4; }
+  static inline std::string name() { return "float"; }
+};
+
+//! double
+template <>
+struct VTKTypeTraitsImpl<false, true, true, 8>
+{
+  using least_type = double;
+  static constexpr std::size_t size() { return 8; }
+  static inline std::string name() { return "double"; }
+};
+
+//! Associate a given type to a corresponding VTK type name and expected size.
 template <typename T>
-struct VTKTypeName;
+struct VTKTypeTraits
+  : VTKTypeTraitsImpl<
+      std::is_integral<T>::value,
+      std::is_floating_point<T>::value,
+      std::is_signed<T>::value,
+      sizeof(T)>
+{
+};
+
+
 
 //! Type info (name and dimension) for VTK. Fundamental type implementation.
 template <typename T>
-struct VTKType : VTKTypeScalar<T>, VTKTypeName<T>
-{};
+struct VTKType : VTKType1DScalar<T>, VTKTypeTraits<T>
+{
+};
 
 //! Type info (name and dimension) for VTK. PointVector implementation.
 template <Dimension dim, typename TEuclideanRing, typename TContainer>
 struct VTKType< PointVector<dim, TEuclideanRing, TContainer> >
-    : VTKTypeVector<TEuclideanRing, dim>, VTKTypeName<TEuclideanRing>
+    : VTKTypeVector<TEuclideanRing, dim>, VTKTypeTraits<TEuclideanRing>
 {};
 
-//! VTK type name for bool
-template <>
-struct VTKTypeName<bool> { static inline std::string name() { return "bit"; } };
-
-//! VTK type name for unsigned char
-template <>
-struct VTKTypeName<unsigned char> { static inline std::string name() { return "unsigned_char"; } };
-
-//! VTK type name for char
-template <>
-struct VTKTypeName<char> { static inline std::string name() { return "char"; } };
-
-//! VTK type name for unsigned short int
-template <>
-struct VTKTypeName<unsigned short int> { static inline std::string name() { return "unsigned_short"; } };
-
-//! VTK type name for short int
-template <>
-struct VTKTypeName<short int> { static inline std::string name() { return "short"; } };
-
-//! VTK type name for unsigned int
-template <>
-struct VTKTypeName<unsigned int> { static inline std::string name() { return "unsigned_int"; } };
-
-//! VTK type name for int
-template <>
-struct VTKTypeName<int> { static inline std::string name() { return "int"; } };
-
-//! VTK type name for unsigned long int
-template <>
-struct VTKTypeName<unsigned long int> { static inline std::string name() { return "unsigned_long"; } };
-
-//! VTK type name for long int
-template <>
-struct VTKTypeName<long int> { static inline std::string name() { return "long"; } };
-
-//! VTK type name for float
-template <>
-struct VTKTypeName<float> { static inline std::string name() { return "float"; } };
-
-//! VTK type name for double
-template <>
-struct VTKTypeName<double> { static inline std::string name() { return "double"; } };
 
 //! VTK Stream writer
 template < DGtal::VTKFormat Format >
@@ -187,12 +266,14 @@ struct VTKDataWriter< DGtal::VTKLegacyBinary >
   static inline
   void write( TStream & stream, TValue const& value )
     {
-      // FIXME: check correct endiannes conversion (there is maybe a bug with unsigned int or short ?)
+      // FIXME: check correct endiannes conversion (there is a bug with [unsigned] long)
       //stream.write( reinterpret_cast<const char *>(&value), sizeof value );
       // *@#! endianness
       const char* raw = reinterpret_cast<const char *>(&value);
       for (size_t i = sizeof(TValue); i > 0; --i)
         stream.put(raw[i-1]);
+      //const TValue swapped_value = VTKType<TValue>::endianSwap(value);
+      //stream.write( reinterpret_cast<const char *>(&swapped_value), sizeof(swapped_value) );
     }
 
   static inline
@@ -448,8 +529,15 @@ write ( std::string const& aFieldName, TImage const& aField, TFunctor const& aFu
     dim.push_back(i);
 
   // Field header
-  myFileStream << "SCALARS " << aFieldName << " " << VTKType<Value>::name() << " " << VTKType<Value>::dim() << "\n";
-  myFileStream << "LOOKUP_TABLE default\n";
+  if ( VTKType<Value>::datasetType() == "SCALARS" )
+    {
+      myFileStream << "SCALARS " << aFieldName << " " << VTKType<Value>::name() << " " << VTKType<Value>::dim() << "\n";
+      myFileStream << "LOOKUP_TABLE default\n";
+    }
+  else // Assumed VTKType<Value>::datasetType() == "VECTORS"
+    {
+      myFileStream << "VECTORS " << aFieldName << " " << VTKType<Value>::name() << "\n";
+    }
 
   // Export
   for ( auto const& pt : myDomain.subRange( dim ) )

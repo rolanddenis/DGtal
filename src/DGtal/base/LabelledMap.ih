@@ -774,8 +774,8 @@ blockAt( unsigned int idx )
 template <typename TData, unsigned int L, typename TWord, unsigned int N, unsigned int M>
 inline
 const typename DGtal::LabelledMap<TData, L, TWord, N, M>::Data &
-DGtal::LabelledMap<TData, L, TWord, N, M>::
-operator[]( const Key & key ) const
+DGtal::LabelledMap<TData, L, TWord, N, M>::1
+operator[]( const Key & key ) const // FIXME: insert key 
 {
   ASSERT( key < L ); 
   bool exists = myLabels.test( key );
