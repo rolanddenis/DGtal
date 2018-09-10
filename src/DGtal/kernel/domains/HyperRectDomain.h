@@ -50,6 +50,7 @@
 #include "DGtal/kernel/domains/HyperRectDomain_Iterator.h"
 #include "DGtal/kernel/NumberTraits.h"
 #include "DGtal/base/CConstBidirectionalRange.h"
+#include "DGtal/kernel/domains/DomainTraits.h"
 
 namespace DGtal
 {
@@ -655,6 +656,11 @@ namespace DGtal
   std::ostream&
   operator<< ( std::ostream& out, const HyperRectDomain<TSpace> & object );
 
+  /** @brief HyperRectDomain is a full domain
+   */
+  template<typename TSpace>
+  struct full_domain<HyperRectDomain<TSpace>> : std::true_type
+  {};
 
 } // namespace DGtal
 
