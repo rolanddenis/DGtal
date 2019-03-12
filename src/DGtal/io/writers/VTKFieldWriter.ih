@@ -1,0 +1,518 @@
+/**
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU Lesser General Public License as
+ *  published by the Free Software Foundation, either version 3 of the
+ *  License, or  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ **/
+
+/**
+ * @file VTKFieldWriter.ih
+ * @author Roland Denis (\c roland.denis@math.univ-lyon1.fr )
+ * Institut Camille Jordan - ICJ (CNRS, UMR 5208), Université Lyon 1, France
+ * LAboratory of MAthematics - LAMA (CNRS, UMR 5127), University of Savoie, France
+ *
+ * @date 2015/01/22
+ *
+ * Implementation of inline methods defined in VTKFieldWriter.h
+ *
+ * This file is part of the DGtal library.
+ */
+
+
+//////////////////////////////////////////////////////////////////////////////
+#include <cstdlib>
+#include <iostream>
+#include <string>
+#include <sstream>
+#include <fstream>
+#include <locale>
+#include <type_traits>
+
+#include <boost/concept/assert.hpp>
+
+#include <DGtal/base/Exceptions.h>
+#include <DGtal/kernel/domains/HyperRectDomain.h>
+#include <DGtal/images/CConstImage.h>
+#include <DGtal/base/Assert.h>
+#include "DGtal/kernel/PointVector.h"
+#include "DGtal/base/Common.h"
+
+//////////////////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////////////
+// -------------------------- Some Tools --------------------------
+
+namespace DGtal {
+
+// Anonymous namespace
+namespace {
+
+//! Type info helper for scalar types.
+template <typename T>
+struct VTKTypeScalar
+{
+  //! Return the dimension of the type
+  static constexpr
+  std::size_t dim() { return 1; }
+
+  //! Write a value to the stream.
+  template < typename TStream, typename TValue >
+  static inline
+  void write( TStream & stream, TValue const& value )
+    {
+      stream << static_cast<T>(value);
+    }
+};
+
+//! Type info helper for Vector types.
+template <typename T, std::size_t N>
+struct VTKTypeVector
+{
+  //! Return the dimension of the type
+  static constexpr
+  std::size_t dim() { return N; }
+
+  //! Write a value to the stream.
+  template < typename TStream, typename TValue >
+  static inline
+  void write( TStream & stream, TValue const& value )
+    {
+      // Should be inlined by the compiler
+      for ( std::size_t i = 0; i < N; ++i )
+        stream << static_cast<T>(value[i]);
+    }
+};
+
+//! VTK data type name
+template <typename T>
+struct VTKTypeName;
+
+//! Type info (name and dimension) for VTK. Fundamental type implementation.
+template <typename T>
+struct VTKType : VTKTypeScalar<T>, VTKTypeName<T>
+{};
+
+//! Type info (name and dimension) for VTK. PointVector implementation.
+template <Dimension dim, typename TEuclideanRing, typename TContainer>
+struct VTKType< PointVector<dim, TEuclideanRing, TContainer> >
+    : VTKTypeVector<TEuclideanRing, dim>, VTKTypeName<TEuclideanRing>
+{};
+
+//! VTK type name for bool
+template <>
+struct VTKTypeName<bool> { static inline std::string name() { return "bit"; } };
+
+//! VTK type name for unsigned char
+template <>
+struct VTKTypeName<unsigned char> { static inline std::string name() { return "unsigned_char"; } };
+
+//! VTK type name for char
+template <>
+struct VTKTypeName<char> { static inline std::string name() { return "char"; } };
+
+//! VTK type name for unsigned short int
+template <>
+struct VTKTypeName<unsigned short int> { static inline std::string name() { return "unsigned_short"; } };
+
+//! VTK type name for short int
+template <>
+struct VTKTypeName<short int> { static inline std::string name() { return "short"; } };
+
+//! VTK type name for unsigned int
+template <>
+struct VTKTypeName<unsigned int> { static inline std::string name() { return "unsigned_int"; } };
+
+//! VTK type name for int
+template <>
+struct VTKTypeName<int> { static inline std::string name() { return "int"; } };
+
+//! VTK type name for unsigned long int
+template <>
+struct VTKTypeName<unsigned long int> { static inline std::string name() { return "unsigned_long"; } };
+
+//! VTK type name for long int
+template <>
+struct VTKTypeName<long int> { static inline std::string name() { return "long"; } };
+
+//! VTK type name for float
+template <>
+struct VTKTypeName<float> { static inline std::string name() { return "float"; } };
+
+//! VTK type name for double
+template <>
+struct VTKTypeName<double> { static inline std::string name() { return "double"; } };
+
+//! VTK Stream writer
+template < DGtal::VTKFormat Format >
+struct VTKDataWriter;
+
+//! VTK Stream writer for Legacy ASCII format
+template <>
+struct VTKDataWriter< DGtal::VTKLegacyASCII >
+{
+  static inline
+  std::string separator() { return "\n"; }
+
+  template < typename TStream, typename TValue >
+  static inline
+  void write( TStream & stream, TValue const& value )
+    {
+      stream << value << " ";
+    }
+
+  static inline
+  std::string data_format() { return "ASCII"; }
+  
+  static inline
+  std::string file_extension() { return "vtk"; }
+};
+
+//! VTK Stream writer for Legacy binary format
+template <>
+struct VTKDataWriter< DGtal::VTKLegacyBinary >
+{
+  static inline
+  std::string separator() { return ""; }
+
+  template < typename TStream, typename TValue >
+  static inline
+  void write( TStream & stream, TValue const& value )
+    {
+      // FIXME: check correct endiannes conversion (there is maybe a bug with unsigned int or short ?)
+      //stream.write( reinterpret_cast<const char *>(&value), sizeof value );
+      // *@#! endianness
+      const char* raw = reinterpret_cast<const char *>(&value);
+      for (size_t i = sizeof(TValue); i > 0; --i)
+        stream.put(raw[i-1]);
+    }
+
+  static inline
+  std::string data_format() { return "BINARY"; }
+
+  static inline
+  std::string file_extension() { return "vtk"; }
+};
+
+} // namespace
+} // namespace DGtal
+
+///////////////////////////////////////////////////////////////////////////////
+// IMPLEMENTATION of inline methods.
+///////////////////////////////////////////////////////////////////////////////
+
+namespace DGtal
+{
+
+///////////////////////////////////////////////////////////////////////////////
+// ----------------------- Standard services ------------------------------
+
+/**
+ * Constructor.
+ */
+template <typename TSpace, VTKFormat Format>
+inline
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::
+VTKFieldWriter( std::string const& aFileName, HyperRectDomain<TSpace> const& aDomain, RealPoint const& aSpacing, bool hasExtension )
+    : myDomain( aDomain ), mySpacing( aSpacing ),
+      myFieldName( "" ),
+      myHeader( false ),
+      myDataStream( &myFileStream )
+{
+  if (hasExtension)
+    myFileStream.open(aFileName, std::ofstream::out | std::ofstream::binary);
+  else
+    myFileStream.open(aFileName + "." + VTKDataWriter<Format>::file_extension() , std::ofstream::out | std::ofstream::binary);
+}
+
+/**
+ * Move constructor.
+ */
+template <typename TSpace, VTKFormat Format>
+inline
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::
+VTKFieldWriter( VTKFieldWriter && other )
+    : myDomain( std::move(other.myDomain) ),
+      mySpacing( std::move(other.mySpacing) ),
+      myFieldName( std::move(other.myFieldName) ),
+      myFileStream( std::move(other.myFileStream) ),
+      myHeader( std::move(other.myHeader) ),
+      myDataStream( &myFileStream )
+{}
+/**
+ * Destructor.
+ */
+template <typename TSpace, VTKFormat Format>
+inline
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::
+~VTKFieldWriter()
+{
+  close();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Interface - public :
+
+/**
+ * Checks the validity/consistency of the object.
+ * @return 'true' if the object is valid, 'false' otherwise.
+ */
+template <typename TSpace, VTKFormat Format>
+inline
+bool
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::
+isValid() const
+{
+    return myFileStream.good() && myFileStream.is_open();
+}
+
+/**
+ * Modifies the grid spacing.
+ */
+template <typename TSpace, VTKFormat Format>
+inline
+VTKFieldWriter< HyperRectDomain<TSpace>, Format > &
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::
+setSpacing( RealPoint const& aSpacing )
+{
+  ASSERT_MSG( !myHeader, "Grid spacing should not be modified after data has been exported." );
+  mySpacing = aSpacing;
+}
+
+/**
+ * Returns the grid spacing.
+ */
+template <typename TSpace, VTKFormat Format>
+inline
+typename VTKFieldWriter< HyperRectDomain<TSpace>, Format >::RealPoint const&
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::
+getSpacing() const
+{
+  return mySpacing;
+}
+
+/**
+ * Modifies the grid extent.
+ */
+template <typename TSpace, VTKFormat Format>
+inline
+VTKFieldWriter< HyperRectDomain<TSpace>, Format > &
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::
+setExtent( RealPoint const& anExtent )
+{
+  ASSERT_MSG( !myHeader, "Grid extent should not be modified after data has been exported." );
+  setSpacing( anExtent / ( myDomain.upperBound() - myDomain.lowerBound() ) );
+}
+
+/**
+ * Returns the grid extent.
+ */
+template <typename TSpace, VTKFormat Format>
+inline
+typename VTKFieldWriter< HyperRectDomain<TSpace>, Format >::RealPoint
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::
+getExtent() const
+{
+  return mySpacing * ( myDomain.upperBound() - myDomain.lowerBound() );
+}
+
+/**
+ * Returns the data domain.
+ */
+template <typename TSpace, VTKFormat Format>
+inline
+typename VTKFieldWriter< HyperRectDomain<TSpace>, Format >::Domain const&
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::
+getDomain() const
+{
+  return myDomain;
+}
+
+/**
+ * Write the VTK header
+ */
+template <typename TSpace, VTKFormat Format>
+VTKFieldWriter< HyperRectDomain<TSpace>, Format > &
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::
+init()
+{
+  if ( !myHeader )
+    {
+      const typename Domain::Point lower_bound = myDomain.lowerBound();
+      const typename Domain::Vector extent =
+         myDomain.upperBound() - myDomain.lowerBound() + Domain::Point::diagonal(1);
+
+      try
+        {
+          myFileStream  << "# vtk DataFile Version 2.0\n";
+          myFileStream  << "Exported with DGtal\n";
+          myFileStream  << myDataStream.data_format() << "\n";
+          myFileStream  << "DATASET STRUCTURED_POINTS\n";
+          myFileStream  << "DIMENSIONS "
+                        <<    ( (Domain::dimension >= 1) ? extent(0) : 1 ) << " "
+                        <<    ( (Domain::dimension >= 2) ? extent(1) : 1 ) << " "
+                        <<    ( (Domain::dimension >= 3) ? extent(2) : 1 )
+                        << "\n";
+          myFileStream  << "ORIGIN "
+                        <<    ( (Domain::dimension >= 1) ? lower_bound(0) * mySpacing(0) : 0 ) << " "
+                        <<    ( (Domain::dimension >= 2) ? lower_bound(1) * mySpacing(1) : 0 ) << " "
+                        <<    ( (Domain::dimension >= 3) ? lower_bound(2) * mySpacing(2) : 0 )
+                        << "\n";
+          myFileStream  << "SPACING "
+                        <<    ( (Domain::dimension >= 1) ? mySpacing(0) : 1 ) << " "
+                        <<    ( (Domain::dimension >= 2) ? mySpacing(1) : 1 ) << " "
+                        <<    ( (Domain::dimension >= 3) ? mySpacing(2) : 1 )
+                        << "\n";
+          myFileStream << "POINT_DATA " << myDomain.size() << "\n";
+        }
+      catch( ... )
+        {
+          throw IOException();
+        }
+
+      myHeader = true;
+    }
+
+  return *this;
+}
+
+/**
+ * Set the name of the next field
+ */
+template <typename TSpace, VTKFormat Format>
+inline
+VTKFieldWriter< HyperRectDomain<TSpace>, Format > &
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::
+operator<< ( std::string const& aFieldName )
+{
+  myFieldName = aFieldName;
+  return *this;
+}
+
+template <typename TSpace, VTKFormat Format>
+inline
+VTKFieldWriter< HyperRectDomain<TSpace>, Format > &
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::
+operator<< ( const char* aFieldName )
+{
+  myFieldName = aFieldName;
+  return *this;
+}
+
+/**
+ * Write a field
+ */
+template <typename TSpace, VTKFormat Format>
+template <typename TImage>
+VTKFieldWriter< HyperRectDomain<TSpace>, Format > &
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::
+operator<< ( TImage const& aField )
+{
+  return write( myFieldName, aField );
+}
+
+/**
+ * Write a field, given his name
+ */
+template <typename TSpace, VTKFormat Format>
+template <
+  typename TImage,
+  typename TFunctor
+>
+VTKFieldWriter< HyperRectDomain<TSpace>, Format > &
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::
+write ( std::string const& aFieldName, TImage const& aField, TFunctor const& aFunctor )
+{
+  BOOST_CONCEPT_ASSERT( (concepts::CConstImage<TImage>) );
+
+  // TODO: check image domain
+
+  // Image value type and VTK value type deduced from the functor.
+  using ImageValue = typename TImage::Value;
+  using Value = typename std::result_of< TFunctor( ImageValue ) >::type;
+
+  // Write header if not already done
+  init();
+
+  // Dimension permutation
+  std::vector<typename Domain::Dimension> dim;
+  for (size_t i = 0; i < Domain::dimension; ++i)
+    dim.push_back(i);
+
+  // Field header
+  myFileStream << "SCALARS " << aFieldName << " " << VTKType<Value>::name() << " " << VTKType<Value>::dim() << "\n";
+  myFileStream << "LOOKUP_TABLE default\n";
+
+  // Export
+  for ( auto const& pt : myDomain.subRange( dim ) )
+    {
+      VTKType<Value>::write( myDataStream, aFunctor( aField( pt ) ) );
+      myDataStream.separator();
+    }
+
+  myFileStream << "\n";
+
+  return *this;
+}
+
+/*
+ * Close the file
+ */
+template <typename TSpace, VTKFormat Format>
+void
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::
+close()
+{
+  myFileStream.close();
+}
+
+/**
+ * Internale data stream
+ */
+template <typename TSpace, VTKFormat Format>
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::DataStream::
+DataStream( std::ofstream* aFileStreamPtr )
+  : myFileStreamPtr( aFileStreamPtr )
+{
+  myFileStreamPtr->imbue( std::locale() ); // Dot separator for decimal numbers
+}
+
+template <typename TSpace, VTKFormat Format>
+template <typename TValue>
+typename VTKFieldWriter< HyperRectDomain<TSpace>, Format >::DataStream &
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::DataStream::
+operator<< ( TValue const& aValue )
+{
+  VTKDataWriter<Format>::write( *myFileStreamPtr, aValue );
+  return *this;
+}
+
+template <typename TSpace, VTKFormat Format>
+std::string
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::DataStream::
+data_format()
+{
+  return VTKDataWriter<Format>::data_format();
+}
+
+template <typename TSpace, VTKFormat Format>
+void
+VTKFieldWriter< HyperRectDomain<TSpace>, Format >::DataStream::
+separator()
+{
+  (*myFileStreamPtr) << VTKDataWriter<Format>::separator();
+}
+
+} // namespace DGtal
+
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+

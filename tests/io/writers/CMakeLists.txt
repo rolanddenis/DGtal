@@ -2,7 +2,9 @@ SET(DGTAL_TESTS_SRC_IO_WRITERS
        testCompressedVolWriter
        testPNMRawWriter
        testMeshWriter
-       testGenericWriter)
+       testGenericWriter
+       testVTKLightWriter
+)
 
 
 
