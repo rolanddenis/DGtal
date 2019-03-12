@@ -41,8 +41,14 @@
 - *Geometry*
   - New LpMetric class (model of CMetricSpace) for distance computations in R^n.
     (David Coeurjolly,  [#1388](https://github.com/DGtal-team/DGtal/pull/1388))
+ 
+- *Documentation*
+  - Improving KhalimskySpace related classes documentations by displaying
+    a short description in the member list.
+    (Roland Denis,  [#1398](https://github.com/DGtal-team/DGtal/pull/1398))
 
 ## Bug Fixes
+
 - *Configuration/General*
   - Continuous integration AppVeyor fix
     [#1326](https://github.com/DGtal-team/DGtal/pull/1326)
@@ -56,7 +62,12 @@
     (Boris Mansencal, [#1380](https://github.com/DGtal-team/DGtal/pull/1380))
   - Fixing & updating Travis: documentation deployement and DGtalTools job
     (Roland Denis, [#1383](https://github.com/DGtal-team/DGtal/pull/1383))
-
+  - Various warnings fixed on Xcode (David Coeurjolly,
+    [#1389](https://github.com/DGtal-team/DGtal/pull/1389))
+  - Fix compilation and adding debug version for the generated file with Visual Studio
+    (Raphael Lenain, [#1395](https://github.com/DGtal-team/DGtal/pull/1395))
+  
+	
 - *Base*
   - Fixing wrong members in PredicateCombiner (David Coeurjolly,
     [#1321](https://github.com/DGtal-team/DGtal/pull/1321))
