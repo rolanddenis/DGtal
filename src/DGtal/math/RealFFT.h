@@ -88,10 +88,32 @@ struct FFTWComplexCast
                                                                                                                          \
     static std::mutex myPlanMutex;                                                                                       \
                                                                                                                          \
-    static inline void*   malloc( size_t n )      noexcept { return fftw ## suffix ## _malloc(n); }                      \
-    static inline void    free( void* p )         noexcept { fftw ## suffix ## _free(p); }                               \
-    static inline void    execute( const plan p ) noexcept { fftw ## suffix ## _execute(p); }                            \
-    static inline void    destroy_plan( plan p )  noexcept { fftw ## suffix ## _destroy_plan(p); }                       \
+    static inline                                                                                                        \
+    void* malloc( size_t n ) noexcept                                                                                    \
+      {                                                                                                                  \
+        std::lock_guard<std::mutex> guard(myPlanMutex);                                                                  \
+        return fftw ## suffix ## _malloc(n);                                                                             \
+      }                                                                                                                  \
+                                                                                                                         \
+    static inline                                                                                                        \
+    void  free( void* p ) noexcept                                                                                       \
+      {                                                                                                                  \
+        std::lock_guard<std::mutex> guard(myPlanMutex);                                                                  \
+        fftw ## suffix ## _free(p);                                                                                      \
+      }                                                                                                                  \
+                                                                                                                         \
+    static inline                                                                                                        \
+    void  execute( const plan p ) noexcept                                                                               \
+      {                                                                                                                  \
+        fftw ## suffix ## _execute(p);                                                                                   \
+      }                                                                                                                  \
+                                                                                                                         \
+    static inline                                                                                                        \
+    void  destroy_plan( plan p ) noexcept                                                                                \
+      {                                                                                                                  \
+        std::lock_guard<std::mutex> guard(myPlanMutex);                                                                  \
+        fftw ## suffix ## _destroy_plan(p);                                                                              \
+      }                                                                                                                  \
                                                                                                                          \
     template < typename C >                                                                                              \
     static inline                                                                                                        \
