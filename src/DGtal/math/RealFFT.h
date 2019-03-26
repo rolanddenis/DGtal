@@ -46,6 +46,7 @@
 
 #include <complex>    // To be included before fftw: see http://www.fftw.org/doc/Complex-numbers.html#Complex-numbers
 #include <type_traits>
+#include <mutex>
 #include <fftw3.h>
 
 #include <boost/math/constants/constants.hpp>
@@ -85,6 +86,8 @@ struct FFTWComplexCast
     using plan    = fftw ## suffix ## _plan;                                                                             \
     using self    = FFTWWrapper<real>;                                                                                   \
                                                                                                                          \
+    static std::mutex myPlanMutex;                                                                                       \
+                                                                                                                         \
     static inline void*   malloc( size_t n )      noexcept { return fftw ## suffix ## _malloc(n); }                      \
     static inline void    free( void* p )         noexcept { fftw ## suffix ## _free(p); }                               \
     static inline void    execute( const plan p ) noexcept { fftw ## suffix ## _execute(p); }                            \
@@ -94,6 +97,7 @@ struct FFTWComplexCast
     static inline                                                                                                        \
     plan plan_dft_r2c( int rank, const int* n, real* in, C* out, unsigned flags ) noexcept                               \
       {                                                                                                                  \
+        std::lock_guard<std::mutex> guard(myPlanMutex);                                                                  \
         return fftw ## suffix ## _plan_dft_r2c(rank, n, in, FFTWComplexCast<self>::apply(out), flags);                   \
       }                                                                                                                  \
                                                                                                                          \
@@ -101,6 +105,7 @@ struct FFTWComplexCast
     static inline                                                                                                        \
     plan plan_dft_c2r( int rank, const int* n, C* in, real* out, unsigned flags ) noexcept                               \
       {                                                                                                                  \
+        std::lock_guard<std::mutex> guard(myPlanMutex);                                                                  \
         return fftw ## suffix ## _plan_dft_c2r(rank, n, FFTWComplexCast<self>::apply(in), out, flags);                   \
       }                                                                                                                  \
                                                                                                                          \
@@ -167,6 +172,8 @@ struct FFTWWrapper<double>
     using real = double;
     FFTW_WRAPPER_GEN()
   };
+
+std::mutex FFTWWrapper<double>::myPlanMutex;
 #endif
 
 #ifdef WITH_FFTW3_FLOAT
@@ -179,6 +186,8 @@ struct FFTWWrapper<float>
     using real = float;
     FFTW_WRAPPER_GEN(f)
   };
+
+std::mutex FFTWWrapper<float>::myPlanMutex;
 #endif
 
 #ifdef WITH_FFTW3_LONG
@@ -191,6 +200,8 @@ struct FFTWWrapper<long double>
     using real = long double;
     FFTW_WRAPPER_GEN(l)
   };
+
+std::mutex FFTWWrapper<long double>::myPlanMutex;
 #endif
 
 } // detail namespace
@@ -262,20 +273,33 @@ class RealFFT< HyperRectDomain<TSpace>, T >
      */
     RealFFT( Domain const& aDomain, RealPoint const& aLowerBound, RealPoint const& anExtent );
 
-    /// Copy constructor. Deleted.
-    RealFFT( Self const & /* other */ ) = delete;
+    /// Copy constructor.
+    RealFFT( Self const & other );
 
-    /// Move constructor. Deleted.
-    RealFFT( Self && /* other */ ) = delete;
+    /// Move constructor.
+    RealFFT( Self && other );
 
-    /// Copy assignment operator. Deleted.
-    Self & operator= ( Self const & /* other */ ) = delete;
-
-    /// Move assignment operator. Deleted.
-    Self & operator= ( Self && /* other */ ) = delete;
+    /// Copy and move assignment operator.
+    Self & operator= ( Self other );
 
     /// Destructor
     ~RealFFT();
+
+    /// Swap operator
+    friend void swap(RealFFT& lhs, RealFFT& rhs) noexcept
+      {
+        using std::swap; // Enable ADL
+
+        swap(lhs.mySpatialDomain, rhs.mySpatialDomain);
+        swap(lhs.mySpatialExtent, rhs.mySpatialExtent);
+        swap(lhs.myFreqExtent, rhs.myFreqExtent);
+        swap(lhs.myFreqDomain, rhs.myFreqDomain);
+        swap(lhs.myFullSpatialDomain, rhs.myFullSpatialDomain);
+        swap(lhs.myStorage, rhs.myStorage);
+        swap(lhs.myScaledSpatialExtent, rhs.myScaledSpatialExtent);
+        swap(lhs.myScaledSpatialLowerBound, rhs.myScaledSpatialLowerBound);
+        swap(lhs.myScaledFreqMag, rhs.myScaledFreqMag);
+      }
 
     // ----------------------- Interface --------------------------------------
   public:
@@ -696,7 +720,7 @@ class RealFFT< HyperRectDomain<TSpace>, T >
     const Point   myFreqExtent;     ///< Extent of the frequential domain.
     const Domain  myFreqDomain;     ///< Frequential domain (complex).
     const Domain  myFullSpatialDomain;  ///< Full spatial domain (real) including the padding.
-          void*   myStorage;        ///< Storage.
+          void*   myStorage = nullptr;  ///< Storage.
         RealPoint myScaledSpatialExtent;      ///< Extent of the scaled spatial domain.
         RealPoint myScaledSpatialLowerBound;  ///< Lower bound of the scaled spatial domain.
         Real      myScaledFreqMag;  ///< Magnitude ratio for the scaled frequency values.

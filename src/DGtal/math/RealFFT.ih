@@ -79,6 +79,48 @@ DGtal::RealFFT<DGtal::HyperRectDomain<TSpace>, T>::
 {
 }
 
+// Copy constructor.
+template <typename TSpace, typename T>
+inline
+DGtal::RealFFT<DGtal::HyperRectDomain<TSpace>, T>::
+  RealFFT( Self const& other)
+     : mySpatialDomain{ other.mySpatialDomain }
+     , mySpatialExtent{ other.mySpatialExtent }
+     , myFreqExtent{ other.myFreqExtent }
+     , myFreqDomain{ other.myFreqDomain }
+     , myFullSpatialDomain{ other.myFullSpatialDomain }
+     , myStorage( FFTW::malloc( sizeof(Complex) * myFreqDomain.size() ) )
+     , myScaledSpatialExtent{ other.myScaledSpatialExtent }
+     , myScaledSpatialLowerBound{ other.myScaledSpatialLowerBound }
+     , myScaledFreqMag{ other.myScaledFreqMag }
+{
+  std::copy(
+    static_cast<Complex const*>(other.myStorage),
+    static_cast<Complex const*>(other.myStorage) + myFreqDomain.size(),
+    static_cast<Complex *>(myStorage)
+  );
+}
+
+// Move constructor.
+template <typename TSpace, typename T>
+inline
+DGtal::RealFFT<DGtal::HyperRectDomain<TSpace>, T>::
+  RealFFT( Self && other)
+{
+  swap( *this, other );
+}
+
+// Copy and move assignment operator.
+template <typename TSpace, typename T>
+inline
+DGtal::RealFFT<DGtal::HyperRectDomain<TSpace>, T> &
+DGtal::RealFFT<DGtal::HyperRectDomain<TSpace>, T>::
+  operator= ( Self other)
+{
+  swap( *this, other ); // Copy and swap idiom
+  return *this;
+}
+
 // Destructor
 template <typename TSpace, typename T>
 inline
