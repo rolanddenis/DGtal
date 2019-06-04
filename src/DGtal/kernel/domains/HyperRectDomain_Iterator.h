@@ -397,7 +397,7 @@ namespace DGtal
         std::ptrdiff_t dist = 0;
         std::ptrdiff_t delta = 1;
 
-        for ( Dimension i = 0; i < Point::dimension; ++i )
+        for ( Dimension i = 0; i < mySubDomain.size(); ++i )
           {
             auto const ii = mySubDomain[i];
             dist += delta * (other.myPoint[ii] - myPoint[ii]);

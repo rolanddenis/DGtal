@@ -384,7 +384,7 @@ namespace DGtal
        */
       ConstIterator begin() const
         {
-          return ConstIterator(myStartingPoint, myLowerBound, myUpperBound, myPermutation);
+          return ConstIterator(myLowerBound, myLowerBound, myUpperBound, myPermutation);
         }
 
       /**
