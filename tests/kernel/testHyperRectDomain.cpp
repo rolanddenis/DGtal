@@ -413,7 +413,7 @@ double toc()
 }
 
 constexpr std::size_t dim = 3;
-constexpr signed long long int size = 500;
+constexpr signed long long int size = 1000;
 
 using Space = DGtal::SpaceND<dim>;
 using Point = Space::Point;
@@ -432,7 +432,7 @@ TEST_CASE( "Benchmarking domain traversal", "[.bench]" )
   for (auto const& pt : domain)
     {
       ++cnt;
-      check += pt[0];
+      check += pt[dim-1];
     }
   const auto duration = toc();
 
@@ -449,46 +449,12 @@ TEST_CASE( "Benchmarking domain reverse traversal", "[.bench]" )
   for (auto it = domain.rbegin(), it_end = domain.rend(); it != it_end; ++it)
     {
       ++cnt;
-      check += (*it)[0];
+      check += (*it)[dim-1];
     }
   const auto duration = toc();
 
   REQUIRE( cnt == domain.size() );
   trace.info() << "Domain reverse traversal: " << (domain.size()/duration*1e-9) << " Gpts/s (check = " << check << ")" << std::endl;
-}
-
-TEST_CASE( "Benchmarking domain traversal without point comparison", "[.bench]" )
-{
-  Point::Component check = 0;
-
-  tic();
-  auto it = domain.begin();
-  for (std::size_t i = 0; i < domain.size(); ++i)
-    {
-      ++it;
-      check += (*it)[0];
-    }
-  const auto duration = toc();
-
-  REQUIRE( it == domain.end() );
-  trace.info() << "Domain traversal without point comparison: " << (domain.size()/duration*1e-9) << " Gpts/s (check = " << check << ")" << std::endl;
-}
-
-TEST_CASE( "Benchmarking reverse domain traversal without point comparison", "[.bench]" )
-{
-  Point::Component check = 0;
-
-  tic();
-  auto it = domain.rbegin();
-  for (std::size_t i = 0; i < domain.size(); ++i)
-    {
-      ++it;
-      check += (*it)[0];
-    }
-  const auto duration = toc();
-
-  REQUIRE( it == domain.rend() );
-  trace.info() << "Domain reverse traversal without point comparison: " << (domain.size()/duration*1e-9) << " Gpts/s (check = " << check << ")" << std::endl;
 }
 
 TEST_CASE( "Benchmarking domain traversal using subRange", "[.bench]" )
@@ -504,7 +470,7 @@ TEST_CASE( "Benchmarking domain traversal using subRange", "[.bench]" )
   for (auto const& pt : range)
     {
       ++cnt;
-      check += pt[0];
+      check += pt[dim-1];
     }
   const auto duration = toc();
 
@@ -525,56 +491,12 @@ TEST_CASE( "Benchmarking domain reverse traversal using subRange", "[.bench]" )
   for (auto it = range.rbegin(), it_end = range.rend(); it != it_end; ++it)
     {
       ++cnt;
-      check += (*it)[0];
+      check += (*it)[dim-1];
     }
   const auto duration = toc();
 
   REQUIRE( cnt == domain.size() );
   trace.info() << "Domain reverse traversal using subRange: " << (domain.size()/duration*1e-9) << " Gpts/s (check = " << check << ")" << std::endl;
-}
-
-TEST_CASE( "Benchmarking domain traversal using subRange without point comparison", "[.bench]" )
-{
-  std::vector<Point::Dimension> dimensions(Point::dimension);
-  std::iota(dimensions.begin(), dimensions.end(), Dimension(0));
-  const auto range = domain.subRange(dimensions);
-
-  Point::Component check = 0;
-
-  tic();
-  auto it = range.begin();
-  for (std::size_t i = 0; i < domain.size(); ++i)
-    {
-      ++it;
-      check += (*it)[0];
-    }
-  const auto duration = toc();
-
-  REQUIRE( it == range.end() );
-
-  trace.info() << "Domain traversal using subRange without point comparison: " << (domain.size()/duration*1e-9) << " Gpts/s (check = " << check << ")" << std::endl;
-}
-
-TEST_CASE( "Benchmarking domain reverse traversal using subRange without point comparison", "[.bench]" )
-{
-  std::vector<Point::Dimension> dimensions(Point::dimension);
-  std::iota(dimensions.begin(), dimensions.end(), Dimension(0));
-  const auto range = domain.subRange(dimensions);
-
-  Point::Component check = 0;
-
-  tic();
-  auto it = range.rbegin();
-  for (std::size_t i = 0; i < domain.size(); ++i)
-    {
-      ++it;
-      check += (*it)[0];
-    }
-  const auto duration = toc();
-
-  REQUIRE( it == range.rend() );
-
-  trace.info() << "Domain reverse traversal using subRange without point comparison: " << (domain.size()/duration*1e-9) << " Gpts/s (check = " << check << ")" << std::endl;
 }
 
 /** @ingroup Tests **/

@@ -75,9 +75,6 @@ namespace DGtal
     using Point = typename Iterator::Point;
     using Dimension = typename Point::Dimension;
 
-  private:
-    Iterator current, prev;
-
   public:
     /// @brief Constructor from a HyperRectDomain iterator
     explicit HyperRectDomain_ReverseIterator(Iterator it)
@@ -125,6 +122,10 @@ namespace DGtal
       {
         return std::distance(other.current, current);
       }
+
+  private:
+    Iterator current, prev;
+
   };
 
   /////////////////////////////////////////////////////////////////////////////
@@ -168,6 +169,15 @@ namespace DGtal
             ( lower.isLower(p) && p.isLower(upper) ) || p == lower || p == upper,
             "The point must be inside the domain or be equal to one of his bound."
         );
+
+        // Calculating iterator position in the sequence
+        pos = 0;
+        std::ptrdiff_t delta = 1;
+        for ( Dimension i = 0; i < Point::dimension; ++i )
+          {
+            pos += delta * (myPoint[i] - mylower[i]);
+            delta *= myupper[i] - mylower[i] + 1;
+          }
       }
 
   private:
@@ -189,14 +199,14 @@ namespace DGtal
      *
      * @note compare only the pointed point, not the iterated domain.
      */
-    bool equal ( const Self &other ) const
+    bool equal( const Self &other ) const
       {
         ASSERT_MSG( // we should only compare iterators on the same domain
             mylower == other.mylower && myupper == other.myupper,
             "The compared iterators iterate on different domains."
         );
 
-        return myPoint == other.myPoint;
+        return pos == other.pos;
       }
 
     /** @brief
@@ -205,6 +215,7 @@ namespace DGtal
      */
     void increment()
       {
+        ++pos;
         ++myPoint[0];
         for ( Dimension i = 0; myPoint[i] > myupper[i] && i < Point::dimension - 1; ++i )
           {
@@ -219,6 +230,7 @@ namespace DGtal
      **/
     void decrement()
       {
+        --pos;
         --myPoint[0];
         for ( Dimension i = 0; myPoint[i] < mylower[i] && i < Point::dimension - 1; ++i )
           {
@@ -233,6 +245,7 @@ namespace DGtal
      */
     void advance( std::ptrdiff_t n )
       {
+        pos += n;
         if (n > 0)
           {
             myPoint[0] += n;
@@ -262,16 +275,12 @@ namespace DGtal
      */
     std::ptrdiff_t distance_to( const Self& other ) const
       {
-        std::ptrdiff_t dist = 0;
-        std::ptrdiff_t delta = 1;
+        ASSERT_MSG( // we should only compare iterators on the same domain
+            mylower == other.mylower && myupper == other.myupper,
+            "The compared iterators iterate on different domains."
+        );
 
-        for ( Dimension i = 0; i < Point::dimension; ++i )
-          {
-            dist += delta * (other.myPoint[i] - myPoint[i]);
-            delta *= myupper[i] - mylower[i] + 1;
-          }
-
-        return dist;
+        return other.pos - pos;
       }
 
   private:
@@ -280,6 +289,10 @@ namespace DGtal
 
     ///Copies of the Domain limits
     TPoint mylower, myupper;
+
+    /// Iterator position in the current sequence
+    std::ptrdiff_t pos;
+
   }; // End of class HyperRectDomain_Iterator
 
   /////////////////////////////////////////////////////////////////////////////
@@ -300,42 +313,6 @@ namespace DGtal
     using Point = TPoint;
     using Self  = HyperRectDomain_subIterator<TPoint>;
     using Dimension = typename Point::Dimension;
-
-    // TODO: remove this version (std::vector should be enough). Same in HyperRectDomain::subRange
-    HyperRectDomain_subIterator(const TPoint & p, const TPoint& lower,
-        const TPoint &upper,
-        std::initializer_list<Dimension> subDomain)
-      : myPoint( p ), mylower( lower ), myupper( upper )
-      {
-        ASSERT_MSG( // For an empty domain, lower = upper + diag(1) so that begin() == end().
-            lower.isLower(upper) || lower == upper + TPoint::diagonal(0).partialCopy( TPoint::diagonal(1), subDomain),
-            "The lower bound must be lower than the upper bound or, for an empty domain, be equal to the upper bound + diagonal(1)."
-            );
-
-        ASSERT_MSG(
-            ( lower.isLower(p) && p.isLower(upper) ) || p == lower || p == upper,
-            "The point must be inside the domain or be equal to one of his bound."
-        );
-
-        ASSERT_MSG(
-            subDomain.size() <= TPoint::dimension,
-            "The sub-range cannot have more dimensions than the ambiant space."
-        );
-
-        mySubDomain.reserve( subDomain.size() );
-        for ( const unsigned int *c = subDomain.begin();
-            c != subDomain.end(); ++c )
-          {
-            ASSERT_MSG(
-                *c <= TPoint::dimension,
-                "Invalid dimension in the sub-range."
-            );
-
-            mySubDomain.push_back( *c );
-          }
-
-        // TODO: check the validity of the subDomain ?
-      }
 
     HyperRectDomain_subIterator(const TPoint & p, const TPoint& lower,
         const TPoint &upper,
@@ -368,7 +345,15 @@ namespace DGtal
             mySubDomain.push_back( *it );
           }
 
-        // TODO: check the validity of the subDomain ?
+        // Calculating iterator position in the sequence
+        pos = 0;
+        std::ptrdiff_t delta = 1;
+        for ( Dimension i = 0; i < mySubDomain.size(); ++i )
+          {
+            auto const ii = mySubDomain[i];
+            pos += delta * (myPoint[ii] - mylower[ii]);
+            delta *= myupper[ii] - mylower[ii] + 1;
+          }
       }
 
   private:
@@ -390,14 +375,14 @@ namespace DGtal
      *
      * @note compare only the pointed point, not the iterated domain.
      */
-    bool equal ( const Self &other ) const
+    bool equal( const Self &other ) const
       {
-        ASSERT_MSG( // we should only compare iterators on the same domain
+        ASSERT_MSG( // we should only compare iterators on the same domain and same dimensions
             mylower == other.mylower && myupper == other.myupper && mySubDomain == other.mySubDomain,
             "The compared iterators iterate on different domains or different dimensions."
         );
 
-        return myPoint.partialEqual(other.myPoint, mySubDomain);
+        return pos == other.pos;
       }
 
 
@@ -407,6 +392,7 @@ namespace DGtal
      */
     void increment()
       {
+        ++pos;
         ++myPoint[mySubDomain[0]];
         for ( Dimension i = 0; myPoint[mySubDomain[i]] > myupper[mySubDomain[i]] && i < mySubDomain.size() - 1; ++i )
           {
@@ -421,6 +407,7 @@ namespace DGtal
      **/
     void decrement()
       {
+        --pos;
         --myPoint[mySubDomain[0]];
         for ( Dimension i = 0; myPoint[mySubDomain[i]] < mylower[mySubDomain[i]] && i < mySubDomain.size() - 1; ++i )
           {
@@ -435,6 +422,7 @@ namespace DGtal
      */
     void advance( std::ptrdiff_t n )
       {
+        pos += n;
         if (n > 0)
           {
             myPoint[mySubDomain[0]] += n;
@@ -467,17 +455,12 @@ namespace DGtal
      */
     std::ptrdiff_t distance_to( const Self& other ) const
       {
-        std::ptrdiff_t dist = 0;
-        std::ptrdiff_t delta = 1;
+        ASSERT_MSG( // we should only compare iterators on the same domain and same dimensions
+            mylower == other.mylower && myupper == other.myupper && mySubDomain == other.mySubDomain,
+            "The compared iterators iterate on different domains or different dimensions."
+        );
 
-        for ( Dimension i = 0; i < mySubDomain.size(); ++i )
-          {
-            auto const ii = mySubDomain[i];
-            dist += delta * (other.myPoint[ii] - myPoint[ii]);
-            delta *= myupper[ii] - mylower[ii] + 1;
-          }
-
-        return dist;
+        return other.pos - pos;
       }
 
   private:
@@ -491,6 +474,10 @@ namespace DGtal
      * are considered.
      */
     std::vector<Dimension> mySubDomain;
+
+    /// Iterator position in the current sequence
+    std::ptrdiff_t pos;
+
   }; // End of class HyperRectDomain_subIterator
 
 } //namespace
