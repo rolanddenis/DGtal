@@ -43,109 +43,13 @@
 // Inclusions
 #include <iostream>
 #include <vector>
+#include <iterator>
+
+#include <boost/iterator/iterator_facade.hpp>
+
 #include "DGtal/base/Common.h"
 //////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-//#include <iterator> // Bug for operator * => dangling reference !!!
-// Class allowing to build a reverse iterator of a given iterator.
-template<typename _Iterator>
-class myreverse_iterator
-  : public std::iterator<typename std::iterator_traits<_Iterator>::iterator_category,
-                         typename std::iterator_traits<_Iterator>::value_type,
-                         typename std::iterator_traits<_Iterator>::difference_type,
-                         typename std::iterator_traits<_Iterator>::pointer,
-                         typename std::iterator_traits<_Iterator>::reference>
-{
-protected:
-  _Iterator current;
-  _Iterator prev;
 
-public:
-  typedef _Iterator                 iterator_type;
-  typedef typename std::iterator_traits<_Iterator>::difference_type
-      difference_type;
-  typedef typename std::iterator_traits<_Iterator>::reference   reference;
-  typedef typename std::iterator_traits<_Iterator>::pointer     pointer;
-
-public:
-  explicit
-      myreverse_iterator(iterator_type __x) : current(__x),
-      prev(current)
-  { --prev; }
-
-  myreverse_iterator(const myreverse_iterator& __x)
-    : current(__x.current), prev(__x.prev) { }
-
-  iterator_type base() const
-  { return current; }
-
-  /*const*/ reference operator*() const
-  { return *prev; }
-
-  reference operator*()
-  { return *prev; }
-
-  pointer operator->() const
-  { return &(operator*()); }
-
-  myreverse_iterator& operator++()
-  { --current; --prev;
-    return *this;
-  }
-
-  myreverse_iterator operator++(int)
-  {
-    myreverse_iterator __tmp = *this;
-    operator++();
-    return __tmp;
-  }
-
-  myreverse_iterator& operator--()
-  {
-    ++current; ++prev;
-    return *this;
-  }
-
-  myreverse_iterator operator--(int)
-  {
-    myreverse_iterator __tmp = *this;
-    operator--();
-    return __tmp;
-  }
-
-  myreverse_iterator operator+(difference_type __n) const
-  { return myreverse_iterator(current - __n); }
-
-  myreverse_iterator& operator+=(difference_type __n)
-                                {
-    current -= __n; prev = current; --prev;
-    return *this;
-  }
-
-  myreverse_iterator operator-(difference_type __n) const
-  { return myreverse_iterator(current + __n); }
-
-  myreverse_iterator& operator-=(difference_type __n)
-                                {
-    current += __n; prev = current; --prev;
-    return *this;
-  }
-
-  reference operator[](difference_type __n) const
-  { return *(*this + __n); }
-};
-template<typename _Iterator>
-inline bool
-    operator==(const myreverse_iterator<_Iterator>& __x,
-               const myreverse_iterator<_Iterator>& __y)
-{ return __x.base() == __y.base(); }
-template<typename _Iterator>
-inline bool
-    operator!=(const myreverse_iterator<_Iterator>& __x,
-               const myreverse_iterator<_Iterator>& __y)
-{ return !(__x == __y); }
-
-//******************************************************************************
 namespace DGtal
 {
   /////////////////////////////////////////////////////////////////////////////
@@ -154,19 +58,31 @@ namespace DGtal
    * Description of class 'HyperRectDomain_Iterator' <p>
    * Aim:
    */
-  template<typename TPoint>
+  template <typename TPoint>
   class HyperRectDomain_Iterator
+    : public boost::iterator_facade <
+        HyperRectDomain_Iterator<TPoint>,
+        const TPoint,
+        std::random_access_iterator_tag,
+        const TPoint // so that it avoid the issue with stashing iterators (FIXME check that and bench it)
+      >
   {
   public:
-    typedef std::bidirectional_iterator_tag iterator_category; ///\todo construct a RANDOM-ACCESS iterator
-    typedef TPoint value_type;
-    typedef ptrdiff_t difference_type;
-    typedef TPoint* pointer;
-    typedef TPoint& reference;
-    typedef typename TPoint::Dimension Dimension;
+    using Point = TPoint;
+    using Self  = HyperRectDomain_Iterator<TPoint>;
+    using Dimension = typename Point::Dimension;
 
 
-    HyperRectDomain_Iterator( const TPoint & p, const TPoint& lower, const TPoint &upper )
+    /** @brief HyperRectDomain iterator constructor
+     *
+     * @param p     The point pointed by this iterator
+     * @param lower Lower bound of the iterated domain
+     * @param upper Upper bound of the iterated domain
+     *
+     * @pre @a p must lie inside the given bounds or be equal to one of its bound
+     * @pre the bounds must describe a valid (possibly empty) domain
+     */
+    HyperRectDomain_Iterator( const Point & p, const Point& lower, const Point &upper )
       : myPoint( p ), mylower( lower ), myupper( upper )
       {
         ASSERT_MSG( // For an empty domain, lower = upper + diag(1) so that begin() == end().
@@ -174,160 +90,145 @@ namespace DGtal
             "The lower bound must be lower than the upper bound or, for an empty domain, be equal to the upper bound + diagonal(1)."
         );
 
-        ASSERT_MSG( 
+        ASSERT_MSG(
             ( lower.isLower(p) && p.isLower(upper) ) || p == lower || p == upper,
             "The point must be inside the domain or be equal to one of his bound."
         );
       }
 
-    const TPoint & operator*() const
+  private:
+    friend class boost::iterator_core_access;
+
+    /// @brief Dereference
+    const Point dereference() const
       {
         ASSERT_MSG( // we must be between [begin,end]
             mylower.isLower(myPoint) && myPoint.isLower(myupper),
-            "The iterator points outside the domain." 
-        );
-
-        return myPoint;
-      }
-
-    TPoint & operator*()
-      {
-        ASSERT_MSG( // we must be between [begin,end]
-            mylower.isLower(myPoint) && myPoint.isLower(myupper), 
             "The iterator points outside the domain."
         );
-        
+
         return myPoint;
+
       }
 
-    /**
-     * Operator ==
+    /** @brief Compare iterators
      *
+     * @note compare only the pointed point, not the iterated domain.
      */
-    bool operator== ( const HyperRectDomain_Iterator<TPoint> &it ) const
+    bool equal ( const Self &other ) const
       {
-        return ( myPoint==it.myPoint );
+        ASSERT_MSG( // we should only compare iterators on the same domain
+            mylower == other.mylower && myupper == other.myupper,
+            "The compared iterators iterate on different domains."
+        );
+
+        return myPoint == other.myPoint;
       }
 
-    /**
-     * Operator !=
-     *
-     */
-    bool operator!= ( const HyperRectDomain_Iterator<TPoint> &aIt ) const
-      {
-        return ( myPoint!=aIt.myPoint );
-      }
-
-    /**
-     * Implements the next() method to scan the domain points dimension by dimension
+    /** @brief
+     * Increments the iterator in order to scan the domain points dimension by dimension
      * (lexicographic order).
-     **/
-    void nextLexicographicOrder()
+     */
+    void increment()
       {
         ++myPoint[0];
-        if (( TPoint::dimension > 1 ) &&
-            ( myPoint[0] > myupper[0] ) )
+        for ( Dimension i = 0; myPoint[i] > myupper[i] && i < Point::dimension - 1; ++i )
           {
-            Dimension current_pos = 0;
-            do
-              {
-                myPoint[current_pos] = mylower[current_pos];
-                current_pos++;
-                if ( current_pos < TPoint::dimension )
-                  ++myPoint[current_pos];
-              }
-            while (( current_pos + 1 < TPoint::dimension ) &&
-                ( myPoint[ current_pos ]  >  myupper[ current_pos ] ) );
+            ++myPoint[i+1];
+            myPoint[i] = mylower[i];
           }
       }
 
-    /**
-     * Operator ++ (++it)
-     */
-    HyperRectDomain_Iterator<TPoint> &operator++()
-      {
-        nextLexicographicOrder();
-        return *this;
-      }
-
-    /**
-     * Operator ++ (it++)
-     *
-     */
-    HyperRectDomain_Iterator<TPoint> operator++ ( int )
-      {
-        HyperRectDomain_Iterator<TPoint> tmp = *this;
-        nextLexicographicOrder();
-        return tmp;
-      }
-
-    /**
-     * Implements the prev() method to scan the domain points dimension by dimension
+    /** @brief
+     * Decrements the iterator in order to scan the domain points dimension by dimension
      * (lexicographic order).
      **/
-    void prevLexicographicOrder()
+    void decrement()
       {
         --myPoint[0];
-        if (( TPoint::dimension > 1 ) &&
-            ( myPoint[0]  <  mylower[0] ) )
+        for ( Dimension i = 0; myPoint[i] < mylower[i] && i < Point::dimension - 1; ++i )
           {
-            Dimension current_pos = 0;
-            do
-              {
-                myPoint[ current_pos ] = myupper[ current_pos ];
-                ++current_pos;
-                if ( current_pos < TPoint::dimension )
-                  --myPoint[ current_pos ];
-              }
-            while (( current_pos + 1 < TPoint::dimension ) &&
-                ( myPoint[ current_pos ]  <  mylower[ current_pos ] ) );
+            --myPoint[i+1];
+            myPoint[i] = myupper[i];
           }
       }
 
-    /**
-     * Operator -- (--it)
-     *
+    /** @brief
+     * Advances the iterator in order to scan the domain points dimension by dimension
+     * (lexicographic order).
      */
-    HyperRectDomain_Iterator<TPoint> &operator--()
+    void advance( std::ptrdiff_t n )
       {
-        prevLexicographicOrder();
-        return *this;
+        if (n > 0)
+          {
+            myPoint[0] += n;
+            for ( Dimension i = 0; myPoint[i] > myupper[i] && i < Point::dimension - 1; ++i )
+              {
+                auto const shift = myPoint[i] - mylower[i];
+                auto const length = myupper[i] - mylower[i] + 1;
+                myPoint[i+1] += shift / length;
+                myPoint[i] = mylower[i] + (shift % length);
+              }
+          }
+        else if (n < 0)
+          {
+            myPoint[0] += n;
+            for ( Dimension i = 0; myPoint[i] < mylower[i] && i < Point::dimension - 1; ++i )
+              {
+                auto const shift = myupper[i] - myPoint[i];
+                auto const length = myupper[i] - mylower[i] + 1;
+                myPoint[i+1] -= shift / length;
+                myPoint[i] = myupper[i] - (shift % length);
+              }
+          }
       }
 
-    /**
-     * Operator -- (it--)
+    /** @brief
+     * Distance between two iterators on the same domain (lexicographic order).
      */
-    HyperRectDomain_Iterator<TPoint> operator-- ( int )
+    std::ptrdiff_t distance_to( const Self& other ) const
       {
-        HyperRectDomain_Iterator<TPoint> tmp = *this;
-        prevLexicographicOrder();
-        return tmp;
+        std::ptrdiff_t dist = 0;
+        std::ptrdiff_t delta = 1;
+
+        for ( Dimension i = 0; i < Point::dimension; ++i )
+          {
+            dist += delta * (other.myPoint[i] - myPoint[i]);
+            delta *= myupper[i] - mylower[i] + 1;
+          }
+
+        return dist;
       }
 
   private:
     ///Current Point in the domain
     TPoint myPoint;
+
     ///Copies of the Domain limits
     TPoint mylower, myupper;
   }; // End of class HyperRectDomain_Iterator
 
   /////////////////////////////////////////////////////////////////////////////
-  // class HyperRectDomain_Iterator
+  // class HyperRectDomain_subIterator
   /**
    * Description of class 'HyperRectDomain_subIterator' <p>
    * Aim:
    */
   template<typename TPoint>
   class HyperRectDomain_subIterator
+    : public boost::iterator_facade <
+        HyperRectDomain_subIterator<TPoint>,
+        const TPoint,
+        std::random_access_iterator_tag,
+        const TPoint // so that it avoid the issue with stashing iterators (FIXME check that and bench it)
+      >
   {
   public:
-    typedef std::bidirectional_iterator_tag iterator_category; ///\todo construct a RANDOM-ACCESS iterator
-    typedef TPoint value_type;
-    typedef ptrdiff_t difference_type;
-    typedef TPoint* pointer;
-    typedef TPoint& reference;
-    typedef typename TPoint::Dimension Dimension;
+    using Point = TPoint;
+    using Self  = HyperRectDomain_subIterator<TPoint>;
+    using Dimension = typename Point::Dimension;
 
+    // TODO: remove this version (std::vector should be enough). Same in HyperRectDomain::subRange
     HyperRectDomain_subIterator(const TPoint & p, const TPoint& lower,
         const TPoint &upper,
         std::initializer_list<Dimension> subDomain)
@@ -338,12 +239,12 @@ namespace DGtal
             "The lower bound must be lower than the upper bound or, for an empty domain, be equal to the upper bound + diagonal(1)."
             );
 
-        ASSERT_MSG( 
-            ( lower.isLower(p) && p.isLower(upper) ) || p == lower || p == upper, 
+        ASSERT_MSG(
+            ( lower.isLower(p) && p.isLower(upper) ) || p == lower || p == upper,
             "The point must be inside the domain or be equal to one of his bound."
         );
 
-        ASSERT_MSG( 
+        ASSERT_MSG(
             subDomain.size() <= TPoint::dimension,
             "The sub-range cannot have more dimensions than the ambiant space."
         );
@@ -352,11 +253,11 @@ namespace DGtal
         for ( const unsigned int *c = subDomain.begin();
             c != subDomain.end(); ++c )
           {
-            ASSERT_MSG( 
+            ASSERT_MSG(
                 *c <= TPoint::dimension,
                 "Invalid dimension in the sub-range."
             );
-            
+
             mySubDomain.push_back( *c );
           }
 
@@ -378,7 +279,7 @@ namespace DGtal
             "The point must be inside the domain or be equal to one of his bound."
         );
 
-        ASSERT_MSG( 
+        ASSERT_MSG(
             subDomain.size() <= TPoint::dimension,
             "The sub-range cannot have more dimensions than the ambiant space."
         );
@@ -387,7 +288,7 @@ namespace DGtal
         for ( typename std::vector<Dimension>::const_iterator it = subDomain.begin();
             it != subDomain.end(); ++it )
           {
-            ASSERT_MSG( 
+            ASSERT_MSG(
                 *it <= TPoint::dimension,
                 "Invalid dimension in the sub-range."
             );
@@ -397,18 +298,11 @@ namespace DGtal
         // TODO: check the validity of the subDomain ?
       }
 
+  private:
+    friend class boost::iterator_core_access;
 
-    const TPoint & operator*() const
-      {
-        ASSERT_MSG( // we must be between [begin,end]
-            mylower.isLower(myPoint) && myPoint.isLower(myupper),
-            "The iterator points outside the domain."
-        ); 
-
-        return myPoint;
-      }
-
-    TPoint & operator*()
+    /// @brief Dereference
+    const Point dereference() const
       {
         ASSERT_MSG( // we must be between [begin,end]
             mylower.isLower(myPoint) && myPoint.isLower(myupper),
@@ -416,133 +310,113 @@ namespace DGtal
         );
 
         return myPoint;
+
       }
 
-    /**
-     * Operator ==
+    /** @brief Compare iterators
      *
+     * @note compare only the pointed point, not the iterated domain.
      */
-    bool operator== ( const HyperRectDomain_subIterator<TPoint> &it ) const
+    bool equal ( const Self &other ) const
       {
-        for (unsigned int i=0; i<mySubDomain.size(); ++i)
-          if ( myPoint[mySubDomain[i]]!=it.myPoint[mySubDomain[i]])
-            return false;
-        
-        return true;
+        ASSERT_MSG( // we should only compare iterators on the same domain
+            mylower == other.mylower && myupper == other.myupper && mySubDomain == other.mySubDomain,
+            "The compared iterators iterate on different domains or different dimensions."
+        );
+
+        return myPoint.partialEqual(other.myPoint, mySubDomain);
       }
 
-    /**
-     * Operator !=
-     *
+
+    /** @brief
+     * Increments the iterator in order to scan the domain points dimension by dimension
+     * (by using the subDomain order given by the user).
      */
-    bool operator!= ( const HyperRectDomain_subIterator<TPoint> &aIt ) const
+    void increment()
       {
-        return !operator==(aIt);
+        ++myPoint[mySubDomain[0]];
+        for ( Dimension i = 0; myPoint[mySubDomain[i]] > myupper[mySubDomain[i]] && i < mySubDomain.size() - 1; ++i )
+          {
+            ++myPoint[mySubDomain[i+1]];
+            myPoint[mySubDomain[i]] = mylower[mySubDomain[i]];
+          }
       }
 
-    /**
-     * Implements the next() method to scan the domain points dimension by dimension
+    /** @brief
+     * Decrements the iterator in order to scan the domain points dimension by dimension
      * (by using the subDomain order given by the user).
      **/
-    void nextSubDomainOrder()
+    void decrement()
       {
-        ASSERT( mySubDomain.size() > 0 );
-        ++myPoint[ mySubDomain[0] ];
-
-        if ( mySubDomain.size() > 1 &&
-            myPoint[ mySubDomain[0] ] >
-            myupper[ mySubDomain[0] ] )
+        --myPoint[mySubDomain[0]];
+        for ( Dimension i = 0; myPoint[mySubDomain[i]] < mylower[mySubDomain[i]] && i < mySubDomain.size() - 1; ++i )
           {
-            Dimension current_pos = 0;
-            do
-              {
-                myPoint[ mySubDomain[current_pos] ] =
-                  mylower[ mySubDomain[current_pos] ];
-                ++current_pos;
-                if ( current_pos < mySubDomain.size() )
-                  ++myPoint[ mySubDomain[current_pos] ];
-              }
-            while (( current_pos + 1 < mySubDomain.size() ) &&
-                ( myPoint[ mySubDomain[current_pos] ]  >
-                  myupper[ mySubDomain[current_pos] ] ) );
+            --myPoint[mySubDomain[i+1]];
+            myPoint[mySubDomain[i]] = myupper[mySubDomain[i]];
           }
       }
 
-    /**
-     * Operator ++ (++it)
+    /** @brief
+     * Advances the iterator in order to scan the domain points dimension by dimension
+     * (by using the subDomain order given by the user).
      */
-    HyperRectDomain_subIterator<TPoint> &operator++()
+    void advance( std::ptrdiff_t n )
       {
-        nextSubDomainOrder();
-        return *this;
-      }
-
-    /**
-     * Operator ++ (it++)
-     *
-     */
-    HyperRectDomain_subIterator<TPoint> operator++ ( int )
-      {
-        HyperRectDomain_subIterator<TPoint> tmp = *this;
-        nextSubDomainOrder();
-        return tmp;
-      }
-
-    /**
-     * Implements the prev() method to scan the domain points dimension by dimension
-     * (subDomain order).
-     **/
-    void prevSubDomainOrder()
-      {
-        ASSERT( mySubDomain.size() > 0 );
-        --myPoint[ mySubDomain[0] ];
-
-        if (  mySubDomain.size() > 1 &&
-            myPoint[ mySubDomain[0] ]  <
-            mylower[ mySubDomain[0] ] )
+        if (n > 0)
           {
-            Dimension current_pos = 0;
-            do
+            myPoint[mySubDomain[0]] += n;
+            for ( Dimension i = 0; myPoint[mySubDomain[i]] > myupper[mySubDomain[i]] && i < mySubDomain.size() - 1; ++i )
               {
-                myPoint[ mySubDomain[current_pos] ] =
-                  myupper[ mySubDomain[current_pos] ];
-                ++current_pos;
-                if ( current_pos < mySubDomain.size() )
-                  --myPoint[ mySubDomain[current_pos] ];
+                auto const ii = mySubDomain[i];
+                auto const shift = myPoint[ii] - mylower[ii];
+                auto const length = myupper[ii] - mylower[ii] + 1;
+                myPoint[mySubDomain[i+1]] += shift / length;
+                myPoint[ii] = mylower[ii] + (shift % length);
               }
-            while (( current_pos + 1 < mySubDomain.size() ) &&
-                ( myPoint[ mySubDomain[current_pos] ]  <
-                  mylower[ mySubDomain[current_pos] ] ) );
+          }
+        else if (n < 0)
+          {
+            myPoint[mySubDomain[0]] += n;
+            for ( Dimension i = 0; myPoint[mySubDomain[i]] < mylower[mySubDomain[i]] && i < mySubDomain.size() - 1; ++i )
+              {
+                auto const ii = mySubDomain[i];
+                auto const shift = myupper[ii] - myPoint[ii];
+                auto const length = myupper[ii] - mylower[ii] + 1;
+                myPoint[mySubDomain[i+1]] -= shift / length;
+                myPoint[ii] = myupper[ii] - (shift % length);
+              }
           }
       }
 
-    /**
-     * Operator -- (--it)
-     *
+    /** @brief
+     * Distance between two iterators on the same domain
+     * (by using the subDomain order given by the user).
      */
-    HyperRectDomain_subIterator<TPoint> &operator--()
+    std::ptrdiff_t distance_to( const Self& other ) const
       {
-        prevSubDomainOrder();
-        return *this;
-      }
+        std::ptrdiff_t dist = 0;
+        std::ptrdiff_t delta = 1;
 
-    /**
-     * Operator -- (it--)
-     */
-    HyperRectDomain_subIterator<TPoint> operator-- ( int )
-      {
-        HyperRectDomain_subIterator<TPoint> tmp = *this;
-        prevSubDomainOrder();
-        return tmp;
+        for ( Dimension i = 0; i < Point::dimension; ++i )
+          {
+            auto const ii = mySubDomain[i];
+            dist += delta * (other.myPoint[ii] - myPoint[ii]);
+            delta *= myupper[ii] - mylower[ii] + 1;
+          }
+
+        return dist;
       }
 
   private:
     ///Current Point in the domain
     TPoint myPoint;
+
     ///Copies of the Domain limits
     TPoint mylower, myupper;
-    ///Vector of subDomain on dimension, to fix the order in which dimensions
-    /// are considered.
+
+    /** Vector of subDomain on dimension, to fix the order in which dimensions
+     * are considered.
+     */
     std::vector<Dimension> mySubDomain;
   }; // End of class HyperRectDomain_subIterator
 

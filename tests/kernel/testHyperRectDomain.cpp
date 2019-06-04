@@ -35,6 +35,8 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
+#include <numeric>
+#include <iterator>
 
 #include "DGtal/base/Common.h"
 #include "DGtal/kernel/SpaceND.h"
@@ -42,17 +44,17 @@
 #include "DGtal/kernel/domains/HyperRectDomain.h"
 #include "DGtal/base/CConstBidirectionalRange.h"
 
+#include "DGtalCatch.h"
+
 using namespace DGtal;
 using namespace std;
 
 
-/**
-* Simple test of HyperRectDomain construction.
-*
-**/
-bool testSimpleHyperRectDomain()
-{
+///////////////////////////////////////////////////////////////////////////////
+// Simple test of HyperRectDomain construction.
 
+TEST_CASE( "Simple HyperRectDomain" )
+{
   typedef SpaceND<4> Space4Type;
   typedef Space4Type::Point Point;
   typedef Space4Type::RealPoint RealPoint;
@@ -65,11 +67,8 @@ bool testSimpleHyperRectDomain()
   RealPoint c ( td );
   double td2[] = { 4.9, 4.5, 3 , 4};
   RealPoint d ( td2 );
-
+  
   trace.beginBlock ( "HyperRectDomain init" );
-
-  unsigned int nb = 0;
-  unsigned int nbok = 0;
 
   // Checking that HyperRectDomain is a model of CDomain.
   typedef HyperRectDomain<Space4Type> HRDomain4;
@@ -77,55 +76,226 @@ bool testSimpleHyperRectDomain()
   BOOST_CONCEPT_ASSERT(( concepts::CConstBidirectionalRange<HRDomain4> ));
 
   // Empty domain using the default constructor
+  trace.info() << "Empty domain using the default constructor" << std::endl;
   HyperRectDomain<Space4Type> myEmptyDomain;
-  ++nb; nbok += myEmptyDomain.isEmpty() && myEmptyDomain.size() == 0 ? 1 : 0;
-  trace.info() << "(" << nbok << "/" << nb << ") Empty domain: " << myEmptyDomain << std::endl;
+  trace.info() << "Empty domain = " << myEmptyDomain << std::endl;
+  REQUIRE( myEmptyDomain.isEmpty() );
+  REQUIRE( myEmptyDomain.size() == 0 );
 
   // Domain characterized by points a and b
+  trace.info() << "Domain characterized by points a and b" << std::endl;
   HyperRectDomain<Space4Type> myHyperRectDomain ( a, b );
 
-  ++nb; nbok += myHyperRectDomain.lowerBound() == a && myHyperRectDomain.upperBound() == b ? 1 : 0;
-  trace.info() << "(" << nbok << "/" << nb << ") Domain = " << myHyperRectDomain << std::endl;
+  trace.info() << "Domain = " << myHyperRectDomain << std::endl;
+  REQUIRE( myHyperRectDomain.lowerBound() == a );
+  REQUIRE( myHyperRectDomain.upperBound() == b );
 
-  ++nb; nbok += myHyperRectDomain.size() == 20 ? 1 : 0;
-  trace.info() << "(" << nbok << "/" << nb << ") Domain size = " << myHyperRectDomain.size() << std::endl;
+  trace.info() << "Domain size = " << myHyperRectDomain.size() << std::endl;
+  REQUIRE( myHyperRectDomain.size() == 20 );
 
   // Domain initialized with RealPoint
+  trace.info() << "Domain initialized with RealPoint" << std::endl;
   HyperRectDomain<Space4Type> myHyperRectDomain_rr ( c, d );
-  ++nb; nbok += myHyperRectDomain_rr.lowerBound() == myHyperRectDomain.lowerBound() && myHyperRectDomain_rr.upperBound() == myHyperRectDomain.upperBound() ? 1 : 0;
-  trace.info() << "(" << nbok << "/" << nb << ") Domain(" << c << ", " << d << ") = " << myHyperRectDomain_rr << std::endl;
+  trace.info() << "Domain = " << myHyperRectDomain_rr << std::endl;
+  REQUIRE( myHyperRectDomain_rr.lowerBound() == myHyperRectDomain.lowerBound() );
+  REQUIRE( myHyperRectDomain_rr.upperBound() == myHyperRectDomain.upperBound() );
 
   HyperRectDomain<Space4Type> myHyperRectDomain_ir ( a, d );
-  ++nb; nbok += myHyperRectDomain_ir.lowerBound() == myHyperRectDomain.lowerBound() && myHyperRectDomain_ir.upperBound() == myHyperRectDomain.upperBound() ? 1 : 0;
-  trace.info() << "(" << nbok << "/" << nb << ") Domain(" << a << ", " << d << ") = " << myHyperRectDomain_ir << std::endl;
+  trace.info() << "Domain = " << myHyperRectDomain_ir << std::endl;
+  REQUIRE( myHyperRectDomain_ir.lowerBound() == myHyperRectDomain.lowerBound() );
+  REQUIRE( myHyperRectDomain_ir.upperBound() == myHyperRectDomain.upperBound() );
 
   HyperRectDomain<Space4Type> myHyperRectDomain_ri ( c, b );
-  ++nb; nbok += myHyperRectDomain_ri.lowerBound() == myHyperRectDomain.lowerBound() && myHyperRectDomain_ri.upperBound() == myHyperRectDomain.upperBound() ? 1 : 0;
-  trace.info() << "(" << nbok << "/" << nb << ") Domain(" << c << ", " << b << ") = " << myHyperRectDomain_ri << std::endl;
-
+  trace.info() << "Domain = " << myHyperRectDomain_ri << std::endl;
+  REQUIRE( myHyperRectDomain_ri.lowerBound() == myHyperRectDomain.lowerBound() );
+  REQUIRE( myHyperRectDomain_ri.upperBound() == myHyperRectDomain.upperBound() );
+  
   trace.endBlock();
 
-
+  // Test Copy Constructor
   trace.beginBlock("Test Copy Constructor");
   HyperRectDomain<Space4Type> myHyperRectDomainBis( myHyperRectDomain );
-  ++nb; nbok += myHyperRectDomainBis.lowerBound() == myHyperRectDomain.lowerBound() && myHyperRectDomainBis.upperBound() == myHyperRectDomain.upperBound() && myHyperRectDomainBis.size() == 20 ? 1 : 0;
-  trace.info() << "(" << nbok << "/" << nb << ") Domain size= " << myHyperRectDomainBis.size() << std::endl;
+  trace.info() << "Domain = " << myHyperRectDomainBis << std::endl;
+  trace.info() << "Domain size = " << myHyperRectDomainBis.size() << std::endl;
+  REQUIRE( myHyperRectDomainBis.lowerBound() == myHyperRectDomain.lowerBound() );
+  REQUIRE( myHyperRectDomainBis.upperBound() == myHyperRectDomain.upperBound() );
+  REQUIRE( myHyperRectDomainBis.size() == 20 );
   trace.endBlock();
 
+  // Test Assignement
   trace.beginBlock("Test Assignement");
   HyperRectDomain<Space4Type> myHyperRectDomainTer;
-
   myHyperRectDomainTer = myHyperRectDomain;
-
-  ++nb; nbok += myHyperRectDomainTer.lowerBound() == myHyperRectDomain.lowerBound() && myHyperRectDomainTer.upperBound() == myHyperRectDomain.upperBound() && myHyperRectDomainTer.size() == 20 ? 1 : 0;
-  trace.info() << "(" << nbok << "/" << nb << ") Domain size= " << myHyperRectDomainTer.size() << std::endl;
-
+  trace.info() << "Domain = " << myHyperRectDomainTer << std::endl;
+  trace.info() << "Domain size = " << myHyperRectDomainTer.size() << std::endl;
+  REQUIRE( myHyperRectDomainTer.lowerBound() == myHyperRectDomain.lowerBound() );
+  REQUIRE( myHyperRectDomainTer.upperBound() == myHyperRectDomain.upperBound() );
+  REQUIRE( myHyperRectDomainTer.size() == 20 );
   trace.endBlock();
-
-  return myHyperRectDomain.isValid() && nb == nbok;
-
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// Checking iterators
+
+/// Checking iterator given then span domain and dimensions order.
+template <
+  typename Iterator,
+  typename Point,
+  typename Domain,
+  typename Dimension
+>
+void testIteratorHelperImpl(
+    Iterator & it, Iterator const& it_begin, Iterator const& it_end, std::ptrdiff_t & cnt_begin,
+    Point & pt, Domain const& domain, std::vector<Dimension> const& dimensions, std::size_t id,
+    bool forward)
+{
+  if (id == 0)
+    {
+      trace.warning() << *it << std::endl;
+      REQUIRE( it != it_end );
+      REQUIRE( pt == *it );
+      REQUIRE( std::distance(it_begin, it) ==  cnt_begin );
+      REQUIRE( std::distance(it, it_begin) == -cnt_begin );
+      INFO( *(it_begin + cnt_begin) << " == " << *it );
+      REQUIRE( it_begin + cnt_begin == it );
+      INFO( *(it - cnt_begin) << " == " << *it_begin);
+      REQUIRE( it - cnt_begin == it_begin );
+      ++it;
+      ++cnt_begin;
+      return;
+    }
+
+  --id;
+
+  const auto d = dimensions[id];
+
+  if (forward)
+    {
+      while ( pt[d] <= domain.upperBound()[d] )
+        {
+          testIteratorHelperImpl(it, it_begin, it_end, cnt_begin, pt, domain, dimensions, id, forward);
+          ++pt[d]; 
+        }
+
+      pt[d] = domain.lowerBound()[d];
+    }
+  else
+    {
+      while ( pt[d] >= domain.lowerBound()[d] )
+        {
+          testIteratorHelperImpl(it, it_begin, it_end, cnt_begin, pt, domain, dimensions, id, forward);
+          --pt[d]; 
+        }
+
+      pt[d] = domain.upperBound()[d];
+    }
+}
+
+template <
+  typename Iterator,
+  typename Point,
+  typename Domain,
+  typename Dimension
+>
+void testIteratorHelper(
+    Iterator const& it_begin, Iterator const& it_end,
+    Point pt, Domain const& domain, std::vector<Dimension> const& dimensions,
+    bool forward = true)
+{
+  Iterator it = it_begin;
+  std::ptrdiff_t cnt_begin = 0;
+
+  testIteratorHelperImpl(
+    it, it_begin, it_end, cnt_begin,
+    pt, domain, dimensions, dimensions.size(),
+    forward);
+  REQUIRE( it == it_end );
+}
+
+template <
+  typename Iterator,
+  typename Point,
+  typename Domain
+>
+void testIteratorHelper(
+    Iterator const& it_begin, Iterator const& it_end,
+    Point pt, Domain const& domain, bool forward = true)
+{
+  using Dimension = typename Domain::Dimension;
+  std::vector<Dimension> dimensions(Domain::dimension);
+  std::iota(dimensions.begin(), dimensions.end(), Dimension(0));
+
+  testIteratorHelper(it_begin, it_end, pt, domain, dimensions, forward);
+}
+
+template <
+  typename Point
+>
+void testIterator(Point const& a, Point const& b, Point const& c)
+{
+  using Dimension = typename Point::Dimension;
+  using Space = SpaceND<Point::dimension>;
+  using Domain = HyperRectDomain<Space>;
+
+  trace.beginBlock ( "HyperRectDomain Iterator" );
+  Domain domain(a, b);
+  trace.info() << "Domain = " << domain << std::endl;
+
+  trace.emphase() << "Iterator" << std::endl;
+  testIteratorHelper(domain.begin(), domain.end(), domain.lowerBound(), domain);
+
+  trace.emphase() << "Reverse iterator" << std::endl;
+  testIteratorHelper(domain.rbegin(), domain.rend(), domain.upperBound(), domain, false);
+  
+  trace.emphase() << "Iterator from starting point" << std::endl;
+  testIteratorHelper(domain.begin(c), domain.end(), c, domain);
+
+  trace.emphase() << "Reverse iterator from starting point" << std::endl;
+  testIteratorHelper(domain.rbegin(c), domain.rend(), c, domain, false);
+  
+  trace.emphase() << "Iterator on reversed dimension order: " << std::endl;
+  std::vector<Dimension> dimensions(Point::dimension);
+  std::iota(dimensions.rbegin(), dimensions.rend(), Dimension(0));
+  const auto range = domain.subRange(dimensions);
+  testIteratorHelper(range.begin(), range.end(), domain.lowerBound(), domain, dimensions);
+  
+  trace.emphase() << "Reverse iterator on reversed dimension order: " << std::endl;
+  testIteratorHelper(range.rbegin(), range.rend(), domain.upperBound(), domain, dimensions, false);
+  
+  trace.emphase() << "Iterator on reversed dimension order and from a starting point: " << std::endl;
+  const auto range2 = domain.subRange(dimensions, c);
+  std::cout << *range2.begin() << std::endl;
+  testIteratorHelper(range2.begin(), range2.end(), c, domain, dimensions);
+  
+  trace.emphase() << "Reverse iterator on reversed dimension order and from a starting point: " << std::endl;
+  testIteratorHelper(range2.rbegin(), range2.rend(), c, domain, dimensions, false);
+}
+
+TEST_CASE( "Iterator 2D" )
+{
+  using Space = SpaceND<2>;
+  using Point = Space::Point;
+
+  Point a (1, 1);
+  Point b (4, 5);
+  Point c (2, 2);
+
+  testIterator(a, b, c);
+}
+
+TEST_CASE( "Iterator 4D" )
+{
+  using Space = SpaceND<4>;
+  using Point = Space::Point;
+  
+  Point a({1, 1, 1, 1});
+  Point b({2, 3, 4, 5});
+  Point c({1, 2, 3, 2});
+
+  testIterator(a, b, c);
+}
+
+#if 0
 bool testIterator()
 {
   typedef SpaceND<2> TSpace;
@@ -391,5 +561,6 @@ int main()
   else
     return 1;
 }
+#endif
 
 /** @ingroup Tests **/
