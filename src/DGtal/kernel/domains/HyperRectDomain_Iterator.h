@@ -52,6 +52,15 @@
 
 namespace DGtal
 {
+  /** @brief Reverse iterator for HyperRectDomain
+   *
+   * @tparam TIterator  Iterator type on HyperRectDomain
+   *
+   * @note we need this specific implementation of a reverse iterator instead
+   *  of a std::reverse_iterator because the latter works only on non-stashing
+   *  iterators (i.e. iterators that don't own its pointed data).
+   *  Otherwise, it will lead to dangling reference!
+   */
   template <typename TIterator>
   class HyperRectDomain_ReverseIterator
     : public boost::iterator_facade <
@@ -70,6 +79,7 @@ namespace DGtal
     Iterator current, prev;
 
   public:
+    /// @brief Constructor from a HyperRectDomain iterator
     explicit HyperRectDomain_ReverseIterator(Iterator it)
       : current(it)
       , prev(it)
@@ -77,34 +87,40 @@ namespace DGtal
       --prev;
     }
 
+    /// @brief Dereference
     const Point& dereference() const
       {
         return *prev;
       }
 
+    /// @brief Compare iterators
     bool equal( const Self &other ) const
       {
         return current == other.current;
       }
 
+    /// @brief Increment iterator
     void increment()
       {
         --current;
         --prev;
       }
-    
+
+    /// @brief Decrement iterator
     void decrement()
       {
         ++current;
         ++prev;
       }
-    
+
+    /// @brief Advance iterator by given steps
     void advance( std::ptrdiff_t n )
       {
         current -= n;
         prev -= n;
       }
 
+    /// @brief Distance between two iterators on the same domain
     std::ptrdiff_t distance_to( const Self& other ) const
       {
         return std::distance(other.current, current);
@@ -113,9 +129,9 @@ namespace DGtal
 
   /////////////////////////////////////////////////////////////////////////////
   // class HyperRectDomain_Iterator
-  /**
-   * Description of class 'HyperRectDomain_Iterator' <p>
-   * Aim:
+  /** @brief Iterator for HyperRectDomain
+   *
+   * @tparam TPoint Point type.
    */
   template <typename TPoint>
   class HyperRectDomain_Iterator
