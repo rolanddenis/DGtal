@@ -68,7 +68,7 @@ TEST_CASE( "Simple HyperRectDomain" )
   RealPoint c ( td );
   double td2[] = { 4.9, 4.5, 3 , 4};
   RealPoint d ( td2 );
-  
+
   trace.beginBlock ( "HyperRectDomain init" );
 
   // Checking that HyperRectDomain is a model of CDomain.
@@ -124,7 +124,7 @@ TEST_CASE( "Simple HyperRectDomain" )
   REQUIRE( myHyperRectDomain_ri.isValid() );
   REQUIRE( myHyperRectDomain_ri.lowerBound() == myHyperRectDomain.lowerBound() );
   REQUIRE( myHyperRectDomain_ri.upperBound() == myHyperRectDomain.upperBound() );
-  
+
   trace.endBlock();
 
   // Test Copy Constructor
@@ -191,7 +191,7 @@ void testIteratorHelperImpl(
       while ( pt[d] <= domain.upperBound()[d] )
         {
           testIteratorHelperImpl(it, it_begin, it_end, cnt_begin, pt, domain, dimensions, id, forward);
-          ++pt[d]; 
+          ++pt[d];
         }
 
       pt[d] = domain.lowerBound()[d];
@@ -201,7 +201,7 @@ void testIteratorHelperImpl(
       while ( pt[d] >= domain.lowerBound()[d] )
         {
           testIteratorHelperImpl(it, it_begin, it_end, cnt_begin, pt, domain, dimensions, id, forward);
-          --pt[d]; 
+          --pt[d];
         }
 
       pt[d] = domain.upperBound()[d];
@@ -263,34 +263,34 @@ void testIterator(Point const& a, Point const& b, Point const& c)
 
   trace.emphase() << "Reverse iterator" << std::endl;
   testIteratorHelper(domain.rbegin(), domain.rend(), domain.upperBound(), domain, false);
-  
+
   trace.emphase() << "Iterator from starting point" << std::endl;
   testIteratorHelper(domain.begin(c), domain.end(), c, domain);
 
   trace.emphase() << "Reverse iterator from starting point" << std::endl;
   testIteratorHelper(domain.rbegin(c), domain.rend(), c, domain, false);
-  
+
   trace.emphase() << "Iterator on reversed dimension order: " << std::endl;
   std::vector<Dimension> dimensions(Point::dimension);
   std::iota(dimensions.rbegin(), dimensions.rend(), Dimension(0));
   const auto range = domain.subRange(dimensions);
   testIteratorHelper(range.begin(), range.end(), domain.lowerBound(), domain, dimensions);
-  
+
   trace.emphase() << "Reverse iterator on reversed dimension order: " << std::endl;
   testIteratorHelper(range.rbegin(), range.rend(), domain.upperBound(), domain, dimensions, false);
-  
+
   trace.emphase() << "Iterator on reversed dimension order and from a starting point: " << std::endl;
   const auto range2 = domain.subRange(dimensions);
   testIteratorHelper(range2.begin(c), range2.end(), c, domain, dimensions);
-  
+
   trace.emphase() << "Reverse iterator on reversed dimension order and from a starting point: " << std::endl;
   testIteratorHelper(range2.rbegin(c), range2.rend(), c, domain, dimensions, false);
-  
+
   trace.emphase() << "Iterator along one dimension: " << std::endl;
   const auto range3 = domain.subRange({1});
   const std::vector<Dimension> one_dimension({1});
   testIteratorHelper(range3.begin(), range3.end(), domain.lowerBound(), domain, one_dimension);
-  
+
   trace.emphase() << "Reverse iterator along one dimension: " << std::endl;
   auto upper_one_dim = domain.lowerBound();
   upper_one_dim.partialCopy(domain.upperBound(), one_dimension);
@@ -299,7 +299,7 @@ void testIterator(Point const& a, Point const& b, Point const& c)
   trace.emphase() << "Iterator along one dimension and from a starting point: " << std::endl;
   const auto range4 = domain.subRange({1}, c);
   testIteratorHelper(range4.begin(c), range4.end(), c, domain, one_dimension);
-  
+
   trace.emphase() << "Reverse iterator along one dimension and from a starting point: " << std::endl;
   testIteratorHelper(range4.rbegin(c), range4.rend(), c, domain, one_dimension, false);
 }
@@ -320,7 +320,7 @@ TEST_CASE( "Iterator 4D" )
 {
   using Space = SpaceND<4>;
   using Point = Space::Point;
-  
+
   Point a({1, 1, 1, 1});
   Point b({2, 3, 4, 5});
   Point c({1, 2, 3, 2});
@@ -389,79 +389,192 @@ TEST_CASE( "Empty domain" )
   REQUIRE( range.rbegin() == range.rend() );
 }
 
-TEST_CASE( "Benchmarking iterators", "[.bench]" )
+///////////////////////////////////////////////////////////////////////////////
+// Benchmarks
+//
+// Note: using multiple TEST_CASE instead of SECTION because it seems to alter
+// the way the compiler optimizes the code and it reduces performances.
+
+/// Timer user in tic and toc
+auto tic_timer = std::chrono::high_resolution_clock::now();
+
+/// Starts timer
+void tic()
 {
-  using Space = DGtal::SpaceND<3>;
-  using Point = Space::Point;
-  using Domain = DGtal::HyperRectDomain<Space>;
-
-  constexpr Point::Component size = 1000;
-  
-  const auto a = Point::diagonal(0);
-  const auto b = Point::diagonal(size);
-  const auto domain = Domain(a, b);
-
-  auto tic_timer = std::chrono::high_resolution_clock::now();
-  const auto tic = [&tic_timer] ()
-    {
-      tic_timer = std::chrono::high_resolution_clock::now();
-    };
-  const auto toc = [&tic_timer] ()
-    {
-      const auto toc_timer = std::chrono::high_resolution_clock::now();
-      const std::chrono::duration<double> time_span = toc_timer - tic_timer;
-      return time_span.count();
-    };
-
-  #if 0
-  SECTION( "Benchmarking domain traversal" )
-    {
-      tic();
-      std::size_t cnt = 0;
-      for (auto const& pt : domain)
-        ++cnt;
-      const auto duration = toc();
-
-      REQUIRE( cnt == domain.size() );
-      trace.info() << "Domain traversal: " << (domain.size()/duration*1e-9) << " Gpts/s" << std::endl;
-    }
-  
-  SECTION( "Benchmarking domain reverse traversal" )
-    {
-      tic();
-      std::size_t cnt = 0;
-      for (auto it = domain.rbegin(), it_end = domain.rend(); it != it_end; ++it)
-        ++cnt;
-      const auto duration = toc();
-
-      REQUIRE( cnt == domain.size() );
-      trace.info() << "Domain reverse traversal: " << (domain.size()/duration*1e-9) << " Gpts/s" << std::endl;
-    }
-  
-  #endif
-
-  SECTION( "Benchmarking domain traversal without point comparison" )
-    {
-      tic();
-      auto it = domain.begin();
-      for (std::size_t i = 0; i < domain.size(); ++i)
-        ++it;
-      const auto duration = toc();
-
-      REQUIRE( it == domain.end() );
-      trace.info() << "Domain traversal without point comparison: " << (domain.size()/duration*1e-9) << " Gpts/s" << std::endl;
-    }
-
-  SECTION( "Benchmarking reverse domain traversal without point comparison" )
-    {
-      tic();
-      auto it = domain.rbegin();
-      for (std::size_t i = 0; i < domain.size(); ++i)
-        ++it;
-      const auto duration = toc();
-
-      REQUIRE( it == domain.rend() );
-      trace.info() << "Domain reverse traversal without point comparison: " << (domain.size()/duration*1e-9) << " Gpts/s" << std::endl;
-    }
+  tic_timer = std::chrono::high_resolution_clock::now();
 }
+
+/// Ends timer and return elapsed time
+double toc()
+{
+  const auto toc_timer = std::chrono::high_resolution_clock::now();
+  const std::chrono::duration<double> time_span = toc_timer - tic_timer;
+  return time_span.count();
+}
+
+constexpr std::size_t dim = 3;
+constexpr signed long long int size = 500;
+
+using Space = DGtal::SpaceND<dim>;
+using Point = Space::Point;
+using Domain = DGtal::HyperRectDomain<Space>;
+
+const auto a = Point::diagonal(0);
+const auto b = Point::diagonal(size);
+const auto domain = Domain(a, b);
+
+TEST_CASE( "Benchmarking domain traversal", "[.bench]" )
+{
+  std::size_t cnt = 0;
+  Point::Component check = 0;
+
+  tic();
+  for (auto const& pt : domain)
+    {
+      ++cnt;
+      check += pt[0];
+    }
+  const auto duration = toc();
+
+  REQUIRE( cnt == domain.size() );
+  trace.info() << "Domain traversal: " << (domain.size()/duration*1e-9) << " Gpts/s (check = " << check << ")" << std::endl;
+}
+
+TEST_CASE( "Benchmarking domain reverse traversal", "[.bench]" )
+{
+  std::size_t cnt = 0;
+  Point::Component check = 0;
+
+  tic();
+  for (auto it = domain.rbegin(), it_end = domain.rend(); it != it_end; ++it)
+    {
+      ++cnt;
+      check += (*it)[0];
+    }
+  const auto duration = toc();
+
+  REQUIRE( cnt == domain.size() );
+  trace.info() << "Domain reverse traversal: " << (domain.size()/duration*1e-9) << " Gpts/s (check = " << check << ")" << std::endl;
+}
+
+TEST_CASE( "Benchmarking domain traversal without point comparison", "[.bench]" )
+{
+  Point::Component check = 0;
+
+  tic();
+  auto it = domain.begin();
+  for (std::size_t i = 0; i < domain.size(); ++i)
+    {
+      ++it;
+      check += (*it)[0];
+    }
+  const auto duration = toc();
+
+  REQUIRE( it == domain.end() );
+  trace.info() << "Domain traversal without point comparison: " << (domain.size()/duration*1e-9) << " Gpts/s (check = " << check << ")" << std::endl;
+}
+
+TEST_CASE( "Benchmarking reverse domain traversal without point comparison", "[.bench]" )
+{
+  Point::Component check = 0;
+
+  tic();
+  auto it = domain.rbegin();
+  for (std::size_t i = 0; i < domain.size(); ++i)
+    {
+      ++it;
+      check += (*it)[0];
+    }
+  const auto duration = toc();
+
+  REQUIRE( it == domain.rend() );
+  trace.info() << "Domain reverse traversal without point comparison: " << (domain.size()/duration*1e-9) << " Gpts/s (check = " << check << ")" << std::endl;
+}
+
+TEST_CASE( "Benchmarking domain traversal using subRange", "[.bench]" )
+{
+  std::vector<Point::Dimension> dimensions(Point::dimension);
+  std::iota(dimensions.begin(), dimensions.end(), Dimension(0));
+  const auto range = domain.subRange(dimensions);
+
+  std::size_t cnt = 0;
+  Point::Component check = 0;
+
+  tic();
+  for (auto const& pt : range)
+    {
+      ++cnt;
+      check += pt[0];
+    }
+  const auto duration = toc();
+
+  REQUIRE( cnt == domain.size() );
+  trace.info() << "Domain traversal using subRange: " << (domain.size()/duration*1e-9) << " Gpts/s (check = " << check << ")" << std::endl;
+}
+
+TEST_CASE( "Benchmarking domain reverse traversal using subRange", "[.bench]" )
+{
+  std::vector<Point::Dimension> dimensions(Point::dimension);
+  std::iota(dimensions.begin(), dimensions.end(), Dimension(0));
+  const auto range = domain.subRange(dimensions);
+
+  std::size_t cnt = 0;
+  Point::Component check = 0;
+
+  tic();
+  for (auto it = range.rbegin(), it_end = range.rend(); it != it_end; ++it)
+    {
+      ++cnt;
+      check += (*it)[0];
+    }
+  const auto duration = toc();
+
+  REQUIRE( cnt == domain.size() );
+  trace.info() << "Domain reverse traversal using subRange: " << (domain.size()/duration*1e-9) << " Gpts/s (check = " << check << ")" << std::endl;
+}
+
+TEST_CASE( "Benchmarking domain traversal using subRange without point comparison", "[.bench]" )
+{
+  std::vector<Point::Dimension> dimensions(Point::dimension);
+  std::iota(dimensions.begin(), dimensions.end(), Dimension(0));
+  const auto range = domain.subRange(dimensions);
+
+  Point::Component check = 0;
+
+  tic();
+  auto it = range.begin();
+  for (std::size_t i = 0; i < domain.size(); ++i)
+    {
+      ++it;
+      check += (*it)[0];
+    }
+  const auto duration = toc();
+
+  REQUIRE( it == range.end() );
+
+  trace.info() << "Domain traversal using subRange without point comparison: " << (domain.size()/duration*1e-9) << " Gpts/s (check = " << check << ")" << std::endl;
+}
+
+TEST_CASE( "Benchmarking domain reverse traversal using subRange", "[.bench]" )
+{
+  std::vector<Point::Dimension> dimensions(Point::dimension);
+  std::iota(dimensions.begin(), dimensions.end(), Dimension(0));
+  const auto range = domain.subRange(dimensions);
+
+  Point::Component check = 0;
+
+  tic();
+  auto it = range.rbegin();
+  for (std::size_t i = 0; i < domain.size(); ++i)
+    {
+      ++it;
+      check += (*it)[0];
+    }
+  const auto duration = toc();
+
+  REQUIRE( it == range.rend() );
+
+  trace.info() << "Domain reverse traversal using subRange: " << (domain.size()/duration*1e-9) << " Gpts/s (check = " << check << ")" << std::endl;
+}
+
 /** @ingroup Tests **/
