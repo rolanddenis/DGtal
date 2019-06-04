@@ -52,6 +52,65 @@
 
 namespace DGtal
 {
+  template <typename TIterator>
+  class HyperRectDomain_ReverseIterator
+    : public boost::iterator_facade <
+        HyperRectDomain_ReverseIterator<TIterator>,
+        const typename TIterator::Point,
+        std::random_access_iterator_tag
+      >
+  {
+  public:
+    using Iterator = TIterator;
+    using Self  = HyperRectDomain_ReverseIterator<Iterator>;
+    using Point = typename Iterator::Point;
+    using Dimension = typename Point::Dimension;
+
+  private:
+    Iterator current, prev;
+
+  public:
+    explicit HyperRectDomain_ReverseIterator(Iterator it)
+      : current(it)
+      , prev(it)
+    {
+      --prev;
+    }
+
+    const Point& dereference() const
+      {
+        return *prev;
+      }
+
+    bool equal( const Self &other ) const
+      {
+        return current == other.current;
+      }
+
+    void increment()
+      {
+        --current;
+        --prev;
+      }
+    
+    void decrement()
+      {
+        ++current;
+        ++prev;
+      }
+    
+    void advance( std::ptrdiff_t n )
+      {
+        current -= n;
+        prev -= n;
+      }
+
+    std::ptrdiff_t distance_to( const Self& other ) const
+      {
+        return std::distance(other.current, current);
+      }
+  };
+
   /////////////////////////////////////////////////////////////////////////////
   // class HyperRectDomain_Iterator
   /**
@@ -63,8 +122,7 @@ namespace DGtal
     : public boost::iterator_facade <
         HyperRectDomain_Iterator<TPoint>,
         const TPoint,
-        std::random_access_iterator_tag,
-        const TPoint // so that it avoid the issue with stashing iterators (FIXME check that and bench it)
+        std::random_access_iterator_tag
       >
   {
   public:
@@ -100,7 +158,7 @@ namespace DGtal
     friend class boost::iterator_core_access;
 
     /// @brief Dereference
-    const Point dereference() const
+    const Point& dereference() const
       {
         ASSERT_MSG( // we must be between [begin,end]
             mylower.isLower(myPoint) && myPoint.isLower(myupper),
@@ -219,8 +277,7 @@ namespace DGtal
     : public boost::iterator_facade <
         HyperRectDomain_subIterator<TPoint>,
         const TPoint,
-        std::random_access_iterator_tag,
-        const TPoint // so that it avoid the issue with stashing iterators (FIXME check that and bench it)
+        std::random_access_iterator_tag
       >
   {
   public:
@@ -302,7 +359,7 @@ namespace DGtal
     friend class boost::iterator_core_access;
 
     /// @brief Dereference
-    const Point dereference() const
+    const Point& dereference() const
       {
         ASSERT_MSG( // we must be between [begin,end]
             mylower.isLower(myPoint) && myPoint.isLower(myupper),

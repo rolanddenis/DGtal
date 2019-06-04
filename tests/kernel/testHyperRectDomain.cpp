@@ -555,7 +555,7 @@ TEST_CASE( "Benchmarking domain traversal using subRange without point compariso
   trace.info() << "Domain traversal using subRange without point comparison: " << (domain.size()/duration*1e-9) << " Gpts/s (check = " << check << ")" << std::endl;
 }
 
-TEST_CASE( "Benchmarking domain reverse traversal using subRange", "[.bench]" )
+TEST_CASE( "Benchmarking domain reverse traversal using subRange without point comparison", "[.bench]" )
 {
   std::vector<Point::Dimension> dimensions(Point::dimension);
   std::iota(dimensions.begin(), dimensions.end(), Dimension(0));
@@ -574,7 +574,7 @@ TEST_CASE( "Benchmarking domain reverse traversal using subRange", "[.bench]" )
 
   REQUIRE( it == range.rend() );
 
-  trace.info() << "Domain reverse traversal using subRange: " << (domain.size()/duration*1e-9) << " Gpts/s (check = " << check << ")" << std::endl;
+  trace.info() << "Domain reverse traversal using subRange without point comparison: " << (domain.size()/duration*1e-9) << " Gpts/s (check = " << check << ")" << std::endl;
 }
 
 /** @ingroup Tests **/

@@ -115,7 +115,7 @@ namespace DGtal
 
     ///Typedef of domain iterators
     typedef HyperRectDomain_Iterator<Point> Iterator;
-    typedef std::reverse_iterator<Iterator> ReverseIterator;
+    typedef HyperRectDomain_ReverseIterator<Iterator> ReverseIterator;
     typedef Iterator ConstIterator;
     typedef ReverseIterator ConstReverseIterator;
 
@@ -243,7 +243,7 @@ namespace DGtal
     struct ConstSubRange
     {
       typedef HyperRectDomain_subIterator<Point> ConstIterator;
-      typedef std::reverse_iterator<ConstIterator> ConstReverseIterator;
+      typedef HyperRectDomain_ReverseIterator<ConstIterator> ConstReverseIterator;
 
       /**
        * ConstSubRange constructor from a given domain.
