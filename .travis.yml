@@ -27,31 +27,28 @@ secure: "Ra00iyQ+5wm7G3XfaaI40aKgfcGTigfmEd+3/TY1hYcjYnJvNOG0dekolcMDSelE8SfqLcW
 ##Deps for linux builds
 addons:
   apt:
-   sources:
-    - deadsnakes
-    - ubuntu-toolchain-r-test
-   packages:
-    - libhdf5-serial-dev
-    - libboost-dev
-    - libcairo2-dev
-    - libboost-system-dev
-    - libboost-program-options-dev
-    - libgmp-dev
-    - libgdcm2-dev
-    - libgraphicsmagick++1-dev
-    - libqglviewer-dev
-    - libinsighttoolkit3-dev
-    - libfftw3-dev
-    - g++-5
-    - ninja-build
-    - doxygen
-    - graphviz
-    - flex
-    - bison
-    - texlive
+    sources:
+      - deadsnakes
+      - ubuntu-toolchain-r-test
+    packages:
+      - libhdf5-serial-dev
+      - libboost-dev
+      - libcairo2-dev
+      - libboost-system-dev
+      - libboost-program-options-dev
+      - libgmp-dev
+      - libgdcm2-dev
+      - libgraphicsmagick++1-dev
+      - libqglviewer-dev
+      - libinsighttoolkit3-dev
+      - libfftw3-dev
+      - g++-5
+      - ninja-build
+      - doxygen
+      - graphviz
+      - flex
+      - bison
+      - texlive
 
-############
-# Main rules
-############
 script:
     - echo IWH
