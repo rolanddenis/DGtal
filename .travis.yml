@@ -53,8 +53,5 @@ addons:
 ############
 # Main rules
 ############
-script: |
-  source .travis/before_global.sh &&
-  .travis/build_all.sh &&
-  .travis/check_tests.sh
+script: source .travis/before_global.sh && .travis/build_all.sh && .travis/check_tests.sh
 
