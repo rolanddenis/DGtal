@@ -49,3 +49,36 @@ addons:
     - flex
     - bison
     - texlive
+
+############
+# Main rules
+############
+script: |
+  source .travis/before_global.sh &&
+  .travis/build_all.sh &&
+  .travis/check_tests.sh
+
+jobs:
+ include:
+   - stage: "DGtalTools"
+     name: "Testing DGtalTools + DGtal with examples"
+     script: |
+       source .travis/before_global.sh &&
+       .travis/build_dgtal.sh &&
+       .travis/getAndCheckDGtalTools.sh
+   - stage: "Documentation"
+     name: "Building and deploying the documentation"
+     script: |
+       source .travis/before_global.sh &&
+       .travis/install_doxygen.sh &&
+       .travis/build_dgtal_doc.sh &&
+       .travis/checkDoxygenDocumentation.sh
+     deploy:
+       provider: pages
+       skip-cleanup: true
+       github-token: $GITHUB_TOKEN
+       keep-history: true
+       repo: DGtal-team/doc-nightly
+       target-branch: master
+       verbose: true
+       local-dir: "$TRAVIS_BUILD_DIR/build/html"
