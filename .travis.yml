@@ -50,5 +50,3 @@ addons:
       - bison
       - texlive
 
-script:
-  - echo IWH
