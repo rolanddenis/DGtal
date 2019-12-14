@@ -20,3 +20,32 @@ matrix:
     - os: osx
       compiler: gcc
 
+cache: apt
+
+secure: "Ra00iyQ+5wm7G3XfaaI40aKgfcGTigfmEd+3/TY1hYcjYnJvNOG0dekolcMDSelE8SfqLcWYnK6+vtOCmyZuUWheUhA+83Tgq/bIH6dMzSvLkJdyq2D9me4sX6zx3ct90swP7Adj8EBHmv61pH5OBeEcmNWJNIZmNQs3+1awca4="
+
+##Deps for linux builds
+addons:
+  apt:
+   sources:
+    - deadsnakes
+    - ubuntu-toolchain-r-test
+   packages:
+    - libhdf5-serial-dev
+    - libboost-dev
+    - libcairo2-dev
+    - libboost-system-dev
+    - libboost-program-options-dev
+    - libgmp-dev
+    - libgdcm2-dev
+    - libgraphicsmagick++1-dev
+    - libqglviewer-dev
+    - libinsighttoolkit3-dev
+    - libfftw3-dev
+    - g++-5
+    - ninja-build
+    - doxygen
+    - graphviz
+    - flex
+    - bison
+    - texlive
